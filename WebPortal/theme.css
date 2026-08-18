@@ -1,0 +1,674 @@
+/* Shared TechWise 360 light/dark theme layer. Loaded last on every portal page. */
+:root {
+  --theme-bg: #f3f6fc;
+  --theme-shell: #ffffff;
+  --theme-surface: #ffffff;
+  --theme-surface-raised: #ffffff;
+  --theme-surface-soft: #eef5ff;
+  --theme-text: #101827;
+  --theme-text-soft: #667085;
+  --theme-border: #dfe7ee;
+  --theme-shadow: rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --blue: #5b9cff;
+  --blue-dark: #77adff;
+  --primary-blue: #327ff0;
+  --primary-blue-hover: #4d92f6;
+  --light-blue-bg: #15263b;
+  --ink: #f4f7fb;
+  --text-primary: #f4f7fb;
+  --muted: #a8b3c4;
+  --text-muted: #a8b3c4;
+  --line: #2d3949;
+  --border-color: #2d3949;
+  --border: var(--border-color);
+  --panel: #151b24;
+  --card-bg: #171e28;
+  --page: #0b0f15;
+  --page-bg: #0b0f15;
+  --danger-soft: #3a1c25;
+  --success-soft: #123329;
+  --warning-soft: #3b2a16;
+  --purple-soft: #2b2043;
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+  --card-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  --theme-bg: #0b0f15;
+  --theme-shell: #10151d;
+  --theme-surface: #151b24;
+  --theme-surface-raised: #19212c;
+  --theme-surface-soft: #15263b;
+  --theme-text: #f4f7fb;
+  --theme-text-soft: #a8b3c4;
+  --theme-border: #2d3949;
+  --theme-shadow: rgba(0, 0, 0, 0.34);
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] {
+  --teacher-ink: #f4f7fb;
+  --teacher-ink-soft: #dce3ed;
+  --teacher-muted: #9eabba;
+  --teacher-line: #2d3949;
+  --teacher-line-soft: #222c39;
+  --teacher-primary: #327ff0;
+  --teacher-primary-hover: #4d92f6;
+  --teacher-primary-soft: #70a7f7;
+  --teacher-primary-muted: #315987;
+  --teacher-blue: #15263b;
+  --teacher-blue-strong: #1b314c;
+  --teacher-blue-text: #9fc5ff;
+  --home-ink: #f4f7fb;
+  --home-muted: #9eabba;
+  --home-line: #2d3949;
+  --home-blue: #15263b;
+  --home-blue-strong: #1b314c;
+  background: var(--theme-bg);
+}
+
+html,
+body,
+.app-shell,
+.app-main,
+.app-sidebar,
+.app-topbar,
+.teacher-section,
+.student-section,
+.auth-shell,
+.form-card,
+.notification-panel,
+.feedback-modal,
+.app-toast {
+  transition: background-color 220ms ease, border-color 220ms ease, color 180ms ease, box-shadow 220ms ease;
+}
+
+.theme-toggle {
+  position: relative;
+  width: 54px;
+  min-width: 54px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid #d5dfeb;
+  border-radius: 999px;
+  background: #edf4fc;
+  color: #526173;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
+  width: 54px;
+  min-width: 54px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.theme-toggle-track {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7px;
+}
+
+.theme-toggle-track > svg {
+  position: relative;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+.theme-toggle-track > svg:first-child { color: #d98d10; }
+.theme-toggle-track > svg:nth-child(2) { color: #6e7b8d; }
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+  transition: transform 240ms cubic-bezier(.22, 1, .36, 1), background-color 200ms ease;
+}
+
+.theme-toggle:hover {
+  border-color: #b9c9da;
+  box-shadow: 0 4px 12px rgba(31, 111, 235, 0.12);
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid rgba(31, 111, 235, 0.28);
+  outline-offset: 2px;
+}
+
+:root[data-theme="dark"] .theme-toggle {
+  border-color: #3a4b61;
+  background: #16263b;
+  color: #dce9fb;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .theme-toggle-thumb {
+  background: #e9f2ff;
+  transform: translateX(22px);
+}
+
+:root[data-theme="dark"] .theme-toggle-track > svg:first-child { color: #8290a3; }
+:root[data-theme="dark"] .theme-toggle-track > svg:nth-child(2) { color: #7eaff8; }
+
+.auth-theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 22px;
+  z-index: 50;
+}
+
+:root[data-theme="dark"] body {
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body :is(h1, h2, h3, h4, strong, label, legend) {
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body :is(p, small, time, .helper-text, .subtitle, .muted, .link-label) {
+  color: var(--theme-text-soft);
+}
+
+:root[data-theme="dark"] body :is(input, select, textarea) {
+  border-color: var(--theme-border);
+  background: #101722;
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body :is(input, textarea)::placeholder { color: #748196; }
+:root[data-theme="dark"] body select { color-scheme: dark; }
+:root[data-theme="dark"] body hr { border-color: var(--theme-border); }
+
+/* Authentication and account pages */
+:root[data-theme="dark"] body[data-page="login"],
+:root[data-theme="dark"] body[data-page="register"],
+:root[data-theme="dark"] body[data-page="forgot-password"],
+:root[data-theme="dark"] body[data-page="reset-password"] {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(50, 127, 240, 0.13), transparent 28%),
+    var(--theme-bg);
+}
+
+:root[data-theme="dark"] :is(.form-card, .asset-stage, .feature-strip, .input-wrap) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] :is(.brand-mark, .brand-panel h1, .feature-strip div, .field, .input-wrap, .form-heading h2) {
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] :is(.form-heading p, .brand-panel p, .input-hint, .account-prompt) {
+  color: var(--theme-text-soft);
+}
+
+/* Shared dashboard shell and overlays */
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .app-shell,
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .app-main,
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.teacher-section, .student-section) {
+  background: var(--theme-bg);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .app-sidebar {
+  border-color: var(--theme-border);
+  background: #101720;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .app-topbar {
+  border-color: var(--theme-border);
+  background: rgba(16, 21, 29, 0.96);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.brand-mark, .topbar-profile, .topbar-profile > svg, .topbar-breadcrumb, .topbar-breadcrumb strong) {
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .topbar-profile span {
+  color: var(--theme-text-soft);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button) {
+  border-color: var(--theme-border);
+  background: #151d28;
+  color: #d7e1ee;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button):hover {
+  border-color: #43536a;
+  background: #1b293a;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] :is(.notification-panel, .feedback-modal, .app-toast) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-theme="dark"] :is(.notification-panel-header, .feedback-modal-actions) {
+  border-color: var(--theme-border);
+  background: #141b25;
+}
+
+:root[data-theme="dark"] :is(.notification-item, .assessment-review-row) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] :is(.notification-item:hover, .notification-item.unread) { background: #17283d; }
+:root[data-theme="dark"] .feedback-modal-overlay { background: rgba(2, 6, 12, 0.74); }
+
+/* Cards, panels, tables, forms, drawers, and generated dashboard content */
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(
+  .welcome-block,
+  .quick-access,
+  .achievement-strip,
+  .lesson-card,
+  .quick-card,
+  .stat-card,
+  .panel-card,
+  .teacher-home-surface,
+  .student-profile-photo-card,
+  .student-profile-form,
+  [class$="-card"],
+  [class*="-card "],
+  [class$="-panel"],
+  [class*="-panel "],
+  [class$="-drawer"],
+  [class*="-drawer "]
+) {
+  border-color: var(--theme-border);
+  background-color: var(--theme-surface);
+  color: var(--theme-text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(
+  .stat-card-body,
+  .quarter-spotlight,
+  .evidence-line-chart,
+  .evidence-mastery-overview,
+  .evidence-growth-score > div,
+  .next-action-panel,
+  .student-skill-snapshot-row,
+  .student-due-row,
+  .student-evidence-row,
+  .compact-list .mini-row,
+  .settings-switch-row,
+  .profile-summary-item,
+  .lesson-section,
+  .assessment-question,
+  .empty-state
+) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(
+  .stat-card-heading,
+  .settings-card-heading,
+  .profile-card-heading,
+  .lesson-card-heading,
+  .evidence-card > .panel-title-row,
+  thead,
+  th
+) {
+  border-color: var(--theme-border);
+  background-color: var(--theme-surface-soft);
+  color: #dce9fb;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) table,
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(td, tr) {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) tbody tr,
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) tbody td {
+  background-color: transparent;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) tbody tr:hover {
+  background: #17283d;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.soft-pill, .status-pill, .evidence-chip, .home-eyebrow, .teacher-page-eyebrow) {
+  border-color: #324763;
+  background: #17283d;
+  color: #9fc5ff;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .nav-item.active,
+:root[data-theme="dark"] body[data-page="student"] .nav-item:hover {
+  background: #eaf2ff;
+  color: #1f6feb;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .app-sidebar {
+  background: linear-gradient(180deg, #143a72 0%, #102b55 100%);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.student-search, .lesson-search, .assessment-search, .search-field, .filter-control, .input-wrap) {
+  border-color: var(--theme-border);
+  background: #101722;
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) svg text {
+  fill: var(--theme-text-soft);
+}
+
+:root[data-theme="dark"] body :is(.good-text, b.good, .success-text) { color: #5fd19e !important; }
+:root[data-theme="dark"] body :is(.warn-text, b.warn, .warning-text) { color: #f5b85c !important; }
+:root[data-theme="dark"] body :is(.danger-text, b.danger, .error-text) { color: #ff8490 !important; }
+
+:root[data-theme="dark"] body :is(.primary-button, .export-button) {
+  border-color: var(--primary-blue);
+  background: var(--primary-blue);
+  color: #fff;
+}
+
+:root[data-theme="dark"] body :is(.primary-button, .export-button):hover {
+  border-color: var(--primary-blue-hover);
+  background: var(--primary-blue-hover);
+}
+
+/* Home-only dark actions requested for Create Lesson, PDF, and the selected update range. */
+body[data-page="teacher"] .home-hero-actions .primary-button,
+body[data-page="teacher"] .evidence-export-actions button:first-child,
+body[data-page="teacher"] .home-update-tabs button.active {
+  border-color: #111318;
+  background: #111318;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(17, 19, 24, 0.16);
+}
+
+body[data-page="teacher"] .home-hero-actions .primary-button:hover,
+body[data-page="teacher"] .evidence-export-actions button:first-child:hover,
+body[data-page="teacher"] .home-update-tabs button.active:hover {
+  border-color: #2a2f38;
+  background: #2a2f38;
+}
+
+:root[data-theme="dark"] body ::-webkit-scrollbar { width: 10px; height: 10px; }
+:root[data-theme="dark"] body ::-webkit-scrollbar-track { background: #0c1118; }
+:root[data-theme="dark"] body ::-webkit-scrollbar-thumb { border: 2px solid #0c1118; border-radius: 999px; background: #35445a; }
+
+@media (max-width: 620px) {
+  .theme-toggle,
+  body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
+    width: 50px;
+    min-width: 50px;
+    height: 30px;
+    min-height: 30px;
+  }
+
+  .theme-toggle-thumb { width: 22px; height: 22px; }
+  :root[data-theme="dark"] .theme-toggle-thumb { transform: translateX(20px); }
+  .auth-theme-toggle { top: 14px; right: 14px; }
+}
+
+/* Final mobile navigation layer: keep the drawer above its backdrop and fully tappable. */
+@media (max-width: 840px) {
+  body:is([data-page="teacher"], [data-page="student"]).mobile-nav-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .mobile-nav-toggle {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    left: 12px;
+    z-index: 90;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 1px solid #d8e2ec;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #111318;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(17, 19, 24, 0.16);
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .mobile-nav-toggle:active {
+    transform: scale(0.96);
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .mobile-nav-toggle[aria-expanded="true"] {
+    border-color: #111318;
+    color: #fff;
+    background: #111318;
+    box-shadow: 0 8px 22px rgba(17, 19, 24, 0.25);
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .mobile-nav-toggle svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 2.25;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(1.5px);
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
+    touch-action: none;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]).mobile-nav-open .mobile-nav-backdrop {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 80;
+    width: min(320px, 86vw);
+    max-width: calc(100vw - 44px);
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: none;
+    margin: 0;
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+    border: 0;
+    border-right: 1px solid #dfe7ee;
+    border-radius: 0 18px 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    color: #111318;
+    background: #fbfcfd;
+    box-shadow: 18px 0 44px rgba(15, 23, 42, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate3d(-102%, 0, 0);
+    transition: transform 260ms cubic-bezier(.22, 1, .36, 1), opacity 180ms ease, visibility 0s linear 260ms;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]).mobile-nav-open .app-sidebar,
+  body[data-page="teacher"] .app-sidebar.open,
+  body[data-page="student"] .app-sidebar.open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0s;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]).mobile-nav-open .app-sidebar .sidebar-logo-mark {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .sidebar-brand-block {
+    width: 100%;
+    min-height: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    margin: 0 0 10px;
+    border-bottom: 1px dashed #dfe7ee;
+  }
+
+  body[data-page="student"] .app-sidebar .sidebar-brand-block {
+    padding-left: 52px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .sidebar-search {
+    width: 100%;
+    min-height: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    margin: 4px 0 10px;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .sidebar-search input {
+    height: 44px;
+    min-height: 44px;
+    border-radius: 11px;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .sidebar-section-label {
+    min-height: 18px;
+    height: auto;
+    flex: 0 0 auto;
+    margin: 12px 10px 5px;
+    color: #778394;
+    font-size: 9px;
+    line-height: 18px;
+    letter-spacing: 0.09em;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .nav-item {
+    position: relative;
+    width: 100%;
+    min-height: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    place-items: center start;
+    align-content: center;
+    gap: 10px;
+    color: #4f5a68;
+    background: transparent;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .nav-item svg {
+    position: static;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    transform: none;
+    stroke-width: 2;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .nav-item > span {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    overflow: hidden;
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .nav-item:is(.active, [aria-current="page"]) {
+    border-color: #cfe0ee;
+    color: #111318;
+    background: #eef7ff;
+    box-shadow: none;
+  }
+
+  body:is([data-page="teacher"], [data-page="student"]) .app-sidebar .nav-item:active {
+    background: #e2f0fc;
+    transform: scale(0.985);
+  }
+
+  body[data-page="teacher"] .app-sidebar .sidebar-profile-card,
+  body[data-page="student"] .app-sidebar .sidebar-help-card {
+    width: 100%;
+    margin: auto 0 0;
+    flex: 0 0 auto;
+  }
+
+  body[data-page="teacher"] .app-sidebar .sidebar-profile-card {
+    min-height: 60px;
+    height: 60px;
+    padding: 7px;
+    border-color: #dfe7ee;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(17, 19, 24, 0.07);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-thumb,
+  html,
+  body,
+  .app-shell,
+  .app-main,
+  .app-sidebar,
+  .app-topbar,
+  .teacher-section,
+  .student-section {
+    transition: none !important;
+  }
+}

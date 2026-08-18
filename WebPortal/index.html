@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechWise 360 | Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body data-page="login">
+  <main class="auth-shell">
+    <section class="brand-panel" aria-label="TechWise 360 introduction">
+      <a class="brand-mark" href="index.html">TechWise <span>360</span></a>
+      <h1>Welcome to<br>TechWise <span>360</span></h1>
+      <p>Learn ICT skills through structured lessons, guided practice, and immersive VR experiences</p>
+      <div class="asset-stage">
+        <img class="asset pc-case" src="assets/pc-case.png" alt="">
+        <img class="asset fan" src="assets/fan.png" alt="">
+        <img class="asset gpu" src="assets/gpu.png" alt="">
+        <img class="asset vr" src="assets/vr-headset.png" alt="">
+        <img class="asset word" src="assets/word.png" alt="">
+        <img class="asset excel" src="assets/excel.png" alt="">
+        <img class="asset ppt" src="assets/powerpoint.png" alt="">
+      </div>
+      <div class="feature-strip" role="group" aria-label="TechWise features">
+        <div><i data-lucide="book-open-check"></i><span>Guided<br>Learning</span></div>
+        <div><i data-lucide="monitor"></i><span>Real-World<br>ICT Skills</span></div>
+        <div><i data-lucide="headphones"></i><span>Immersive<br>VR Lab</span></div>
+        <div><i data-lucide="trophy"></i><span>Track<br>Progress</span></div>
+      </div>
+    </section>
+
+    <section class="form-card login-card" aria-labelledby="login-title">
+      <div class="form-heading">
+        <h2 id="login-title">Login</h2>
+        <p>Enter your details to access your account.</p>
+      </div>
+
+      <form id="loginForm" class="form-stack" novalidate>
+        <label class="field">
+          <span>Email</span>
+          <span class="input-wrap">
+            <i data-lucide="mail"></i>
+            <input name="identifier" type="text" autocomplete="username" placeholder="Email or Username" required>
+          </span>
+        </label>
+
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <span class="input-wrap">
+            <i data-lucide="key-round"></i>
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+            <button class="icon-button reveal-button" type="button" data-toggle-password="loginPassword" aria-label="Show password">
+              <i data-lucide="eye"></i>
+            </button>
+          </span>
+        </div>
+
+        <div class="form-row">
+          <label class="check-label">
+            <input name="remember" type="checkbox">
+            <span>Remember me</span>
+          </label>
+          <a href="forgot-password.html" class="text-link">Forgot password?</a>
+        </div>
+
+        <p id="loginMessage" class="status-message" role="status" aria-live="polite"></p>
+
+        <button class="primary-button" type="submit">Login now</button>
+        <a class="outline-button" href="create-account.html">
+          <span>Create Account</span>
+          <i data-lucide="user-plus"></i>
+        </a>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

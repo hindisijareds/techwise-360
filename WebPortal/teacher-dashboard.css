@@ -1,0 +1,2216 @@
+/* Teacher dashboard visual system
+   Scoped to the teacher portal so authentication and student screens remain unchanged. */
+body[data-page="teacher"] {
+  --teacher-ink: #111318;
+  --teacher-ink-soft: #252a33;
+  --teacher-muted: #687384;
+  --teacher-line: #dfe7ee;
+  --teacher-line-soft: #edf1f4;
+  --teacher-primary: #1f6feb;
+  --teacher-primary-hover: #185fcf;
+  --teacher-primary-soft: #79aaf2;
+  --teacher-primary-muted: #b9d3f8;
+  --teacher-blue: #eef5ff;
+  --teacher-blue-strong: #dceaff;
+  --teacher-blue-text: #245f9e;
+  --home-blue: #eef5ff;
+  --home-blue-strong: #dceaff;
+  --teacher-green: #16876b;
+  --teacher-green-bg: #eaf8f3;
+  --teacher-amber: #aa6a0b;
+  --teacher-amber-bg: #fff7e8;
+  --teacher-red: #c4474f;
+  --teacher-red-bg: #fff0f1;
+  --teacher-radius: 13px;
+  --teacher-shadow: 0 1px 2px rgba(17, 19, 24, 0.04), 0 8px 24px rgba(52, 73, 94, 0.035);
+  color: var(--teacher-ink);
+  background: #f4f6f8;
+}
+
+body[data-page="teacher"],
+body[data-page="teacher"] button,
+body[data-page="teacher"] input,
+body[data-page="teacher"] select,
+body[data-page="teacher"] textarea {
+  font-family: "Poppins", system-ui, sans-serif;
+}
+
+body[data-page="teacher"] .app-shell {
+  display: block;
+  min-height: 100vh;
+  background: #fff;
+}
+
+body[data-page="teacher"] .app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  width: 220px;
+  padding: 16px 10px 12px;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
+  border-right: 1px solid var(--teacher-line);
+  background: #fbfcfd;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .app-main {
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 220px;
+  background: #fff;
+}
+
+body[data-page="teacher"] .sidebar-brand-block {
+  position: relative;
+  display: block;
+  min-height: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  padding: 2px 7px 14px;
+  overflow: hidden;
+  border-bottom: 1px dashed var(--teacher-line);
+}
+
+body[data-page="teacher"] .sidebar-logo-mark {
+  position: absolute;
+  top: 2px;
+  left: 7px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--teacher-ink);
+  box-shadow: 0 6px 14px rgba(17, 19, 24, 0.16);
+  transition: opacity 180ms ease 120ms, transform 340ms cubic-bezier(.22,1,.36,1);
+}
+
+body[data-page="teacher"] .sidebar-brand-block > div {
+  position: absolute;
+  top: 7px;
+  right: 32px;
+  left: 54px;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 180ms ease 140ms, transform 340ms cubic-bezier(.22,1,.36,1), visibility 0s linear 0s;
+}
+
+body[data-page="teacher"] .techwise-cube-logo {
+  width: 25px;
+  height: 25px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body[data-page="teacher"] .sidebar-brand-block strong {
+  color: var(--teacher-ink);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+body[data-page="teacher"] .sidebar-brand-block small {
+  color: var(--teacher-muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .sidebar-search {
+  width: calc(100% - 4px);
+  height: 42px;
+  min-height: 42px;
+  flex: 0 0 42px;
+  margin: 14px 2px 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: width 360ms cubic-bezier(.22,1,.36,1), margin 360ms cubic-bezier(.22,1,.36,1);
+}
+
+body[data-page="teacher"] .sidebar-search input {
+  width: 100%;
+  height: 42px;
+  min-width: 0;
+  padding: 0 54px 0 44px;
+  border: 1px solid var(--teacher-line);
+  border-radius: 11px;
+  color: var(--teacher-ink);
+  background: #fff;
+  font-size: 12px;
+  box-shadow: var(--teacher-shadow);
+  transition: padding 340ms cubic-bezier(.22,1,.36,1), color 180ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+body[data-page="teacher"] .sidebar-search input::placeholder {
+  opacity: 1;
+  transition: opacity 160ms ease 120ms;
+}
+
+body[data-page="teacher"] .sidebar-search kbd {
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--teacher-muted);
+  background: #f0f3f5;
+  font-size: 8px;
+  font-weight: 700;
+  transition: opacity 160ms ease 120ms, transform 340ms cubic-bezier(.22,1,.36,1), visibility 0s linear 0s;
+}
+
+body[data-page="teacher"] .sidebar-search > svg {
+  left: 15.5px;
+  transition: left 360ms cubic-bezier(.22,1,.36,1), transform 360ms cubic-bezier(.22,1,.36,1);
+}
+
+body[data-page="teacher"] .sidebar-section-label {
+  position: relative;
+  display: block;
+  min-height: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin: 11px 9px 6px;
+  color: #7a8594;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.085em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 180ms ease 140ms, opacity 180ms ease 140ms;
+}
+
+body[data-page="teacher"] .sidebar-section-label::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 1px;
+  border-radius: 999px;
+  opacity: 0;
+  background: var(--teacher-line);
+  transform: translate(-50%, -50%) scaleX(.35);
+  transition: opacity 150ms ease, transform 300ms cubic-bezier(.2,.75,.25,1);
+}
+
+body[data-page="teacher"] .nav-item {
+  position: relative;
+  width: calc(100% - 4px);
+  height: 36px;
+  display: block;
+  min-height: 36px;
+  flex: 0 0 36px;
+  margin: 0 2px;
+  padding: 7px 10px;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #56606d;
+  background: transparent;
+  font-size: 10.5px;
+  font-weight: 500;
+  overflow: hidden;
+  transition: width 360ms cubic-bezier(.22,1,.36,1), padding 360ms cubic-bezier(.22,1,.36,1), color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+body[data-page="teacher"] .nav-item svg {
+  position: absolute;
+  top: 50%;
+  left: 15px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  transform: translateY(-50%);
+  transition: left 360ms cubic-bezier(.22,1,.36,1), transform 360ms cubic-bezier(.22,1,.36,1), width 240ms ease, height 240ms ease;
+}
+
+body[data-page="teacher"] .nav-item > span {
+  position: absolute;
+  top: 50%;
+  left: 40px;
+  width: 150px;
+  max-width: none;
+  overflow: hidden;
+  opacity: 1;
+  transform: translate(0, -50%);
+  white-space: nowrap;
+  transition: opacity 180ms ease 140ms, transform 340ms cubic-bezier(.22,1,.36,1), visibility 0s linear 0s;
+}
+
+body[data-page="teacher"] .nav-item:hover {
+  color: var(--teacher-ink);
+  background: #f5f9fc;
+  transform: translateX(2px);
+}
+
+body[data-page="teacher"] .nav-item.active,
+body[data-page="teacher"] .nav-item[aria-current="page"] {
+  color: var(--teacher-ink);
+  border-color: #cfdfeb;
+  background: var(--teacher-blue);
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .sidebar-profile-card {
+  position: relative;
+  bottom: auto;
+  margin: auto 2px 0;
+  padding: 6px;
+  min-height: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  overflow: hidden;
+  border: 1px solid var(--teacher-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--teacher-shadow);
+  backdrop-filter: blur(8px);
+  transition: width 360ms cubic-bezier(.22,1,.36,1), padding 360ms cubic-bezier(.22,1,.36,1), border-color 160ms ease;
+}
+
+body[data-page="teacher"] .sidebar-profile-card > div,
+body[data-page="teacher"] .sidebar-profile-card .icon-shell {
+  opacity: 1;
+  transform: none;
+  transition: opacity 160ms ease 140ms, visibility 0s linear 0s;
+}
+
+body[data-page="teacher"] .profile-badge {
+  color: var(--teacher-ink);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  height: 66px;
+  min-height: 66px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+body[data-page="teacher"] .sidebar-collapse-toggle {
+  position: absolute;
+  top: 10px;
+  right: auto;
+  left: 14px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #8a939d;
+  background: transparent;
+  translate: 157px 0;
+  cursor: pointer;
+  transition: translate 360ms cubic-bezier(.22,1,.36,1), color 160ms ease, border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+body[data-page="teacher"] .topbar-leading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+body[data-page="teacher"] .sidebar-collapse-toggle:hover {
+  color: var(--teacher-ink);
+  border-color: var(--teacher-line);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .sidebar-collapse-toggle:active {
+  transform: scale(0.94);
+}
+
+body[data-page="teacher"] .sidebar-toggle-glyph {
+  position: relative;
+  display: block;
+  width: 17px;
+  height: 14px;
+  border: 1.4px solid currentColor;
+  border-radius: 4px;
+}
+
+body[data-page="teacher"] .sidebar-toggle-glyph::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 4px;
+  width: 1.4px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateX(6px);
+  transition: transform 320ms cubic-bezier(.22,1,.36,1);
+}
+
+body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-toggle-glyph::after {
+  transform: translateX(0);
+}
+
+body[data-page="teacher"] .app-sidebar,
+body[data-page="teacher"] .app-main {
+  transition: width 360ms cubic-bezier(.22,1,.36,1), margin-left 360ms cubic-bezier(.22,1,.36,1), padding 360ms cubic-bezier(.22,1,.36,1);
+}
+
+@media (min-width: 861px) {
+  body[data-page="teacher"].teacher-sidebar-collapsed .app-sidebar {
+    width: 72px;
+    padding-inline: 10px;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .app-main {
+    margin-left: 72px;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-brand-block {
+    padding-inline: 0;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-search kbd {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition-delay: 0s, 0s, 360ms;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-logo-mark {
+    opacity: 0;
+    transform: translateX(-10px) scale(.9);
+    pointer-events: none;
+    transition-delay: 0s, 0s;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-brand-block > div {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(-12px);
+    transition-delay: 0s, 0s, 360ms;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-collapse-toggle {
+    translate: 0 0;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-search {
+    width: 48px;
+    margin-right: 0;
+    margin-left: 2px;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-search input {
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+    caret-color: transparent;
+    -webkit-text-fill-color: transparent;
+    cursor: pointer;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-search input::placeholder {
+    color: transparent;
+    opacity: 0;
+    -webkit-text-fill-color: transparent;
+    transition-delay: 0s;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-search > svg {
+    left: 15.5px;
+    transform: none;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-section-label {
+    width: auto;
+    color: transparent;
+    background: transparent;
+    transition-delay: 0s, 0s;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-section-label::after {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1);
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item {
+    width: 48px;
+    min-width: 48px;
+    padding-inline: 0 !important;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item > span {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(-10px, -50%);
+    transition-delay: 0s, 0s, 360ms;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item:hover {
+    transform: none;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item:hover,
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item.active,
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item[aria-current="page"] {
+    border-color: #cfe0ec;
+    border-radius: 9px;
+    background: var(--teacher-blue);
+    box-shadow: none;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .nav-item svg {
+    left: 15px;
+    width: 16px;
+    height: 16px;
+    margin: 0 !important;
+    transform: translateY(-50%) !important;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-profile-card {
+    width: 48px;
+    grid-template-columns: 34px !important;
+    justify-items: start !important;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-profile-card > div,
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-profile-card .icon-shell {
+    position: absolute;
+    visibility: hidden;
+    opacity: 0;
+    transform: none;
+    pointer-events: none;
+    transition: none;
+  }
+
+  body[data-page="teacher"].teacher-sidebar-collapsed .sidebar-profile-card .profile-badge {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    margin: 0 !important;
+  }
+}
+
+body[data-page="teacher"] .topbar-breadcrumb {
+  gap: 11px;
+  color: var(--teacher-muted);
+  font-size: 12px;
+}
+
+body[data-page="teacher"] .topbar-breadcrumb svg:first-child {
+  width: 17px;
+  color: #4e5a67;
+}
+
+body[data-page="teacher"] .topbar-breadcrumb svg:not(:first-child) {
+  width: 13px;
+  color: #9aa4af;
+}
+
+body[data-page="teacher"] .topbar-breadcrumb strong {
+  color: var(--teacher-ink);
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .topbar-actions {
+  gap: 6px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header {
+  align-items: start;
+  column-gap: 24px;
+  row-gap: 10px;
+  padding: 14px 18px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header > div:first-child {
+  align-self: start;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header h1,
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header p {
+  margin: 0;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header h1 {
+  line-height: 1.25;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header p {
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-toolbar {
+  align-self: start;
+  justify-self: end;
+  width: min(100%, 600px);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-toolbar label {
+  min-width: 210px;
+  flex: 1 1 280px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-toolbar select {
+  width: 100%;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-quarter-pill {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-export-actions {
+  grid-column: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  justify-content: flex-start;
+}
+
+body[data-page="teacher"] .icon-shell,
+body[data-page="teacher"] .notification-button,
+body[data-page="teacher"] .icon-button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #525d69;
+  background: transparent;
+}
+
+body[data-page="teacher"] .icon-shell:hover,
+body[data-page="teacher"] .notification-button:hover,
+body[data-page="teacher"] .icon-button:hover {
+  color: var(--teacher-ink);
+  border-color: var(--teacher-line);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .dashboard-status {
+  margin: 0;
+  border-radius: 0;
+}
+
+body[data-page="teacher"] .dashboard-status:empty {
+  display: none;
+}
+
+body[data-page="teacher"] .teacher-section {
+  padding: 28px 24px 40px;
+  background: #fff;
+}
+
+body[data-page="teacher"] .teacher-section.active {
+  animation: teacher-view-in 300ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+body[data-page="teacher"] .teacher-page-header,
+body[data-page="teacher"] .dashboard-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 0 0 20px;
+  padding: 0 0 18px;
+  border-bottom: 1px solid var(--teacher-line-soft);
+}
+
+body[data-page="teacher"] .teacher-page-header h1,
+body[data-page="teacher"] .dashboard-page-header h1 {
+  margin: 5px 0 3px;
+  color: var(--teacher-ink);
+  font-size: clamp(24px, 2vw, 31px);
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+}
+
+body[data-page="teacher"] .teacher-page-header p,
+body[data-page="teacher"] .dashboard-page-header p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--teacher-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+body[data-page="teacher"] .teacher-page-eyebrow,
+body[data-page="teacher"] .evidence-eyebrow,
+body[data-page="teacher"] .home-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #2570aa;
+  background: var(--teacher-blue);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body[data-page="teacher"] .teacher-page-eyebrow svg,
+body[data-page="teacher"] .evidence-eyebrow svg,
+body[data-page="teacher"] .home-eyebrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+body[data-page="teacher"] .primary-button,
+body[data-page="teacher"] .small-button,
+body[data-page="teacher"] .secondary-button,
+body[data-page="teacher"] .link-button,
+body[data-page="teacher"] [class*="export"] button,
+body[data-page="teacher"] [class*="actions"] > button:not(.icon-button):not(.notification-button) {
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .primary-button {
+  border-color: var(--teacher-primary);
+  color: #fff;
+  background: var(--teacher-primary);
+  box-shadow: 0 6px 14px rgba(31, 111, 235, 0.18);
+}
+
+body[data-page="teacher"] .primary-button:hover {
+  border-color: var(--teacher-primary-hover);
+  background: var(--teacher-primary-hover);
+  transform: translateY(-1px);
+}
+
+body[data-page="teacher"] .export-button,
+body[data-page="teacher"] .home-hero-actions .primary-button,
+body[data-page="teacher"] .home-update-tabs button.active,
+body[data-page="teacher"] .evidence-export-actions button:first-child {
+  border-color: var(--teacher-primary);
+  background: var(--teacher-primary);
+  box-shadow: 0 6px 14px rgba(31, 111, 235, 0.16);
+}
+
+body[data-page="teacher"] .export-button:hover,
+body[data-page="teacher"] .home-hero-actions .primary-button:hover,
+body[data-page="teacher"] .home-update-tabs button.active:hover,
+body[data-page="teacher"] .evidence-export-actions button:first-child:hover {
+  border-color: var(--teacher-primary-hover);
+  background: var(--teacher-primary-hover);
+}
+
+body[data-page="teacher"] .small-button,
+body[data-page="teacher"] .secondary-button {
+  border: 1px solid var(--teacher-line);
+  color: var(--teacher-ink);
+  background: #fff;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .small-button:hover,
+body[data-page="teacher"] .secondary-button:hover {
+  border-color: #cbd8e2;
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] input,
+body[data-page="teacher"] select,
+body[data-page="teacher"] textarea {
+  border-color: var(--teacher-line);
+  border-radius: 9px;
+  color: var(--teacher-ink);
+  background: #fff;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] input:focus,
+body[data-page="teacher"] select:focus,
+body[data-page="teacher"] textarea:focus,
+body[data-page="teacher"] button:focus-visible,
+body[data-page="teacher"] a:focus-visible {
+  outline: 3px solid rgba(70, 152, 210, 0.26);
+  outline-offset: 2px;
+  border-color: #70a9cf;
+}
+
+body[data-page="teacher"] .panel-card,
+body[data-page="teacher"] .student-table-card,
+body[data-page="teacher"] .student-side-card,
+body[data-page="teacher"] .lesson-library-card,
+body[data-page="teacher"] .lesson-side-card,
+body[data-page="teacher"] .assessment-library-card,
+body[data-page="teacher"] .assessment-insight-card,
+body[data-page="teacher"] .report-card,
+body[data-page="teacher"] .settings-card,
+body[data-page="teacher"] .completion-dashboard-card,
+body[data-page="teacher"] .evaluation-card,
+body[data-page="teacher"] .evaluation-table-card,
+body[data-page="teacher"] .competition-management-panel,
+body[data-page="teacher"] .achievement-panel,
+body[data-page="teacher"] .profile-card,
+body[data-page="teacher"] .profile-table-card {
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  background: #fff;
+  box-shadow: var(--teacher-shadow);
+}
+
+body[data-page="teacher"] .panel-title-row,
+body[data-page="teacher"] .settings-card-heading,
+body[data-page="teacher"] .profile-card-header,
+body[data-page="teacher"] .report-card-header,
+body[data-page="teacher"] .achievement-panel-header {
+  min-height: 44px;
+  margin: -1px -1px 14px;
+  padding: 10px 13px;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius) var(--teacher-radius) 0 0;
+  background-color: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.46) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] .panel-title-row h2,
+body[data-page="teacher"] .settings-card-heading h2,
+body[data-page="teacher"] .report-card-header h2,
+body[data-page="teacher"] .achievement-panel-header h2 {
+  color: var(--teacher-ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Reference-style metric cards used across every teacher view. */
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  min-height: 138px;
+  padding: 48px 14px 13px;
+  overflow: hidden;
+  border: 1px solid #d7e0e7;
+  border-radius: var(--teacher-radius);
+  background-color: var(--teacher-blue);
+  background-image: repeating-linear-gradient(118deg, rgba(255,255,255,.55) 0 2px, transparent 2px 7px);
+  box-shadow: 0 2px 5px rgba(17, 19, 24, 0.06);
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card)::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 37px;
+  z-index: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card)::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 41px 4px 4px;
+  border: 1px solid #dde4e9;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(17, 19, 24, 0.05);
+  pointer-events: none;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) > div {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) > :is(span, .stat-icon) {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  right: 9px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  color: #516272;
+  background: rgba(255,255,255,.58);
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) > :is(span, .stat-icon) svg {
+  width: 15px;
+  height: 15px;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) p {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  left: 13px;
+  max-width: calc(100% - 52px);
+  margin: 0;
+  color: var(--teacher-ink-soft);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) strong {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--teacher-ink);
+  font-size: clamp(23px, 2vw, 30px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) small {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  color: var(--teacher-muted);
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+/* Home metrics use real body wrappers, matching the nested card in the reference. */
+body[data-page="teacher"] .teacher-home-metrics .stat-card {
+  --metric-tone: var(--teacher-primary-soft);
+  --metric-fill: rgba(31, 111, 235, 0.12);
+  --metric-shell: var(--teacher-blue);
+  --metric-border: #d5e4fa;
+  border-color: var(--metric-border);
+  background-color: var(--metric-shell);
+  background-image: repeating-linear-gradient(118deg, rgba(255,255,255,.55) 0 2px, transparent 2px 7px);
+  box-shadow: 0 2px 5px rgba(17, 19, 24, 0.06);
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card:nth-child(2) {
+  --metric-tone: #2f9a73;
+  --metric-fill: rgba(47, 154, 115, 0.14);
+  --metric-shell: #edf9f4;
+  --metric-border: #cfe8dc;
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card:nth-child(3) {
+  --metric-tone: #df684d;
+  --metric-fill: rgba(223, 104, 77, 0.14);
+  --metric-shell: #fff2ee;
+  --metric-border: #f0d5cd;
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card:nth-child(4) {
+  --metric-tone: #8668bd;
+  --metric-fill: rgba(134, 104, 189, 0.14);
+  --metric-shell: #f5f1fc;
+  --metric-border: #ded5ef;
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card-heading {
+  border-bottom: 0;
+  background: transparent;
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card-heading .stat-icon,
+body[data-page="teacher"] .teacher-home-metrics .metric-sparkline polyline {
+  color: var(--metric-tone) !important;
+  stroke: var(--metric-tone);
+}
+
+body[data-page="teacher"] .teacher-home-metrics .metric-sparkline .sparkline-area {
+  fill: var(--metric-fill);
+}
+
+body[data-page="teacher"] .teacher-home-metrics .stat-card-body {
+  min-height: 88px;
+  margin: 4px;
+  padding: 12px 10px 11px 12px;
+  border: 1px solid #dde4e9;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(17, 19, 24, 0.05);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article {
+  --evidence-line: #5799bd;
+  --evidence-fill: rgba(87, 153, 189, 0.14);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article:nth-child(2) {
+  --evidence-line: #2f9a73;
+  --evidence-fill: rgba(47, 154, 115, 0.14);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article:nth-child(3) {
+  --evidence-line: #8668bd;
+  --evidence-fill: rgba(134, 104, 189, 0.14);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article:nth-child(4) {
+  --evidence-line: #d2a52f;
+  --evidence-fill: rgba(210, 165, 47, 0.15);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article:nth-child(5) {
+  --evidence-line: #7b8793;
+  --evidence-fill: rgba(123, 135, 147, 0.14);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article:nth-child(6) {
+  --evidence-line: #e17d3f;
+  --evidence-fill: rgba(225, 125, 63, 0.14);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-sparkline polyline {
+  stroke: var(--evidence-line);
+  stroke-width: 1.8;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-sparkline .sparkline-area {
+  fill: var(--evidence-fill);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring,
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring.warn {
+  --ring-color: var(--teacher-primary-soft);
+  --ring-track: var(--teacher-blue-strong);
+  position: relative;
+  width: 82px;
+  height: 82px;
+  min-width: 82px;
+  isolation: isolate;
+  overflow: hidden;
+  background: conic-gradient(from -90deg, var(--ring-color) calc(var(--mastery) * 1%), var(--ring-track) 0);
+  border: 1px solid #c8dcfa;
+  box-shadow: 0 6px 18px rgba(31, 111, 235, 0.11), inset 0 0 0 1px rgba(255,255,255,.78);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring.good {
+  --ring-color: var(--teacher-primary-soft);
+  --ring-track: var(--teacher-blue-strong);
+  border-color: #c8dcfa;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 8px;
+  border: 1px solid #d9e7fb;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 34%, #fff 0, #fbfdff 72%, #f2f7fa 100%);
+  box-shadow: 0 2px 8px rgba(17,19,24,.08);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring strong,
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring span {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring strong {
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .mastery-ring span {
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-mastery-overview {
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-mastery-overview > div:last-child {
+  align-self: center;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .wide-progress,
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-growth-bar {
+  background: var(--teacher-blue-strong);
+  box-shadow: inset 0 0 0 1px rgba(31, 111, 235, 0.07);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .wide-progress {
+  height: 8px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-growth-bar {
+  height: 10px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .wide-progress span {
+  background: var(--teacher-primary-soft);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-growth-bar span:not(.post) {
+  background: var(--teacher-primary-muted);
+  opacity: 1;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-growth-bar span.post {
+  background: var(--teacher-primary-soft);
+  opacity: .92;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-line-chart {
+  min-height: 112px;
+  padding: 8px 12px;
+  border-color: #d5e4fa;
+  background: linear-gradient(180deg, #fbfdff 0%, var(--teacher-blue) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-line-chart svg {
+  height: 112px;
+  max-height: 112px;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .chart-grid-line {
+  stroke: #d7e6fa;
+  stroke-width: .8;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .chart-area {
+  fill: rgba(31, 111, 235, 0.11);
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .chart-line {
+  stroke: var(--teacher-primary-soft);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sparkline-draw 900ms 120ms ease-out forwards;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="overview"] .chart-point.pre,
+body[data-page="teacher"] .teacher-section[data-view="overview"] .chart-point.post {
+  fill: #fff;
+  stroke: var(--teacher-primary-soft);
+  stroke-width: 2.5;
+}
+
+body[data-page="teacher"] .student-management-header,
+body[data-page="teacher"] .lesson-metric-grid,
+body[data-page="teacher"] .assessment-metric-grid,
+body[data-page="teacher"] .report-metric-grid,
+body[data-page="teacher"] .teacher-leaderboard-metrics,
+body[data-page="teacher"] .achievement-summary-grid {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+body[data-page="teacher"] .student-toolbar,
+body[data-page="teacher"] .lesson-toolbar,
+body[data-page="teacher"] .assessment-toolbar,
+body[data-page="teacher"] .report-toolbar,
+body[data-page="teacher"] .leaderboard-toolbar,
+body[data-page="teacher"] .achievement-toolbar,
+body[data-page="teacher"] .evaluation-actions {
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--teacher-line);
+  border-radius: 11px;
+  background: #fbfcfd;
+}
+
+body[data-page="teacher"] :is(.student-toolbar, .lesson-toolbar, .assessment-toolbar, .report-toolbar, .leaderboard-toolbar, .achievement-toolbar) input,
+body[data-page="teacher"] :is(.student-toolbar, .lesson-toolbar, .assessment-toolbar, .report-toolbar, .leaderboard-toolbar, .achievement-toolbar) select {
+  min-height: 40px;
+  font-size: 10px;
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--teacher-ink-soft);
+  font-size: 10px;
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) thead {
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) th {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--teacher-line);
+  color: #596777;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--teacher-line-soft);
+  vertical-align: middle;
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) tbody tr {
+  transition: background 140ms ease;
+}
+
+body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table, .profile-table-wrap table) tbody tr:hover {
+  background: #f7fbfe;
+}
+
+body[data-page="teacher"] .student-management-table-wrap,
+body[data-page="teacher"] .assessment-table-wrap,
+body[data-page="teacher"] .leaderboard-table-wrap,
+body[data-page="teacher"] .evaluation-table-wrap,
+body[data-page="teacher"] .profile-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--teacher-line);
+  border-radius: 11px;
+}
+
+body[data-page="teacher"] .status-pill,
+body[data-page="teacher"] .assessment-status-pill,
+body[data-page="teacher"] [class*="status-pill"] {
+  border: 1px solid #d4e0e8;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+body[data-page="teacher"] :is(.published, .approved, .submitted, .complete, .active):is(.status-pill, .assessment-status-pill),
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).published,
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).approved,
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).submitted {
+  color: var(--teacher-green);
+  border-color: #cde8dd;
+  background: var(--teacher-green-bg);
+}
+
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).pending,
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).draft,
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).not_started {
+  color: var(--teacher-amber);
+  border-color: #f0ddba;
+  background: var(--teacher-amber-bg);
+}
+
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).rejected,
+body[data-page="teacher"] :is(.status-pill, .assessment-status-pill).inactive {
+  color: var(--teacher-red);
+  border-color: #f1cfd2;
+  background: var(--teacher-red-bg);
+}
+
+/* View layouts */
+body[data-page="teacher"] .student-management-layout,
+body[data-page="teacher"] .lesson-dashboard-layout,
+body[data-page="teacher"] .assessment-dashboard-layout,
+body[data-page="teacher"] .report-dashboard-layout {
+  gap: 14px;
+}
+
+body[data-page="teacher"] .quarter-form-card,
+body[data-page="teacher"] .quarter-card,
+body[data-page="teacher"] .upload-panel,
+body[data-page="teacher"] .calendar-panel {
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  background: #fff;
+  box-shadow: var(--teacher-shadow);
+}
+
+body[data-page="teacher"] .quarter-form-card > h2,
+body[data-page="teacher"] .upload-panel > h2,
+body[data-page="teacher"] .calendar-panel > h2,
+body[data-page="teacher"] .form-panel > h2,
+body[data-page="teacher"] .lesson-side-card > h2,
+body[data-page="teacher"] [data-view="quarters"] .panel-card > h2 {
+  margin: -1px -1px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius) var(--teacher-radius) 0 0;
+  background: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.5) 0 2px, transparent 2px 9px);
+  font-size: 13px;
+}
+
+body[data-page="teacher"] .lesson-library-header,
+body[data-page="teacher"] .assessment-library-header {
+  min-height: 48px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--teacher-line);
+  background-color: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.52) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] :is(.lesson-library-header, .assessment-library-header) h1 {
+  color: var(--teacher-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Reports heading and filters mirror the clean Home toolbar treatment. */
+body[data-page="teacher"] .reports-header.teacher-page-header {
+  align-items: center;
+  gap: 24px;
+  min-height: 72px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+
+body[data-page="teacher"] .reports-header > div:first-child {
+  min-width: 280px;
+}
+
+body[data-page="teacher"] .reports-header h1 {
+  margin-top: 0;
+}
+
+body[data-page="teacher"] .reports-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(128px, 156px));
+  align-items: end;
+  justify-content: end;
+  gap: 8px;
+  width: auto;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .reports-toolbar label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--teacher-muted);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+body[data-page="teacher"] .reports-toolbar input,
+body[data-page="teacher"] .reports-toolbar select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--teacher-line);
+  border-radius: 9px;
+  color: var(--teacher-ink);
+  background: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .reports-toolbar input:hover,
+body[data-page="teacher"] .reports-toolbar select:hover {
+  border-color: #c5d7e4;
+  background: #fbfdff;
+}
+
+body[data-page="teacher"] .lesson-table-heading {
+  color: #5d6977;
+  border-color: var(--teacher-line);
+  background: #f7fafc;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .lesson-row {
+  border-color: var(--teacher-line-soft);
+  background: #fff;
+}
+
+body[data-page="teacher"] .lesson-row:hover {
+  background: #f7fbfe;
+}
+
+body[data-page="teacher"] .lesson-drop-zone {
+  border: 1px dashed #bdd5e6;
+  border-radius: 11px;
+  color: var(--teacher-muted);
+  background: #f7fbfe;
+}
+
+body[data-page="teacher"] .lesson-drop-zone:hover {
+  border-color: #78a9ca;
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .student-table-footer,
+body[data-page="teacher"] .lesson-table-footer,
+body[data-page="teacher"] .assessment-table-footer,
+body[data-page="teacher"] .achievement-list-footer {
+  min-height: 48px;
+  padding: 10px 13px;
+  border-top: 1px solid var(--teacher-line);
+  color: var(--teacher-muted);
+  background: #fbfcfd;
+  font-size: 9px;
+}
+
+body[data-page="teacher"] .student-pagination button,
+body[data-page="teacher"] .achievement-pagination button {
+  min-width: 32px;
+  min-height: 32px;
+  border: 1px solid var(--teacher-line);
+  border-radius: 8px;
+  color: var(--teacher-ink);
+  background: #fff;
+}
+
+body[data-page="teacher"] .student-pagination button.active,
+body[data-page="teacher"] .achievement-pagination button.active {
+  color: #fff;
+  border-color: var(--teacher-primary);
+  background: var(--teacher-primary);
+}
+
+/* Full student profile */
+body[data-page="teacher"] .student-profile-shell {
+  display: grid;
+  gap: 14px;
+}
+
+body[data-page="teacher"] .student-profile-hero {
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  color: var(--teacher-ink);
+  background: #fff;
+  box-shadow: var(--teacher-shadow);
+}
+
+body[data-page="teacher"] .student-profile-top-actions {
+  margin: -14px -14px 14px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.52) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] .student-profile-avatar {
+  color: #fff;
+  border: 3px solid #fff;
+  background: var(--teacher-ink);
+  box-shadow: 0 0 0 1px var(--teacher-line);
+}
+
+body[data-page="teacher"] .student-profile-identity h1 {
+  color: var(--teacher-ink);
+  letter-spacing: -0.04em;
+}
+
+body[data-page="teacher"] .student-profile-tags,
+body[data-page="teacher"] .student-profile-meta,
+body[data-page="teacher"] .student-profile-actions {
+  color: var(--teacher-muted);
+}
+
+body[data-page="teacher"] .student-profile-meta article,
+body[data-page="teacher"] .student-profile-metrics article,
+body[data-page="teacher"] .student-weak-card,
+body[data-page="teacher"] .prepost-grid article {
+  border: 1px solid var(--teacher-line);
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .student-profile-metrics {
+  gap: 10px;
+}
+
+body[data-page="teacher"] .student-profile-metrics article {
+  position: relative;
+  min-height: 108px;
+  padding: 43px 12px 12px;
+  overflow: hidden;
+}
+
+body[data-page="teacher"] .student-profile-metrics article::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 34px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .student-profile-metrics article > i {
+  position: absolute;
+  z-index: 1;
+  top: 9px;
+  right: 10px;
+  width: 15px;
+  height: 15px;
+  color: #526576;
+}
+
+body[data-page="teacher"] .student-profile-metrics article > span {
+  position: absolute;
+  z-index: 1;
+  top: 9px;
+  left: 11px;
+  max-width: calc(100% - 38px);
+  color: var(--teacher-ink-soft);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .student-profile-metrics article > strong {
+  color: var(--teacher-ink);
+  font-size: 22px;
+}
+
+body[data-page="teacher"] .student-weak-panel {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  background: #fff;
+  box-shadow: var(--teacher-shadow);
+}
+
+body[data-page="teacher"] .student-weak-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.5) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] .student-weak-grid {
+  padding: 13px;
+}
+
+body[data-page="teacher"] .profile-card-heading {
+  min-height: 44px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .profile-info-card > h2,
+body[data-page="teacher"] :is(.profile-module-mastery, .profile-prepost-card) > h2 {
+  margin: -1px -1px 13px;
+  padding: 11px 13px;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius) var(--teacher-radius) 0 0;
+  background: var(--teacher-blue);
+  font-size: 13px;
+}
+
+/* Reports, evaluation, achievements, competitions, and settings */
+body[data-page="teacher"] .completion-overview-card {
+  position: relative;
+  min-height: 126px;
+  padding: 46px 13px 12px;
+  overflow: hidden;
+  border: 1px solid var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  background: #fff;
+}
+
+body[data-page="teacher"] .completion-overview-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 36px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .completion-overview-card > .stat-icon {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  right: 9px;
+  width: 23px;
+  height: 23px;
+  color: #526576;
+  background: transparent;
+}
+
+body[data-page="teacher"] .completion-overview-card p {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  left: 12px;
+  margin: 0;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+body[data-page="teacher"] .completion-overview-card strong {
+  color: var(--teacher-ink);
+  font-size: 25px;
+}
+
+body[data-page="teacher"] .completion-breakdown-item,
+body[data-page="teacher"] .completion-row,
+body[data-page="teacher"] .evaluation-setup-card,
+body[data-page="teacher"] .evaluation-gain-card,
+body[data-page="teacher"] .student-awards-list > article,
+body[data-page="teacher"] .achievement-history-row {
+  border: 1px solid var(--teacher-line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .evaluation-tabs,
+body[data-page="teacher"] .achievement-tab-bar {
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 14px;
+  padding: 3px;
+  border: 1px solid var(--teacher-line);
+  border-radius: 10px;
+  background: #f7f9fb;
+}
+
+body[data-page="teacher"] :is(.evaluation-tabs, .achievement-tab-bar) button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--teacher-muted);
+  background: transparent;
+  font-size: 10px;
+}
+
+body[data-page="teacher"] :is(.evaluation-tabs, .achievement-tab-bar) button.active {
+  color: #fff;
+  background: var(--teacher-primary);
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .settings-grid {
+  gap: 14px;
+}
+
+body[data-page="teacher"] .settings-card {
+  padding: 14px;
+}
+
+body[data-page="teacher"] .settings-card-heading {
+  margin: -15px -15px 14px;
+}
+
+body[data-page="teacher"] .settings-card-icon {
+  color: #526576;
+  background: rgba(255,255,255,.62);
+}
+
+body[data-page="teacher"] .settings-toggle {
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid var(--teacher-line-soft);
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+body[data-page="teacher"] .competition-management-panel,
+body[data-page="teacher"] .leaderboard-filter-panel,
+body[data-page="teacher"] .student-awards-table-card,
+body[data-page="teacher"] .certificate-template-library,
+body[data-page="teacher"] .badge-design-library {
+  overflow: hidden;
+}
+
+body[data-page="teacher"] .competition-card,
+body[data-page="teacher"] .badge-definition-card,
+body[data-page="teacher"] .certificate-template-option {
+  border: 1px solid var(--teacher-line);
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: none;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+body[data-page="teacher"] :is(.competition-card, .badge-definition-card, .certificate-template-option):hover {
+  border-color: #bfd5e4;
+  transform: translateY(-2px);
+}
+
+body[data-page="teacher"] .mobile-nav-toggle {
+  color: var(--teacher-ink);
+  border-color: var(--teacher-line);
+  background: #fff;
+}
+
+body[data-page="teacher"] .report-chart,
+body[data-page="teacher"] .evidence-card,
+body[data-page="teacher"] .evaluation-dashboard > section,
+body[data-page="teacher"] .competition-card,
+body[data-page="teacher"] .badge-card {
+  border-color: var(--teacher-line);
+  border-radius: var(--teacher-radius);
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .wide-progress,
+body[data-page="teacher"] [class*="score-bar"],
+body[data-page="teacher"] [class*="progress-track"] {
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .wide-progress > span,
+body[data-page="teacher"] [class*="score-bar"] > span,
+body[data-page="teacher"] [class*="progress-track"] > span {
+  background: #65a7cf;
+}
+
+body[data-page="teacher"] .empty-text,
+body[data-page="teacher"] .empty-table-cell,
+body[data-page="teacher"] [class*="empty-state"],
+body[data-page="teacher"] .notification-empty {
+  color: var(--teacher-muted);
+}
+
+body[data-page="teacher"] .empty-table-cell {
+  padding: 42px 20px !important;
+  text-align: center;
+}
+
+body[data-page="teacher"] .empty-table-cell strong,
+body[data-page="teacher"] .empty-table-cell span {
+  display: block;
+  margin: 3px auto;
+}
+
+/* Secondary surfaces */
+body[data-page="teacher"] .notification-panel {
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(390px, calc(100vw - 28px));
+  overflow: hidden;
+  border: 1px solid var(--teacher-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(17, 19, 24, 0.16);
+  animation: teacher-pop-in 180ms ease-out both;
+}
+
+body[data-page="teacher"] .notification-panel-header {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.5) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] .notification-item {
+  min-height: 68px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--teacher-line-soft);
+  background: #fff;
+}
+
+body[data-page="teacher"] .notification-item:hover,
+body[data-page="teacher"] .notification-item.unread {
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .notification-icon {
+  border: 1px solid #d6e6f2;
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .student-drawer {
+  z-index: 80;
+}
+
+body[data-page="teacher"] .student-drawer-backdrop {
+  background: rgba(17, 19, 24, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+body[data-page="teacher"] .student-drawer-panel {
+  width: min(680px, 100vw);
+  border-left: 1px solid var(--teacher-line);
+  background: #fff;
+  box-shadow: -20px 0 55px rgba(17, 19, 24, 0.14);
+  transition: transform 260ms cubic-bezier(.2,.75,.25,1);
+}
+
+body[data-page="teacher"] .lesson-preview-panel {
+  width: min(940px, 100vw);
+}
+
+body[data-page="teacher"] .student-drawer-panel > header,
+body[data-page="teacher"] .drawer-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--teacher-line);
+  background: var(--teacher-blue);
+  background-image: repeating-linear-gradient(120deg, rgba(255,255,255,.5) 0 2px, transparent 2px 9px);
+}
+
+body[data-page="teacher"] .drawer-actions {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 18px;
+  border-top: 1px solid var(--teacher-line);
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(10px);
+}
+
+body[data-page="teacher"] .feedback-modal-overlay {
+  z-index: 100;
+  padding: 20px;
+  background: rgba(17, 19, 24, 0.46);
+  backdrop-filter: blur(3px);
+}
+
+body[data-page="teacher"] .feedback-modal {
+  width: min(520px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--teacher-line);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgba(17, 19, 24, 0.22);
+  animation: teacher-modal-in 220ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+body[data-page="teacher"] .management-modal,
+body[data-page="teacher"] .certificate-modal {
+  width: min(720px, 100%);
+  max-height: min(86vh, 860px);
+  overflow-y: auto;
+}
+
+body[data-page="teacher"] .feedback-modal-main {
+  padding: 20px;
+}
+
+body[data-page="teacher"] .feedback-modal-icon {
+  color: #356e94;
+  background: var(--teacher-blue);
+}
+
+body[data-page="teacher"] .feedback-modal-actions {
+  padding: 12px 20px;
+  border-top: 1px solid var(--teacher-line);
+  background: #fbfcfd;
+}
+
+body[data-page="teacher"] .toast-container {
+  z-index: 130;
+}
+
+body[data-page="teacher"] .app-toast {
+  border: 1px solid var(--teacher-line);
+  border-radius: 12px;
+  color: var(--teacher-ink);
+  background: #fff;
+  box-shadow: 0 14px 38px rgba(17,19,24,.16);
+}
+
+/* Loading affordances stay quiet and consistent with the reference. */
+body[data-page="teacher"] .loading,
+body[data-page="teacher"] [aria-busy="true"] {
+  cursor: progress;
+}
+
+body[data-page="teacher"] .skeleton,
+body[data-page="teacher"] [class*="skeleton"] {
+  background: linear-gradient(90deg, #edf3f7 25%, #f8fbfd 45%, #edf3f7 65%);
+  background-size: 240% 100%;
+  animation: teacher-shimmer 1.3s linear infinite;
+}
+
+@keyframes teacher-view-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes teacher-pop-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes teacher-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes teacher-shimmer {
+  to { background-position: -240% 0; }
+}
+
+@media (max-width: 1180px) {
+  body[data-page="teacher"] .app-sidebar { width: 220px; }
+  body[data-page="teacher"] .app-main { margin-left: 220px; }
+  body[data-page="teacher"] .teacher-section { padding-inline: 18px; }
+
+  body[data-page="teacher"] :is(.student-management-header, .lesson-metric-grid, .assessment-metric-grid, .report-metric-grid, .teacher-leaderboard-metrics, .achievement-summary-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-page="teacher"] :is(.student-management-layout, .lesson-dashboard-layout, .assessment-dashboard-layout, .report-dashboard-layout) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-page="teacher"] .student-management-grid,
+  body[data-page="teacher"] .lesson-dashboard-grid,
+  body[data-page="teacher"] .assessment-insight-grid,
+  body[data-page="teacher"] .report-dashboard-grid,
+  body[data-page="teacher"] .student-profile-priority-grid,
+  body[data-page="teacher"] .student-weak-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-page="teacher"] .student-right-rail,
+  body[data-page="teacher"] .lesson-side-rail {
+    position: static;
+  }
+
+  body[data-page="teacher"] .reports-header.teacher-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  body[data-page="teacher"] .reports-toolbar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  body[data-page="teacher"] .app-sidebar {
+    width: min(286px, 88vw);
+    transform: translateX(-105%);
+    transition: transform 240ms cubic-bezier(.2,.75,.25,1);
+    box-shadow: 18px 0 45px rgba(17,19,24,.12);
+  }
+
+  body[data-page="teacher"].mobile-nav-open .app-sidebar,
+  body[data-page="teacher"] .app-sidebar.open {
+    transform: translateX(0);
+  }
+
+  body[data-page="teacher"] .app-main { margin-left: 0; }
+  body[data-page="teacher"] .mobile-nav-toggle { display: grid; }
+  body[data-page="teacher"] .sidebar-collapse-toggle { display: none; }
+  body[data-page="teacher"] .app-topbar { padding-left: 64px; }
+  body[data-page="teacher"] .teacher-section { padding: 22px 16px 34px; }
+
+  body[data-page="teacher"] .teacher-page-header,
+  body[data-page="teacher"] .dashboard-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body[data-page="teacher"] .teacher-page-header > :last-child:not(:first-child),
+  body[data-page="teacher"] .dashboard-page-header > :last-child:not(:first-child) {
+    width: 100%;
+  }
+
+  body[data-page="teacher"] .reports-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-toolbar {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-toolbar label {
+    min-width: 100%;
+    flex-basis: 100%;
+  }
+
+  body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header .evidence-export-actions {
+    margin-left: auto;
+  }
+
+  body[data-page="teacher"] .app-topbar {
+    height: 60px;
+    min-height: 60px;
+    padding-right: 10px;
+  }
+
+  body[data-page="teacher"] .topbar-breadcrumb span { display: none; }
+  body[data-page="teacher"] .topbar-breadcrumb { gap: 7px; }
+  body[data-page="teacher"] .teacher-section { padding-inline: 12px; }
+
+  body[data-page="teacher"] :is(.student-management-header, .lesson-metric-grid, .assessment-metric-grid, .report-metric-grid, .teacher-leaderboard-metrics, .achievement-summary-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-page="teacher"] :is(.student-toolbar, .lesson-toolbar, .assessment-toolbar, .report-toolbar, .leaderboard-toolbar, .achievement-toolbar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-page="teacher"] :is(.student-toolbar, .lesson-toolbar, .assessment-toolbar, .report-toolbar, .leaderboard-toolbar, .achievement-toolbar) > * {
+    width: 100%;
+    max-width: none;
+  }
+
+  body[data-page="teacher"] .student-drawer-panel,
+  body[data-page="teacher"] .lesson-preview-panel {
+    width: 100vw;
+  }
+
+  body[data-page="teacher"] .feedback-modal-overlay { padding: 10px; }
+  body[data-page="teacher"] .feedback-modal-main { padding: 16px; }
+
+  body[data-page="teacher"] button,
+  body[data-page="teacher"] [role="button"],
+  body[data-page="teacher"] select,
+  body[data-page="teacher"] input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+
+  body[data-page="teacher"] .student-profile-identity,
+  body[data-page="teacher"] .student-profile-top-actions,
+  body[data-page="teacher"] .student-profile-actions,
+  body[data-page="teacher"] .student-profile-meta,
+  body[data-page="teacher"] .student-profile-metrics,
+  body[data-page="teacher"] .completion-overview-row,
+  body[data-page="teacher"] .completion-breakdown-row,
+  body[data-page="teacher"] .evaluation-metric-grid,
+  body[data-page="teacher"] .evaluation-board-grid,
+  body[data-page="teacher"] .settings-grid,
+  body[data-page="teacher"] .dashboard-grid.two-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-page="teacher"] .evaluation-tabs,
+  body[data-page="teacher"] .achievement-tab-bar {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  body[data-page="teacher"] :is(.evaluation-tabs, .achievement-tab-bar) button {
+    flex: 1 0 max-content;
+    min-height: 44px;
+  }
+
+  /* Convert the four data-heavy teacher tables into labeled cards. */
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) {
+    display: block;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) tbody {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--teacher-line);
+    border-radius: 11px;
+    background: #fff;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) td {
+    display: grid;
+    grid-template-columns: minmax(105px, 39%) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 43px;
+    padding: 9px 11px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) td::before {
+    color: var(--teacher-muted);
+    font-size: 9px;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  body[data-page="teacher"] .student-management-table td:nth-child(1)::before { content: "Student"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(2)::before { content: "Grade"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(3)::before { content: "Lessons"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(4)::before { content: "Average score"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(5)::before { content: "Badges"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(6)::before { content: "Certificates"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(7)::before { content: "Last active"; }
+  body[data-page="teacher"] .student-management-table td:nth-child(8)::before { content: "Status / actions"; }
+
+  body[data-page="teacher"] .assessment-table td:nth-child(1)::before { content: "Assessment"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(2)::before { content: "Topic"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(3)::before { content: "Type"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(4)::before { content: "Due date"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(5)::before { content: "Submitted"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(6)::before { content: "Average"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(7)::before { content: "Status"; }
+  body[data-page="teacher"] .assessment-table td:nth-child(8)::before { content: "Actions"; }
+
+  body[data-page="teacher"] .leaderboard-table td:nth-child(1)::before { content: "Rank"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(2)::before { content: "Student"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(3)::before { content: "Simulation"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(4)::before { content: "Score"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(5)::before { content: "Time"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(6)::before { content: "Mistakes"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(7)::before { content: "Attempts"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(8)::before { content: "Last attempt"; }
+  body[data-page="teacher"] .leaderboard-table td:nth-child(9)::before { content: "Status"; }
+
+  body[data-page="teacher"] .evaluation-table td:nth-child(1)::before { content: "Student"; }
+  body[data-page="teacher"] .evaluation-table td:nth-child(2)::before { content: "Grade"; }
+  body[data-page="teacher"] .evaluation-table td:nth-child(3)::before { content: "Pre-assessment"; }
+  body[data-page="teacher"] .evaluation-table td:nth-child(4)::before { content: "Post-assessment"; }
+  body[data-page="teacher"] .evaluation-table td:nth-child(5)::before { content: "Change"; }
+  body[data-page="teacher"] .evaluation-table td:nth-child(6)::before { content: "Status"; }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) .empty-table-cell {
+    display: block;
+    text-align: center;
+  }
+
+  body[data-page="teacher"] :is(.student-management-table, .assessment-table, .leaderboard-table, .evaluation-table) .empty-table-cell::before {
+    content: none;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) .profile-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) table,
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--teacher-line);
+    border-radius: 10px;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) td {
+    display: grid;
+    grid-template-columns: minmax(105px, 39%) minmax(0, 1fr);
+    gap: 10px;
+    padding: 9px 11px;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) td::before {
+    color: var(--teacher-muted);
+    font-size: 9px;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  body[data-page="teacher"] #profileLessonReport td:nth-child(1)::before { content: "Lesson"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(2)::before { content: "Module"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(3)::before { content: "Type"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(4)::before { content: "Progress"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(5)::before { content: "Status"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(6)::before { content: "Latest score"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(7)::before { content: "Started"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(8)::before { content: "Completed"; }
+  body[data-page="teacher"] #profileLessonReport td:nth-child(9)::before { content: "Updated"; }
+
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(1)::before { content: "Assessment"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(2)::before { content: "Type"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(3)::before { content: "Score"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(4)::before { content: "Correct"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(5)::before { content: "Total points"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(6)::before { content: "Time spent"; }
+  body[data-page="teacher"] #profileAssessmentReport td:nth-child(7)::before { content: "Submitted"; }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) .empty-cell {
+    display: block;
+    text-align: center;
+  }
+
+  body[data-page="teacher"] :is(#profileLessonReport, #profileAssessmentReport) .empty-cell::before {
+    content: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="teacher"] *,
+  body[data-page="teacher"] *::before,
+  body[data-page="teacher"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,86 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="menu-root" class="tw-root">
+        <ui:VisualElement name="main-screen" class="tw-screen tw-main-screen">
+            <ui:VisualElement name="main-left" class="main-left">
+                <ui:VisualElement class="brand">
+                    <ui:VisualElement class="brand-copy">
+                        <ui:VisualElement class="brand-title-row">
+                            <ui:Label text="TECHWISE" class="brand-title" />
+                            <ui:Label text="360" class="brand-title brand-title-blue" />
+                        </ui:VisualElement>
+                        <ui:Label text="Learn. Practice. Compete." class="brand-subtitle" />
+                        <ui:VisualElement class="brand-underline" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="login-card" class="card sync-card">
+                    <ui:Label text="Student Sync" class="card-title" />
+                    <ui:Label text="Log in with a student account to sync competition attempts." class="card-subtitle" />
+                    <ui:VisualElement class="divider" />
+                    <ui:TextField name="identifier-field" class="flat-field" />
+                    <ui:TextField name="password-field" class="flat-field" />
+                    <ui:VisualElement class="login-meta">
+                        <ui:Toggle name="remember-toggle" text="Remember me" class="remember-toggle" />
+                        <ui:Button name="forgot-button" text="Forgot password?" class="link-button" />
+                    </ui:VisualElement>
+                    <ui:Button name="login-button" text="Log In" class="primary-button" />
+                    <ui:VisualElement class="or-row">
+                        <ui:VisualElement class="divider" />
+                        <ui:Label text="OR" class="or-text" />
+                        <ui:VisualElement class="divider" />
+                    </ui:VisualElement>
+                    <ui:Button name="create-account-button" text="Create Student Account" class="outline-button" />
+                    <ui:Label name="login-status" class="status-line" />
+                </ui:VisualElement>
+                <ui:VisualElement name="signed-card" class="card sync-card">
+                    <ui:VisualElement class="row-between">
+                        <ui:Label name="welcome-title" text="Welcome back!" class="card-title" />
+                        <ui:Label name="sync-pill" text="SYNCED" class="sync-pill" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="divider" />
+                    <ui:Label name="signed-name" text="Logged in." class="info-line" />
+                    <ui:Label name="signed-activity" text="No active VR activities loaded." class="info-line" />
+                    <ui:Label name="signed-pending" text="Pending sync: 0" class="info-line" />
+                    <ui:VisualElement class="sync-actions">
+                        <ui:Button name="refresh-activities" class="tile-button" />
+                        <ui:Button name="signed-logout" class="tile-button danger-tile" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="card safety-card">
+                    <ui:Label text="OK" class="safety-icon" />
+                    <ui:VisualElement class="safety-copy">
+                        <ui:Label text="Your progress is safe." class="safety-title" />
+                        <ui:Label text="Competition data saves locally first, then syncs when you log in." class="safety-subtitle" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="main-right" class="main-right">
+                <ui:VisualElement class="selector-card">
+                    <ui:Label text="SELECT MODE" class="section-label" />
+                    <ui:VisualElement class="mode-row">
+                        <ui:Button name="desktop-mode" text="Desktop" class="mode-button" />
+                        <ui:Button name="vr-mode" text="VR" class="mode-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="menu-card">
+                    <ui:Label text="MAIN MENU" class="section-label" />
+                    <ui:Button name="start-item" class="menu-item" />
+                    <ui:Button name="practice-item" class="menu-item" />
+                    <ui:Button name="competition-item" class="menu-item" />
+                    <ui:Button name="controls-item" class="menu-item" />
+                    <ui:Button name="settings-item" class="menu-item" />
+                    <ui:Button name="quit-item" class="menu-item danger-item" />
+                    <ui:VisualElement name="account-section" class="account-section">
+                        <ui:Label text="ACCOUNT" class="section-label" />
+                        <ui:Button name="account-logout-item" class="menu-item danger-item" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="why-login" class="why-card">
+                        <ui:Label text="Why log in?" class="why-title" />
+                        <ui:Label text="Logging in syncs your competition attempts and updates leaderboards across your devices." class="why-text" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="controls-screen" class="tw-screen tw-controls-screen" />
+        <ui:VisualElement name="modal-overlay" class="modal-overlay" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechWise 360 | Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body data-page="register">
+  <main class="auth-shell create-shell">
+    <section class="brand-panel" aria-label="TechWise 360 account creation">
+      <a class="brand-mark" href="index.html">TechWise <span>360</span></a>
+      <h1>Create your<br>TechWise <span>360</span><br>account</h1>
+      <p>Learn ICT skills through structured lessons, guided practice, and immersive VR experiences.</p>
+      <div class="asset-stage">
+        <img class="asset pc-case" src="assets/pc-case.png" alt="">
+        <img class="asset fan" src="assets/fan.png" alt="">
+        <img class="asset gpu" src="assets/gpu.png" alt="">
+        <img class="asset vr" src="assets/vr-headset.png" alt="">
+        <img class="asset word" src="assets/word.png" alt="">
+        <img class="asset excel" src="assets/excel.png" alt="">
+        <img class="asset ppt" src="assets/powerpoint.png" alt="">
+      </div>
+      <div class="feature-strip" role="group" aria-label="TechWise features">
+        <div><i data-lucide="book-open-check"></i><span>Guided<br>Learning</span></div>
+        <div><i data-lucide="monitor"></i><span>Real-World<br>ICT Skills</span></div>
+        <div><i data-lucide="headphones"></i><span>Immersive<br>VR Lab</span></div>
+        <div><i data-lucide="trophy"></i><span>Track<br>Progress</span></div>
+      </div>
+    </section>
+
+    <section class="form-card create-card" aria-labelledby="create-title">
+      <div class="form-heading">
+        <h2 id="create-title">Create Account</h2>
+        <p>Enter your details to create your student account.</p>
+      </div>
+
+      <form id="registerForm" class="form-stack compact" novalidate>
+        <div class="field-grid">
+          <label class="field">
+            <span>First Name</span>
+            <span class="input-wrap">
+              <i data-lucide="user"></i>
+              <input name="first_name" type="text" autocomplete="given-name" placeholder="Enter first name" required>
+            </span>
+          </label>
+          <label class="field">
+            <span>Last Name</span>
+            <span class="input-wrap">
+              <i data-lucide="user"></i>
+              <input name="last_name" type="text" autocomplete="family-name" placeholder="Enter last name" required>
+            </span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Full Name</span>
+          <span class="input-wrap">
+            <i data-lucide="user-round"></i>
+            <input name="full_name" type="text" autocomplete="name" placeholder="Enter your full name" required>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Username</span>
+          <span class="input-wrap">
+            <i data-lucide="badge"></i>
+            <input name="username" type="text" autocomplete="username" placeholder="Create a username" required>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Email</span>
+          <span class="input-wrap">
+            <i data-lucide="mail"></i>
+            <input name="email" type="email" autocomplete="email" placeholder="Enter your email address" required>
+          </span>
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Home Town</span>
+            <span class="input-wrap">
+              <i data-lucide="map-pin"></i>
+              <input name="home_town" type="text" autocomplete="address-level2" placeholder="Enter home town" required>
+            </span>
+          </label>
+          <label class="field">
+            <span>Phone Number</span>
+            <span class="input-wrap">
+              <i data-lucide="phone"></i>
+              <input name="phone_number" type="tel" inputmode="numeric" autocomplete="tel" placeholder="09XXXXXXXXX" maxlength="11" pattern="09[0-9]{9}" required>
+            </span>
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Grade Level</span>
+            <span class="input-wrap select-wrap">
+              <i data-lucide="graduation-cap"></i>
+              <select name="grade_level" required>
+                <option value="">Select grade level</option>
+                <option>Grade 9</option>
+                <option>Grade 10</option>
+              </select>
+            </span>
+          </label>
+          <label class="field">
+            <span>Section</span>
+            <span class="input-wrap select-wrap">
+              <i data-lucide="users-round"></i>
+              <select name="section" required disabled>
+                <option value="">Select grade level first</option>
+              </select>
+            </span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Adviser</span>
+          <span class="input-wrap">
+            <i data-lucide="school"></i>
+            <input name="adviser" type="text" placeholder="Select grade level and section first" readonly required>
+          </span>
+        </label>
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="password">Password</label>
+            <span class="input-wrap">
+              <i data-lucide="lock"></i>
+              <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Create a password" minlength="10" required>
+              <button class="icon-button reveal-button" type="button" data-toggle-password="password" aria-label="Show password">
+                <i data-lucide="eye"></i>
+              </button>
+            </span>
+            <small class="field-hint">Use 10+ characters with uppercase, lowercase, number, and symbol.</small>
+          </div>
+          <div class="field">
+            <label for="confirmPassword">Confirm Password</label>
+            <span class="input-wrap">
+              <i data-lucide="lock"></i>
+              <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" placeholder="Confirm your password" required>
+              <button class="icon-button reveal-button" type="button" data-toggle-password="confirmPassword" aria-label="Show password">
+                <i data-lucide="eye"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <label class="check-label terms">
+          <input name="terms" type="checkbox" required>
+          <span>I agree to the <a href="#" class="text-link">Terms</a> and <a href="#" class="text-link">Privacy Policy</a>.</span>
+        </label>
+
+        <p id="registerMessage" class="status-message" role="status" aria-live="polite"></p>
+
+        <button class="primary-button" type="submit">Create account</button>
+        <a class="outline-button centered" href="index.html">
+          <i data-lucide="arrow-left"></i>
+          <span>Back to Login</span>
+        </a>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechWise 360 | Student Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body data-page="student">
+  <main class="app-shell">
+    <button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="studentSidebar">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="mobile-nav-backdrop" data-mobile-nav-close></div>
+    <aside id="studentSidebar" class="app-sidebar" aria-label="Student navigation">
+      <div class="sidebar-brand-block">
+        <span class="sidebar-logo-mark"><i data-lucide="box"></i></span>
+        <div>
+          <strong>TechWise 360</strong>
+          <small>Learn. Practice. Grow.</small>
+        </div>
+      </div>
+      <button class="nav-item active" type="button" data-student-view="home"><i data-lucide="home"></i><span>Home</span></button>
+      <button class="nav-item" type="button" data-student-view="lessons"><i data-lucide="book-open"></i><span>Learn</span></button>
+      <button class="nav-item" type="button" data-student-view="assessments"><i data-lucide="clipboard-check"></i><span>Assessments</span></button>
+      <button class="nav-item" type="button" data-student-view="progress"><i data-lucide="bar-chart-3"></i><span>Progress</span></button>
+      <button class="nav-item" type="button" data-student-view="leaderboard"><i data-lucide="bar-chart-3"></i><span>VR Leaderboard</span></button>
+      <button class="nav-item" type="button" data-student-view="achievements"><i data-lucide="trophy"></i><span>Achievements</span></button>
+      <button class="nav-item" type="button" data-student-view="profile"><i data-lucide="settings"></i><span>Settings</span></button>
+      <div class="sidebar-help-card">
+        <span><i data-lucide="book-open-check"></i></span>
+        <strong>Learning Tools</strong>
+        <small>Continue lessons, submit checks, and track progress.</small>
+      </div>
+    </aside>
+
+    <section class="app-main">
+      <header class="app-topbar">
+        <a class="brand-mark compact-brand" href="student-dashboard.html">TechWise <span>360</span></a>
+        <div class="topbar-profile">
+          <div class="notification-center" id="studentNotificationCenter">
+            <button id="studentNotificationButton" class="notification-button" type="button" aria-label="Open notifications" aria-expanded="false">
+              <i data-lucide="bell"></i>
+              <span id="studentNotificationBadge" class="notification-badge" hidden>0</span>
+            </button>
+            <section id="studentNotificationPanel" class="notification-panel" aria-label="Student notifications" hidden>
+              <div class="notification-panel-header">
+                <div>
+                  <strong>Notifications</strong>
+                  <span id="studentNotificationSummary">No unread updates</span>
+                </div>
+                <button id="markAllStudentNotificationsRead" class="link-button" type="button">Mark all read</button>
+              </div>
+              <div id="studentNotificationList" class="notification-list"></div>
+            </section>
+          </div>
+          <div id="studentTopAvatar" class="profile-badge"><i data-lucide="user-round"></i></div>
+          <div>
+            <strong id="studentTopName">Student</strong>
+            <span id="studentTopGrade">Grade Level</span>
+          </div>
+          <button id="logoutButton" class="icon-shell" type="button" aria-label="Logout">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
+      </header>
+
+      <p id="studentMessage" class="status-message dashboard-status" role="status" aria-live="polite"></p>
+
+      <section class="student-section active" data-view="home">
+        <div class="student-hero-row">
+          <section class="welcome-block">
+            <h1 id="studentGreeting">Welcome back!</h1>
+            <p id="studentQuarter">Ready to build your ICT skills today?</p>
+          </section>
+          <section class="achievement-strip">
+            <div><i data-lucide="award"></i><strong id="studentBadges">0</strong><span>Badges</span></div>
+            <div><i data-lucide="file-badge"></i><strong id="studentCertificates">0</strong><span>Certificates</span></div>
+            <div><i data-lucide="bar-chart-3"></i><strong id="studentRank">-</strong><span>VR Result</span></div>
+          </section>
+        </div>
+
+        <section class="quick-access">
+          <h2>Quick Access</h2>
+          <div id="quickAccessCards" class="quick-grid"></div>
+        </section>
+
+        <section id="studentEvaluationPrompt" class="student-evaluation-prompt" hidden></section>
+
+        <div class="student-home-grid">
+          <section class="panel-card student-next-action-card">
+            <div class="panel-title-row"><h2>Next Best Action</h2><span id="nextActionKind" class="soft-pill"><i data-lucide="sparkles"></i> Ready</span></div>
+            <div id="studentNextAction"></div>
+          </section>
+          <section class="panel-card mission-card">
+            <div class="panel-title-row"><h2>Today's Learning Task</h2><span class="soft-pill"><i data-lucide="clock"></i> Active</span></div>
+            <div id="dailyMission"></div>
+          </section>
+          <section class="panel-card student-skill-snapshot-card">
+            <div class="panel-title-row"><h2>Skill Snapshot</h2><button class="link-button" type="button" data-jump-student="progress">View Progress</button></div>
+            <div id="studentSkillSnapshot"></div>
+          </section>
+          <section class="panel-card progress-card">
+            <div class="panel-title-row"><h2>Progress Overview</h2><span id="progressWindow" class="link-label">Active Term</span></div>
+            <div class="gauge"><strong id="overallProgress">0%</strong><span>Overall Progress</span></div>
+            <div class="progress-stats">
+              <div><i data-lucide="book-open"></i><strong id="topicsCompleted">0</strong><span>Topics</span></div>
+              <div><i data-lucide="clock"></i><strong id="hoursLearned">0</strong><span>Hours</span></div>
+              <div><i data-lucide="file-text"></i><strong id="lessonsCompleted">0</strong><span>Done</span></div>
+              <div><i data-lucide="bar-chart-3"></i><strong id="avgScore">0%</strong><span>Avg Score</span></div>
+            </div>
+          </section>
+          <section class="panel-card student-due-reminders-card">
+            <div class="panel-title-row"><h2>Due Reminders</h2><button class="link-button" type="button" data-jump-student="assessments">Open Checks</button></div>
+            <div id="studentDueReminders"></div>
+          </section>
+          <section class="panel-card student-evidence-timeline-card">
+            <div class="panel-title-row"><h2>Learning Evidence</h2><button class="link-button" type="button" data-jump-student="progress">View All</button></div>
+            <div id="studentEvidenceTimeline"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="student-section" data-view="lessons">
+        <div class="section-heading learn-heading">
+          <div>
+            <h1>Modules and Lessons</h1>
+            <p>Open a module to see every lesson and practice prepared by your teacher.</p>
+          </div>
+        </div>
+        <div id="studentLessons" class="student-learn-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="lesson-player">
+        <div id="studentLessonPlayer" class="lesson-player-shell"></div>
+      </section>
+
+      <section class="student-section" data-view="assessments">
+        <div class="section-heading assessments-heading">
+          <div>
+            <h1>Assessments</h1>
+            <p>Track practice checks, formal assessments, scores, and topic progress.</p>
+          </div>
+        </div>
+        <div id="studentAssessmentsDashboard" class="student-assessments-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="progress">
+        <div class="section-heading progress-heading">
+          <div>
+            <h1>My Progress</h1>
+            <p>Track your learning journey and see how you're growing.</p>
+          </div>
+          <div class="progress-range-pill"><i data-lucide="calendar-days"></i><span id="studentProgressRange">Active Term</span><i data-lucide="chevron-down"></i></div>
+        </div>
+        <div id="studentProgressDashboard" class="student-progress-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="leaderboard">
+        <div id="studentLeaderboardDashboard" class="leaderboard-dashboard student-leaderboard-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="achievements">
+        <div id="studentAchievementsDashboard" class="student-achievements-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="evaluation">
+        <div class="section-heading">
+          <div>
+            <h1>Feedback Survey</h1>
+            <p>Share your experience with TechWise 360 while the survey is open.</p>
+          </div>
+        </div>
+        <div id="studentEvaluationSurvey" class="student-evaluation-survey"></div>
+      </section>
+
+      <section class="student-section" data-view="profile">
+        <div class="section-heading">
+          <div>
+            <h1>Profile</h1>
+            <p>Manage your profile picture and optional contact details.</p>
+          </div>
+        </div>
+        <div class="student-profile-editor-grid">
+          <section class="panel-card student-profile-photo-card">
+            <h2>Profile Picture</h2>
+            <div id="studentProfileAvatar" class="student-profile-editor-avatar"></div>
+            <label class="student-avatar-upload">
+              <input id="studentAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
+              <i data-lucide="image-plus"></i>
+              <span>Choose JPEG, PNG, or WebP</span>
+              <small>Maximum size: 2 MB</small>
+            </label>
+            <p id="studentAvatarFileName" class="upload-file-name">No file selected</p>
+            <div class="student-profile-actions">
+              <button id="uploadStudentAvatar" class="primary-button" type="button" disabled><i data-lucide="upload"></i><span>Upload Photo</span></button>
+              <button id="removeStudentAvatar" class="small-button danger" type="button"><i data-lucide="trash-2"></i><span>Remove Photo</span></button>
+            </div>
+          </section>
+          <form id="studentProfileForm" class="panel-card profile-details student-profile-form">
+            <h2>School Information</h2>
+            <dl>
+              <div><dt>Full Name</dt><dd id="profileFullName">-</dd></div>
+              <div><dt>Username</dt><dd id="profileUsername">-</dd></div>
+              <div><dt>Email</dt><dd id="profileEmail">-</dd></div>
+              <div><dt>Grade &amp; Section</dt><dd id="profileGrade">-</dd></div>
+              <div><dt>Adviser</dt><dd id="profileAdviser">-</dd></div>
+              <div><dt>Status</dt><dd><span id="profileStatus" class="status-pill">Approved</span></dd></div>
+            </dl>
+            <h2>Optional Details</h2>
+            <label>Phone Number<input name="phone_number" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}" placeholder="09XXXXXXXXX"></label>
+            <label>Home Town<input name="home_town" type="text" maxlength="120"></label>
+            <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Profile</span></button>
+          </form>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

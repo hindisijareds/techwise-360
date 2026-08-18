@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechWise 360 | Teacher Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="teacher-dashboard.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body data-page="teacher">
+  <main class="app-shell">
+    <button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="teacherSidebar">
+      <i data-lucide="menu"></i>
+    </button>
+    <div class="mobile-nav-backdrop" data-mobile-nav-close></div>
+    <aside id="teacherSidebar" class="app-sidebar" aria-label="Teacher navigation">
+      <div class="sidebar-brand-block">
+        <span class="sidebar-logo-mark" aria-hidden="true">
+          <svg class="techwise-cube-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <path d="M20.5 7.25 12 12.1 3.5 7.25"></path>
+            <path d="M12 12.1V21.5"></path>
+            <path d="M21 16.55V7.45a2 2 0 0 0-1-1.73l-6-3.42a4 4 0 0 0-4 0L4 5.72a2 2 0 0 0-1 1.73v9.1a2 2 0 0 0 1 1.73l6 3.42a4 4 0 0 0 4 0l6-3.42a2 2 0 0 0 1-1.73Z"></path>
+          </svg>
+        </span>
+        <div>
+          <strong>TechWise 360</strong>
+          <small>Teach. Track. Transform.</small>
+        </div>
+        <button id="teacherSidebarToggle" class="sidebar-collapse-toggle" type="button" aria-controls="teacherSidebar" aria-expanded="true" aria-label="Collapse navigation">
+          <span class="sidebar-toggle-glyph" aria-hidden="true"></span>
+        </button>
+      </div>
+      <label class="sidebar-search">
+        <i data-lucide="search"></i>
+        <input id="teacherNavSearch" type="search" placeholder="Search menu" autocomplete="off">
+        <kbd>Ctrl K</kbd>
+      </label>
+      <span class="sidebar-section-label">Main navigation</span>
+      <button class="nav-item active" type="button" data-teacher-view="overview"><i data-lucide="home"></i><span>Home</span></button>
+      <button class="nav-item" type="button" data-teacher-view="students"><i data-lucide="graduation-cap"></i><span>Students</span></button>
+      <button class="nav-item" type="button" data-teacher-view="content"><i data-lucide="book-open"></i><span>Lessons</span></button>
+      <button class="nav-item" type="button" data-teacher-view="quarters"><i data-lucide="calendar-days"></i><span>Terms</span></button>
+      <button class="nav-item" type="button" data-teacher-view="assessments"><i data-lucide="file-text"></i><span>Assessments</span></button>
+      <span class="sidebar-section-label">Analytics &amp; insights</span>
+      <button class="nav-item" type="button" data-teacher-view="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></button>
+      <button class="nav-item" type="button" data-teacher-view="leaderboard"><i data-lucide="trophy"></i><span>VR Leaderboard</span></button>
+      <button class="nav-item" type="button" data-teacher-view="evaluation"><i data-lucide="clipboard-check"></i><span>Evaluation</span></button>
+      <button class="nav-item" type="button" data-teacher-view="achievements"><i data-lucide="award"></i><span>Achievements</span></button>
+      <button class="nav-item" type="button" data-teacher-view="settings"><i data-lucide="settings"></i><span>Settings</span></button>
+      <div class="sidebar-profile-card">
+        <span class="profile-badge"><i data-lucide="user-round"></i></span>
+        <div>
+          <strong id="teacherName">ICT Teacher</strong>
+          <small>Teacher account</small>
+        </div>
+        <button id="logoutButton" class="icon-shell" type="button" aria-label="Logout">
+          <i data-lucide="log-out"></i>
+        </button>
+      </div>
+    </aside>
+
+    <section class="app-main">
+      <header class="app-topbar">
+        <div class="topbar-leading">
+          <div class="topbar-breadcrumb" aria-label="Breadcrumb">
+            <i data-lucide="layout-grid"></i>
+            <span id="teacherBreadcrumbParent">Overview</span>
+            <i data-lucide="chevron-right"></i>
+            <strong id="teacherBreadcrumbCurrent">Dashboard</strong>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="notification-center" id="teacherNotificationCenter">
+            <button id="teacherNotificationButton" class="notification-button" type="button" aria-label="Open notifications" aria-expanded="false">
+              <i data-lucide="bell"></i>
+              <span id="teacherNotificationBadge" class="notification-badge" hidden>0</span>
+            </button>
+            <section id="teacherNotificationPanel" class="notification-panel" aria-label="Teacher notifications" hidden>
+              <div class="notification-panel-header">
+                <div>
+                  <strong>Notifications</strong>
+                  <span id="teacherNotificationSummary">No unread updates</span>
+                </div>
+                <button id="markAllNotificationsRead" class="link-button" type="button">Mark all read</button>
+              </div>
+              <div id="teacherNotificationList" class="notification-list"></div>
+            </section>
+          </div>
+          <button class="icon-shell" type="button" data-jump-view="settings" aria-label="Open settings"><i data-lucide="settings"></i></button>
+        </div>
+      </header>
+
+      <p id="teacherMessage" class="status-message dashboard-status" role="status" aria-live="polite"></p>
+
+      <section class="teacher-section active" data-view="overview">
+        <div class="teacher-home-surface">
+          <header class="teacher-home-hero">
+            <div>
+              <h1>Hello, <span id="teacherWelcomeName">ICT Teacher</span> <span class="wave" aria-hidden="true">&#128075;</span></h1>
+              <p>Here are the latest insights from your TechWise 360 learning portal.</p>
+            </div>
+            <div class="home-hero-actions">
+              <span class="home-period-pill"><i data-lucide="calendar-days"></i><span>Active term</span><i data-lucide="chevron-down"></i></span>
+              <button class="small-button" type="button" data-jump-view="students"><i data-lucide="users"></i><span>Students</span></button>
+              <button class="primary-button compact-action" type="button" data-jump-view="content"><i data-lucide="plus"></i><span>Create Lesson</span></button>
+            </div>
+          </header>
+
+          <div class="teacher-home-layout">
+            <div class="teacher-home-main">
+              <div class="metric-grid teacher-home-metrics">
+                <article class="stat-card">
+                  <div class="stat-card-heading"><p>Total Students</p><span class="stat-icon blue"><i data-lucide="users"></i></span></div>
+                  <div class="stat-card-body">
+                    <div class="stat-card-value"><strong id="metricStudents">0</strong><small><b>Active</b> across Grade 9-10</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="students" viewBox="0 0 100 46" role="img" aria-label="Total students across classes">
+                      <title>Loading real student data</title>
+                      <path class="sparkline-area" d=""></path>
+                      <polyline pathLength="1" points=""></polyline>
+                    </svg>
+                  </div>
+                </article>
+                <article class="stat-card">
+                  <div class="stat-card-heading"><p>On Track</p><span class="stat-icon green"><i data-lucide="check-circle-2"></i></span></div>
+                  <div class="stat-card-body">
+                    <div class="stat-card-value"><strong id="metricOnTrack">0</strong><small><b>Current</b> active-term learners</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="on-track" viewBox="0 0 100 46" role="img" aria-label="On-track students across classes">
+                      <title>Loading real on-track data</title>
+                      <path class="sparkline-area" d=""></path>
+                      <polyline pathLength="1" points=""></polyline>
+                    </svg>
+                  </div>
+                </article>
+                <article class="stat-card">
+                  <div class="stat-card-heading"><p>Needs Support</p><span class="stat-icon orange"><i data-lucide="alert-circle"></i></span></div>
+                  <div class="stat-card-body">
+                    <div class="stat-card-value"><strong id="metricSupport">0</strong><small><b>Review</b> learners below target</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="support" viewBox="0 0 100 46" role="img" aria-label="Students needing support across classes">
+                      <title>Loading real support data</title>
+                      <path class="sparkline-area" d=""></path>
+                      <polyline pathLength="1" points=""></polyline>
+                    </svg>
+                  </div>
+                </article>
+                <article class="stat-card">
+                  <div class="stat-card-heading"><p>Published Lessons</p><span class="stat-icon purple"><i data-lucide="book-open"></i></span></div>
+                  <div class="stat-card-body">
+                    <div class="stat-card-value"><strong id="metricLessons">0</strong><small id="metricQuarter">No active term</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="lessons" viewBox="0 0 100 46" role="img" aria-label="Published lessons across modules">
+                      <title>Loading real lesson data</title>
+                      <path class="sparkline-area" d=""></path>
+                      <polyline pathLength="1" points=""></polyline>
+                    </svg>
+                  </div>
+                </article>
+              </div>
+
+              <section class="capstone-evidence-panel" aria-labelledby="capstoneEvidenceTitle">
+              <div class="capstone-evidence-header">
+                <div>
+                  <h1 id="capstoneEvidenceTitle">Class Progress Overview</h1>
+                  <p>Track class progress, low-scoring topics, test improvement, and students who may need support.</p>
+                </div>
+                <div class="evidence-toolbar" role="group" aria-label="Class results controls">
+                  <label><span>Class</span><select id="evidenceClassFilter"><option value="">All Classes</option></select></label>
+                  <span id="evidenceActiveQuarterLabel" class="evidence-quarter-pill">Active term</span>
+                  <div class="evidence-export-actions">
+                    <button type="button" data-evidence-download="pdf"><i data-lucide="file-down"></i><span>PDF</span></button>
+                    <button type="button" data-evidence-download="csv"><i data-lucide="download"></i><span>CSV</span></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="evidence-metric-grid">
+                <article><span class="blue"><i data-lucide="users"></i></span><p>Approved Students</p><div class="evidence-metric-value-row"><strong id="evidenceMetricStudents">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-students" viewBox="0 0 100 46" role="img"><title>Loading real student data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Filtered class</small></article>
+                <article><span class="green"><i data-lucide="check-circle-2"></i></span><p>Completion Rate</p><div class="evidence-metric-value-row"><strong id="evidenceMetricCompletion">0%</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-completion" viewBox="0 0 100 46" role="img"><title>Loading real completion data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Published active-term lessons</small></article>
+                <article><span class="purple"><i data-lucide="bar-chart-3"></i></span><p>Average Score</p><div class="evidence-metric-value-row"><strong id="evidenceMetricAverage">-</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-score" viewBox="0 0 100 46" role="img"><title>Loading real score data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Latest submitted checks</small></article>
+                <article><span class="orange"><i data-lucide="send"></i></span><p>Submission Rate</p><div class="evidence-metric-value-row"><strong id="evidenceMetricSubmissions">0%</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-submissions" viewBox="0 0 100 46" role="img"><title>Loading real submission data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Practice and assessment slots</small></article>
+                <article><span class="silver"><i data-lucide="award"></i></span><p>Certificates</p><div class="evidence-metric-value-row"><strong id="evidenceMetricCertificates">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-certificates" viewBox="0 0 100 46" role="img"><title>Loading real certificate data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Existing awards</small></article>
+                <article><span class="red"><i data-lucide="alert-triangle"></i></span><p>Needs Support</p><div class="evidence-metric-value-row"><strong id="evidenceMetricSupport">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-support" viewBox="0 0 100 46" role="img"><title>Loading real intervention data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Intervention queue</small></article>
+              </div>
+
+              <div class="evidence-dashboard-grid">
+                <section class="evidence-card evidence-mastery-card">
+                  <div class="panel-title-row">
+                    <h2>Class Mastery</h2>
+                    <span class="evidence-chip">Weakest first</span>
+                  </div>
+                  <div id="evidenceMasteryList" class="evidence-mastery-list"></div>
+                </section>
+
+                <section class="evidence-card">
+                  <div class="panel-title-row">
+                    <h2>Pre/Post Test Progress</h2>
+                    <span class="evidence-chip">Class assessments</span>
+                  </div>
+                  <div id="evidencePrePost" class="evidence-growth-card"></div>
+                </section>
+
+                <section class="evidence-card">
+                  <div class="panel-title-row">
+                    <h2>Intervention Queue</h2>
+                    <button class="link-button" type="button" data-jump-view="students">Open Students</button>
+                  </div>
+                  <div id="evidenceInterventionList" class="evidence-intervention-list"></div>
+                </section>
+
+                <section class="evidence-card">
+                  <div class="panel-title-row">
+                    <h2>Setup Checklist</h2>
+                    <span class="evidence-chip">Required steps</span>
+                  </div>
+                  <div id="evidenceReadiness" class="evidence-readiness-list"></div>
+                </section>
+              </div>
+              </section>
+            </div>
+
+            <aside class="teacher-home-rail" aria-label="Teacher home quick panels">
+              <section class="panel-card home-side-card">
+                <div class="panel-title-row">
+                  <h2>Latest Updates</h2>
+                  <button class="small-button" type="button" data-jump-view="quarters"><i data-lucide="calendar"></i><span>Manage</span></button>
+                </div>
+                <div class="home-update-tabs" role="group" aria-label="Update range">
+                  <button class="active" type="button">Today</button>
+                  <button type="button">This week</button>
+                </div>
+                <p class="home-card-label">Active Term</p>
+                <div id="activeQuarterCard" class="quarter-spotlight"></div>
+              </section>
+
+              <section class="panel-card home-side-card">
+                <div class="panel-title-row">
+                  <h2>Pending Accounts</h2>
+                  <button id="refreshPending" class="icon-button" type="button" aria-label="Refresh pending accounts"><i data-lucide="refresh-cw"></i></button>
+                </div>
+                <div id="pendingStudents" class="compact-list"></div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="students">
+        <header class="teacher-page-header">
+          <div>
+            <span class="teacher-page-eyebrow"><i data-lucide="users"></i> Student Management</span>
+            <h1>Students</h1>
+            <p>Review learner progress, performance, achievements, activity, and account status.</p>
+          </div>
+        </header>
+        <div class="student-management-header">
+          <article class="student-metric-card">
+            <span class="student-metric-icon blue"><i data-lucide="user-round"></i></span>
+            <div><p>Total Students</p><strong id="studentMetricTotal">0</strong><small>Across <b id="studentMetricClasses">0</b> Classes</small></div>
+          </article>
+          <article class="student-metric-card">
+            <span class="student-metric-icon green"><i data-lucide="user-round-check"></i></span>
+            <div><p>On Track</p><strong id="studentMetricTrack">0</strong><small><b id="studentMetricTrackPct">0%</b> of total students</small></div>
+          </article>
+          <article class="student-metric-card">
+            <span class="student-metric-icon orange"><i data-lucide="user-round-x"></i></span>
+            <div><p>Needs Support</p><strong id="studentMetricSupport">0</strong><small><b id="studentMetricSupportPct">0%</b> of total students</small></div>
+          </article>
+          <article class="student-metric-card top-performer">
+            <span class="student-metric-icon gold"><i data-lucide="bar-chart-3"></i></span>
+            <div><p>Highest Average</p><strong id="studentMetricTop">-</strong><small>Average score <b id="studentMetricTopScore">0%</b></small></div>
+          </article>
+        </div>
+
+        <div class="student-toolbar">
+          <label class="student-search"><i data-lucide="search"></i><input id="studentSearch" type="search" placeholder="Search students..."></label>
+          <select id="studentGradeFilter" aria-label="Grade filter"><option value="">All Grades</option><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select>
+          <select id="studentSectionFilter" aria-label="Section filter" disabled><option value="">All Sections</option></select>
+          <select id="studentStatusFilter"><option value="approved">Active</option><option value="support">Needs Support</option><option value="pending">Pending</option><option value="rejected">Rejected</option><option value="inactive">Inactive</option><option value="">All Statuses</option></select>
+          <select id="studentSupportFilter"><option value="">All Performance</option><option value="excellent">Excellent</option><option value="good">Good</option><option value="fair">Fair</option><option value="needs">Needs Improvement</option></select>
+          <button id="exportStudents" class="export-button" type="button"><i data-lucide="download"></i><span>Export</span></button>
+        </div>
+
+        <div class="student-management-grid">
+          <section class="student-table-card">
+            <table class="student-management-table">
+              <colgroup>
+                <col class="student-col-name">
+                <col class="student-col-grade">
+                <col class="student-col-lessons">
+                <col class="student-col-average">
+                <col class="student-col-badges">
+                <col class="student-col-certificates">
+                <col class="student-col-active">
+                <col class="student-col-status">
+              </colgroup>
+              <thead><tr><th>Student Name</th><th>Grade Level</th><th>Lessons Completed</th><th>Average Score</th><th>Badges</th><th>Certificates</th><th>Last Active</th><th>Status</th></tr></thead>
+              <tbody id="studentsTable"></tbody>
+            </table>
+            <div class="student-table-footer">
+              <span id="studentPageSummary">Showing 0 students</span>
+              <div id="studentPagination" class="student-pagination"></div>
+            </div>
+          </section>
+
+          <aside class="student-right-rail" aria-label="Student progress insights">
+            <section class="student-side-card">
+              <h2>Progress Distribution</h2>
+              <div class="distribution-layout">
+                <div class="distribution-donut" id="progressDistributionDonut"><strong id="distributionTotal">0</strong><span>Students</span></div>
+                <div id="distributionLegend" class="distribution-legend"></div>
+              </div>
+            </section>
+            <section class="student-side-card student-achievement-coverage-card">
+              <div class="panel-title-row">
+                <h2>Achievement Coverage</h2>
+                <button class="link-button" type="button" data-student-coverage-achievements>Open</button>
+              </div>
+              <div id="studentAchievementCoverage" class="student-achievement-coverage"></div>
+            </section>
+            <section class="student-side-card">
+              <div class="panel-title-row">
+                <h2>Students Needing Attention</h2>
+                <button id="viewAllAttention" class="link-button" type="button">View All</button>
+              </div>
+              <div id="attentionList" class="attention-list"></div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="student-profile">
+        <div id="studentFullProfile" class="student-full-profile">
+          <section class="panel-card student-profile-loading">
+            <i data-lucide="loader-2"></i>
+            <h2>Loading student profile...</h2>
+            <p>Collecting lessons, attempts, awards, and profile records.</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="quarters">
+        <div class="section-heading teacher-page-header">
+          <div>
+            <span class="teacher-page-eyebrow"><i data-lucide="calendar-range"></i> Curriculum Schedule</span>
+            <h1>Term Management</h1>
+            <p>Create school-year terms and choose the active term used by dashboards.</p>
+          </div>
+        </div>
+        <div class="dashboard-grid two-col">
+          <form id="quarterForm" class="panel-card form-panel">
+            <input name="id" type="hidden">
+            <h2 id="quarterFormTitle">Add Term</h2>
+            <label>Term<select name="name" required><option value="T1">1st Term</option><option value="T2">2nd Term</option><option value="T3">3rd Term</option></select></label>
+            <label>Title<input name="title" type="text" value="1st Term" required maxlength="80"></label>
+            <label>School Year<input name="school_year" type="text" value="2026-2027" required></label>
+            <div class="field-grid simple-grid">
+              <label>Start Date<input name="start_date" type="date"></label>
+              <label>End Date<input name="end_date" type="date"></label>
+            </div>
+            <label class="check-label slim"><input name="is_active" type="checkbox"><span>Set as active term</span></label>
+            <div class="form-action-row">
+              <button id="quarterSubmitButton" class="primary-button" type="submit">Create Term</button>
+              <button id="cancelQuarterEdit" class="small-button" type="button" hidden>Cancel Edit</button>
+            </div>
+          </form>
+          <section class="panel-card">
+            <h2>Terms</h2>
+            <div id="quartersList" class="quarter-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="content">
+        <div class="section-heading lesson-page-heading teacher-page-header">
+          <div>
+            <span class="teacher-page-eyebrow"><i data-lucide="book-open"></i> Curriculum Library</span>
+            <h1>Lessons &amp; Modules</h1>
+            <p>Organize curriculum content into published modules, lessons, practices, and resources.</p>
+          </div>
+          <div class="lesson-page-actions">
+            <button id="openLessonAuthorPage" class="primary-button compact" type="button"><i data-lucide="plus"></i><span>Create Lesson</span></button>
+          </div>
+        </div>
+        <div class="lesson-dashboard-grid">
+          <section class="lesson-main-column">
+            <div class="lesson-metric-grid">
+              <article class="lesson-metric-card">
+                <span class="lesson-metric-icon blue"><i data-lucide="book-open"></i></span>
+                <div><p>Total Lessons</p><strong id="lessonMetricTotal">0</strong><small>Across <b id="lessonMetricCategories">0</b> categories</small></div>
+              </article>
+              <article class="lesson-metric-card">
+                <span class="lesson-metric-icon green"><i data-lucide="upload-cloud"></i></span>
+                <div><p>Published Modules</p><strong id="lessonMetricPublished">0</strong><small><b id="lessonMetricPublishedPct">0%</b> of total lessons</small></div>
+              </article>
+              <article class="lesson-metric-card">
+                <span class="lesson-metric-icon orange"><i data-lucide="file-text"></i></span>
+                <div><p>Draft Lessons</p><strong id="lessonMetricDraft">0</strong><small>Unpublished content</small></div>
+              </article>
+              <article class="lesson-metric-card">
+                <span class="lesson-metric-icon purple"><i data-lucide="puzzle"></i></span>
+                <div><p>Practice Activities</p><strong id="lessonMetricPractice">0</strong><small>Interactive exercises</small></div>
+              </article>
+            </div>
+
+            <section class="lesson-library-card">
+              <div class="lesson-library-header">
+                <h1>All Lessons</h1>
+                <div class="lesson-library-actions">
+                  <button id="lessonViewToggle" class="lesson-icon-button" type="button" aria-label="Toggle compact lesson rows"><i data-lucide="list"></i></button>
+                </div>
+              </div>
+              <div class="lesson-toolbar">
+                <label class="lesson-search"><i data-lucide="search"></i><input id="contentSearch" type="search" placeholder="Search lessons..."></label>
+                <select id="lessonCategoryFilter"><option value="">All Categories</option></select>
+                <select id="lessonGradeFilter"><option value="">All Grades</option><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select>
+                <select id="contentStatusFilter"><option value="">All Statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select>
+              </div>
+              <div class="lesson-table-heading">
+                <span>Lesson</span><span>Category</span><span>Grade Level</span><span>Duration</span><span>Status</span><span>Actions</span>
+              </div>
+              <div id="lessonsTable" class="lesson-row-list"></div>
+              <div class="lesson-table-footer">
+                <span id="lessonPageSummary">Showing 0 lessons</span>
+                <div id="lessonPagination" class="student-pagination"></div>
+              </div>
+            </section>
+          </section>
+
+          <aside class="lesson-side-rail" aria-label="Lesson upload and calendar tools">
+            <section class="lesson-side-card upload-card">
+              <h2>Upload New Lesson</h2>
+              <label id="lessonDropZone" class="lesson-drop-zone">
+                <input id="lessonFileInput" type="file" accept=".pdf,.docx,.pptx,.mp4,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,video/mp4">
+                <i data-lucide="cloud-upload"></i>
+                <strong>Drag and drop files here</strong>
+                <span>or click to browse</span>
+                <small>Supports: PDF, DOCX, PPTX, MP4<br>(Max size: 100MB)</small>
+              </label>
+              <p id="selectedLessonFile" class="upload-file-name">No file selected</p>
+              <button id="openLessonDrawer" class="primary-button" type="button"><i data-lucide="plus"></i><span>Create Lesson Page</span></button>
+            </section>
+
+            <section class="lesson-side-card">
+              <div class="panel-title-row">
+                <h2>Recent Uploads</h2>
+                <button id="viewAllUploads" class="link-button" type="button">View All</button>
+              </div>
+              <div id="recentUploadsList" class="recent-upload-list"></div>
+            </section>
+
+            <section class="lesson-side-card">
+              <div class="panel-title-row">
+                <h2>Content Calendar</h2>
+                <button id="viewCalendar" class="link-button" type="button">View Calendar</button>
+              </div>
+              <div class="mini-calendar">
+                <div class="calendar-topline"><strong id="calendarMonthLabel">This Month</strong><button id="nextCalendarMonth" class="lesson-icon-button" type="button" aria-label="Next month"><i data-lucide="chevron-right"></i></button></div>
+                <div class="calendar-weekdays"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+                <div id="lessonCalendarGrid" class="calendar-grid"></div>
+                <div class="calendar-legend"><span><b class="dot blue"></b>Lessons</span><span><b class="dot orange"></b>Deadlines</span><span><b class="dot green"></b>Events</span></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="assessments">
+        <header class="teacher-page-header">
+          <div>
+            <span class="teacher-page-eyebrow"><i data-lucide="clipboard-check"></i> Knowledge Checks</span>
+            <h1>Assessments</h1>
+            <p>Manage published checks, review submissions, and monitor topic-level performance.</p>
+          </div>
+        </header>
+        <div class="assessment-metric-grid">
+          <article class="assessment-metric-card">
+            <span class="assessment-metric-icon blue"><i data-lucide="clipboard-list"></i></span>
+            <div><p>Total Assessments</p><strong id="assessmentMetricTotal">0</strong><small>Existing lesson checks</small></div>
+          </article>
+          <article class="assessment-metric-card">
+            <span class="assessment-metric-icon green"><i data-lucide="upload-cloud"></i></span>
+            <div><p>Published</p><strong id="assessmentMetricPublished">0</strong><small><b id="assessmentMetricPublishedPct">0%</b> of assessments</small></div>
+          </article>
+          <article class="assessment-metric-card">
+            <span class="assessment-metric-icon orange"><i data-lucide="file-pen"></i></span>
+            <div><p>Drafts</p><strong id="assessmentMetricDraft">0</strong><small>Need teacher action</small></div>
+          </article>
+          <article class="assessment-metric-card">
+            <span class="assessment-metric-icon purple"><i data-lucide="send"></i></span>
+            <div><p>Submission Rate</p><strong id="assessmentMetricSubmissionRate">0%</strong><small>Across assigned students</small></div>
+          </article>
+        </div>
+
+        <section class="assessment-library-card">
+          <div class="assessment-library-header">
+            <h1>All Assessments</h1>
+            <div class="assessment-toolbar">
+              <select id="assessmentClassFilter"><option value="">All Classes</option></select>
+              <select id="assessmentTypeFilter"><option value="">All Types</option><option value="practice">Practice</option><option value="assessment">Assessment</option></select>
+              <select id="assessmentStatusFilter"><option value="">All Statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="scheduled">Scheduled</option></select>
+              <label class="assessment-search"><input id="assessmentSearch" type="search" placeholder="Search assessments..."><i data-lucide="search"></i></label>
+            </div>
+          </div>
+          <div class="assessment-table-wrap">
+            <table class="assessment-table">
+              <thead><tr><th>Assessment Title</th><th>Topic</th><th>Type</th><th>Due Date</th><th>Submitted</th><th>Average Score</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="assessmentsTable"></tbody>
+            </table>
+          </div>
+          <div class="assessment-table-footer">
+            <span id="assessmentPageSummary">Showing 0 assessments</span>
+            <div id="assessmentPagination" class="student-pagination"></div>
+          </div>
+        </section>
+
+        <div class="assessment-insight-grid">
+          <section class="assessment-insight-card">
+            <div class="panel-title-row">
+              <h2>Average Scores by Topic</h2>
+                <span class="time-pill">Active Term</span>
+            </div>
+            <div id="assessmentTopicScores" class="assessment-bar-chart"></div>
+          </section>
+          <section class="assessment-insight-card">
+            <div class="panel-title-row">
+              <h2>Recent Submissions</h2>
+              <button id="viewAllAssessmentSubmissions" class="link-button" type="button">View All</button>
+            </div>
+            <div id="assessmentRecentSubmissions" class="assessment-submission-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="teacher-section" data-view="reports">
+        <div class="reports-header teacher-page-header">
+          <div>
+            <h1>Reports</h1>
+            <p>Class performance, progress, and downloadable records from existing lessons and assessments.</p>
+          </div>
+          <div class="reports-toolbar" role="group" aria-label="Report filters">
+            <label><span>From</span><input id="reportStartDate" type="date"></label>
+            <label><span>To</span><input id="reportEndDate" type="date"></label>
+            <label><span>Grade</span><select id="reportGradeFilter"><option value="">All Grades</option></select></label>
+            <label><span>Section</span><select id="reportSectionFilter" disabled><option value="">All Sections</option></select></label>
+          </div>
+        </div>
+
+        <div class="report-metric-grid">
+          <article class="report-metric-card">
+            <span class="report-metric-icon blue"><i data-lucide="clipboard-list"></i></span>
+            <div><p>Average Overall Score</p><strong id="reportMetricAverage">0%</strong><small id="reportMetricRange">Selected range</small></div>
+          </article>
+          <article class="report-metric-card">
+            <span class="report-metric-icon green"><i data-lucide="upload-cloud"></i></span>
+            <div><p>Completion Rate</p><strong id="reportMetricCompletion">0%</strong><small>Active term lessons</small></div>
+          </article>
+          <article class="report-metric-card">
+            <span class="report-metric-icon orange"><i data-lucide="user-round-x"></i></span>
+            <div><p>Students Needing Support</p><strong id="reportMetricSupport">0</strong><small>Priority follow-up list</small></div>
+          </article>
+          <article class="report-metric-card">
+            <span class="report-metric-icon red"><i data-lucide="circle-dashed"></i></span>
+            <div><p>Not Started Students</p><strong id="reportMetricNotStarted">0</strong><small>Filtered class progress</small></div>
+          </article>
+          <article class="report-metric-card">
+            <span class="report-metric-icon silver"><i data-lucide="award"></i></span>
+            <div><p>Certificates Issued</p><strong id="reportMetricCertificates">0</strong><small>Selected range</small></div>
+          </article>
+          <article class="report-metric-card">
+            <span class="report-metric-icon purple"><i data-lucide="send"></i></span>
+            <div><p>Submission Rate</p><strong id="reportMetricSubmissions">0%</strong><small>Practice and assessment checks</small></div>
+          </article>
+        </div>
+
+        <div id="teacherCompletionDashboard" class="completion-dashboard embedded-dashboard report-completion-dashboard"></div>
+
+        <section class="report-card report-support-panel">
+          <div class="panel-title-row">
+            <div>
+              <h2>Students Needing Support</h2>
+              <p>Prioritized by risk score, key reasons, diagnosis, and recommended action.</p>
+            </div>
+            <span id="reportSupportCount" class="time-pill">0 students</span>
+          </div>
+          <div id="reportSupportInsights" class="report-support-list"></div>
+        </section>
+
+        <section class="report-card report-weak-panel">
+          <div class="panel-title-row">
+            <div>
+              <h2>Weak Area Analysis</h2>
+              <p>Identify learning gaps and focus on the areas that need the most attention.</p>
+            </div>
+            <span class="time-pill">Class-Level Insights</span>
+          </div>
+          <div id="reportWeakAreaAnalysis" class="report-weak-grid"></div>
+        </section>
+
+        <div class="report-dashboard-grid">
+          <section class="report-card report-weekly-card">
+            <div class="panel-title-row">
+              <h2>Weekly Activity</h2>
+              <span class="report-chart-key"><b></b> Average Score (%)</span>
+            </div>
+            <div id="reportWeeklyActivity" class="report-line-chart"></div>
+          </section>
+
+          <section class="report-card report-split-card">
+            <div class="report-mini-panel">
+              <div class="panel-title-row">
+                <h2>Topic Mastery</h2>
+                <span class="time-pill">Range</span>
+              </div>
+              <div id="reportTopicMastery" class="report-topic-chart"></div>
+            </div>
+            <div class="report-mini-panel">
+              <div class="panel-title-row">
+                <h2>Completion Distribution</h2>
+                <span class="time-pill">Class</span>
+              </div>
+              <div class="report-distribution-layout">
+                <div id="reportCompletionDonut" class="report-donut"><strong>0</strong><span>Students</span></div>
+                <div id="reportCompletionLegend" class="report-donut-legend"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="report-card report-download-panel">
+          <div>
+            <h2>Downloadable Reports</h2>
+            <p>Generate TechWise 360 PDF reports or CSV records using the current filters.</p>
+          </div>
+          <div id="reportDownloads" class="report-download-grid">
+            <article>
+              <span class="report-download-icon blue"><i data-lucide="calendar-days"></i></span>
+              <div><strong>Weekly Report</strong><small>Daily activity and performance for the selected week.</small></div>
+              <div class="report-download-actions">
+                <button type="button" data-report-download="weekly" data-report-format="pdf">PDF</button>
+                <button type="button" data-report-download="weekly" data-report-format="csv">CSV</button>
+              </div>
+            </article>
+            <article>
+              <span class="report-download-icon green"><i data-lucide="calendar-range"></i></span>
+              <div><strong>Monthly Report</strong><small>Topic mastery and class progress for the selected month.</small></div>
+              <div class="report-download-actions">
+                <button type="button" data-report-download="monthly" data-report-format="pdf">PDF</button>
+                <button type="button" data-report-download="monthly" data-report-format="csv">CSV</button>
+              </div>
+            </article>
+            <article>
+              <span class="report-download-icon purple"><i data-lucide="file-text"></i></span>
+              <div><strong>Class Summary</strong><small>Student completion, scores, badges, and certificates.</small></div>
+              <div class="report-download-actions">
+                <button type="button" data-report-download="class" data-report-format="pdf">PDF</button>
+                <button type="button" data-report-download="class" data-report-format="csv">CSV</button>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="teacher-section" data-view="leaderboard">
+        <div id="teacherLeaderboardDashboard" class="leaderboard-dashboard"></div>
+        <div id="teacherCompetitionsDashboard" class="competition-dashboard embedded-dashboard"></div>
+      </section>
+
+      <section class="teacher-section" data-view="evaluation">
+        <div class="evaluation-header teacher-page-header">
+          <div>
+            <span class="evidence-eyebrow"><i data-lucide="clipboard-check"></i> Class Evaluation</span>
+            <h1>Evaluation Dashboard</h1>
+            <p>Choose the pre-assessment and post-assessment, collect student feedback, and export class results.</p>
+          </div>
+          <div class="evaluation-actions" role="group" aria-label="Evaluation exports">
+            <span id="evaluationQuarterLabel" class="evidence-quarter-pill">Active term</span>
+            <button type="button" data-evaluation-export="pdf"><i data-lucide="file-down"></i><span>PDF</span></button>
+            <button type="button" data-evaluation-export="csv"><i data-lucide="download"></i><span>CSV</span></button>
+          </div>
+        </div>
+        <div id="evaluationGradeTabs" class="evaluation-tabs" role="tablist" aria-label="Grade filter">
+          <button class="active" type="button" data-evaluation-grade="">All</button>
+          <button type="button" data-evaluation-grade="Grade 9">Grade 9</button>
+          <button type="button" data-evaluation-grade="Grade 10">Grade 10</button>
+        </div>
+        <div id="evaluationDashboard" class="evaluation-dashboard"></div>
+      </section>
+
+      <section class="teacher-section" data-view="achievements">
+        <div class="achievement-management-header teacher-page-header">
+          <div>
+            <span class="evidence-eyebrow"><i data-lucide="award"></i> Certificates &amp; Badges</span>
+            <h1>Achievements</h1>
+            <p>Create certificate awards, review badge activity, and print student achievements from one place.</p>
+          </div>
+          <button class="primary-button compact-action" type="button" data-generate-certificate><i data-lucide="file-badge"></i><span>Generate Certificate</span></button>
+        </div>
+        <div id="teacherAchievementsDashboard" class="teacher-achievements-dashboard"></div>
+      </section>
+
+      <section class="teacher-section" data-view="settings">
+        <div class="settings-header teacher-page-header">
+          <div>
+            <h1>Settings</h1>
+            <p>Manage your teacher profile, dashboard defaults, notifications, reports, and account security.</p>
+          </div>
+          <span class="settings-status-pill"><i data-lucide="shield-check"></i> Teacher Account</span>
+        </div>
+
+        <div class="settings-grid">
+          <form id="teacherProfileSettingsForm" class="settings-card settings-profile-card">
+            <div class="settings-card-heading">
+              <span class="settings-card-icon blue"><i data-lucide="user-round"></i></span>
+              <div><h2>Teacher Profile</h2><p>Your display name and contact details.</p></div>
+            </div>
+            <div class="settings-readonly-grid">
+              <label>Username<input name="username" type="text" readonly></label>
+              <label>Email<input name="email" type="email" readonly></label>
+              <label>Role<input name="role" type="text" readonly></label>
+              <label>Status<input name="status" type="text" readonly></label>
+            </div>
+            <label>Full Name<input name="full_name" type="text" required maxlength="120"></label>
+            <div class="field-grid simple-grid">
+              <label>First Name<input name="first_name" type="text" maxlength="80"></label>
+              <label>Last Name<input name="last_name" type="text" maxlength="80"></label>
+            </div>
+            <label>Phone Number<input name="phone_number" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}"></label>
+            <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Profile</span></button>
+          </form>
+
+          <form id="teacherNotificationSettingsForm" class="settings-card">
+            <div class="settings-card-heading">
+              <span class="settings-card-icon purple"><i data-lucide="bell-ring"></i></span>
+              <div><h2>Notification Preferences</h2><p>Choose which future updates should alert you.</p></div>
+            </div>
+            <label class="settings-toggle"><input name="student_accounts" type="checkbox"><span><strong>Student account requests</strong><small>Notify when a student creates an account.</small></span></label>
+            <label class="settings-toggle"><input name="lesson_completions" type="checkbox"><span><strong>Lesson completions</strong><small>Notify when students complete lesson parts.</small></span></label>
+            <label class="settings-toggle"><input name="practice_submissions" type="checkbox"><span><strong>Practice and assessment submissions</strong><small>Notify when graded checks are submitted.</small></span></label>
+            <label class="settings-toggle"><input name="achievement_awards" type="checkbox"><span><strong>Badges and certificates</strong><small>Notify when achievements are awarded.</small></span></label>
+            <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Notifications</span></button>
+          </form>
+
+          <form id="teacherDashboardSettingsForm" class="settings-card">
+            <div class="settings-card-heading">
+              <span class="settings-card-icon green"><i data-lucide="layout-dashboard"></i></span>
+              <div><h2>Dashboard Defaults</h2><p>Set your preferred starting view and class focus.</p></div>
+            </div>
+            <label>Default Grade<select name="default_grade"><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select></label>
+            <label>Landing Section<select name="default_landing_view"><option value="overview">Home</option><option value="students">Students</option><option value="content">Lessons</option><option value="assessments">Assessments</option><option value="reports">Reports</option><option value="evaluation">Evaluation</option></select></label>
+            <label class="settings-toggle"><input name="compact_lessons" type="checkbox"><span><strong>Compact lesson library</strong><small>Use denser lesson rows by default.</small></span></label>
+            <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Defaults</span></button>
+          </form>
+
+          <form id="teacherReportSettingsForm" class="settings-card">
+            <div class="settings-card-heading">
+              <span class="settings-card-icon orange"><i data-lucide="file-down"></i></span>
+              <div><h2>Report Defaults</h2><p>Choose report filters and export preference.</p></div>
+            </div>
+            <label>Default Range<select name="report_default_range"><option value="week">Current Week</option><option value="month">Current Month</option></select></label>
+            <label>Preferred Export<select name="report_export_format"><option value="pdf">PDF</option><option value="csv">CSV</option></select></label>
+            <label>Default Class<select name="report_default_grade"><option value="">All Classes</option><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select></label>
+            <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Reports</span></button>
+          </form>
+
+          <form id="teacherPasswordSettingsForm" class="settings-card settings-security-card">
+            <div class="settings-card-heading">
+              <span class="settings-card-icon red"><i data-lucide="lock-keyhole"></i></span>
+              <div><h2>Account Security</h2><p>Change your password with your current password.</p></div>
+            </div>
+            <label>Current Password<input name="current_password" type="password" autocomplete="current-password"></label>
+            <label>New Password<input name="new_password" type="password" autocomplete="new-password"></label>
+            <label>Confirm New Password<input name="confirm_password" type="password" autocomplete="new-password"></label>
+            <button class="primary-button" type="submit"><i data-lucide="key-round"></i><span>Update Password</span></button>
+          </form>
+        </div>
+      </section>
+    </section>
+
+    <aside id="lessonDrawer" class="student-drawer lesson-author-drawer" aria-label="Lesson authoring page">
+      <div class="student-drawer-backdrop" data-close-lesson-drawer></div>
+      <form id="lessonForm" class="student-drawer-panel lesson-drawer-panel">
+        <input name="id" type="hidden">
+        <input name="file_id" type="hidden">
+        <header>
+          <div>
+            <p class="eyebrow">Lesson Details</p>
+            <h2 id="lessonFormTitle">Create Lesson</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-lesson-drawer aria-label="Close lesson details"><i data-lucide="x"></i></button>
+        </header>
+        <div class="lesson-author-tabs" role="tablist" aria-label="Lesson authoring sections">
+          <button class="active" type="button" data-lesson-tab="details">Details</button>
+          <button type="button" data-lesson-tab="content">Content</button>
+          <button type="button" data-lesson-tab="practice">Practice</button>
+          <button type="button" data-lesson-tab="resources">Resources</button>
+        </div>
+        <section class="lesson-tab-panel active" data-lesson-panel="details">
+          <label>Module<select name="module_id" required id="lessonModuleSelect"></select></label>
+          <label>Title<input name="title" type="text" required maxlength="120"></label>
+          <label>Description<textarea name="description" rows="3" maxlength="300"></textarea></label>
+          <div class="field-grid simple-grid">
+            <label>Type<select name="lesson_type"><option value="lesson">Lesson</option><option value="practice">Practice</option><option value="assessment">Assessment</option></select></label>
+            <label>Duration<input name="duration_minutes" type="number" min="1" max="600" value="30" required></label>
+          </div>
+          <div class="field-grid simple-grid">
+            <label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select></label>
+            <label>Order<input name="sort_order" type="number" min="0" value="0"></label>
+          </div>
+          <div class="field-grid simple-grid">
+            <label>Scheduled Date<input name="scheduled_date" type="date"></label>
+            <label>Due Date<input name="due_date" type="date"></label>
+          </div>
+        </section>
+        <section class="lesson-tab-panel" data-lesson-panel="content">
+          <div class="author-panel-heading">
+            <div><strong>Lesson Content</strong><span>Build the in-app student lesson reader.</span></div>
+            <button class="small-button" type="button" data-add-section><i data-lucide="plus"></i><span>Add Block</span></button>
+          </div>
+          <div id="lessonSectionsEditor" class="author-list"></div>
+        </section>
+        <section class="lesson-tab-panel" data-lesson-panel="practice">
+          <div class="author-panel-heading">
+            <div><strong>Guided Practice</strong><span>Add auto-graded questions with hints and feedback.</span></div>
+            <button class="small-button" type="button" data-add-question><i data-lucide="plus"></i><span>Add Question</span></button>
+          </div>
+          <div id="lessonQuestionsEditor" class="author-list"></div>
+        </section>
+        <section class="lesson-tab-panel" data-lesson-panel="resources">
+          <label>Resource URL<input name="resource_url" type="url" placeholder="https://"></label>
+          <p id="lessonAttachedFile" class="upload-file-name">No uploaded file attached</p>
+          <p class="helper-text">Use the Upload New Lesson panel to select a PDF, DOCX, PPTX, or MP4, then save this lesson to attach it.</p>
+        </section>
+        <div class="drawer-actions">
+          <button class="primary-button" type="submit">Save Lesson</button>
+          <button class="small-button" type="button" data-preview-current-lesson><i data-lucide="eye"></i><span>Preview Lesson</span></button>
+          <button class="small-button" type="button" data-reset-lesson><i data-lucide="rotate-ccw"></i><span>Clear</span></button>
+        </div>
+      </form>
+    </aside>
+
+    <aside id="lessonPreviewDrawer" class="student-drawer lesson-player-drawer" aria-label="Teacher lesson preview">
+      <div class="student-drawer-backdrop" data-close-preview></div>
+      <section class="student-drawer-panel lesson-preview-panel">
+        <header>
+          <div>
+            <p class="eyebrow">Read-only Preview</p>
+            <h2>Student Lesson View</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-preview aria-label="Close preview"><i data-lucide="x"></i></button>
+        </header>
+        <div id="teacherLessonPreview" class="lesson-player-shell"></div>
+      </section>
+    </aside>
+
+    <aside id="calendarDrawer" class="student-drawer" aria-label="Content calendar drawer">
+      <div class="student-drawer-backdrop" data-close-calendar></div>
+      <section class="student-drawer-panel calendar-drawer-panel">
+        <header>
+          <div>
+            <p class="eyebrow">Content Calendar</p>
+            <h2 id="calendarDrawerTitle">Lesson Schedule</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-calendar aria-label="Close calendar"><i data-lucide="x"></i></button>
+        </header>
+        <div id="calendarEventList" class="calendar-event-list"></div>
+      </section>
+    </aside>
+
+    <aside id="assessmentResultsDrawer" class="student-drawer" aria-label="Assessment results drawer">
+      <div class="student-drawer-backdrop" data-close-assessment-results></div>
+      <section class="student-drawer-panel assessment-results-panel">
+        <header>
+          <div>
+            <p class="eyebrow">Assessment Results</p>
+            <h2 id="assessmentResultsTitle">Review Results</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-assessment-results aria-label="Close assessment results"><i data-lucide="x"></i></button>
+        </header>
+        <div id="assessmentResultsContent" class="assessment-results-content"></div>
+      </section>
+    </aside>
+
+    <aside id="studentDrawer" class="student-drawer" aria-label="Student details drawer">
+      <div class="student-drawer-backdrop" data-close-student-drawer></div>
+      <form id="studentDrawerForm" class="student-drawer-panel">
+        <input name="id" type="hidden">
+        <header>
+          <div>
+            <p class="eyebrow">Student Details</p>
+            <h2 id="studentDrawerTitle">Manage Student</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-student-drawer aria-label="Close student details"><i data-lucide="x"></i></button>
+        </header>
+        <div class="drawer-summary">
+          <span id="studentDrawerInitials">ST</span>
+          <div>
+            <strong id="studentDrawerName">Student</strong>
+            <small id="studentDrawerMeta">Grade Level</small>
+          </div>
+        </div>
+        <div class="drawer-stats">
+          <div><strong id="drawerLessons">0/0</strong><span>Lessons</span></div>
+          <div><strong id="drawerAverage">0%</strong><span>Average</span></div>
+          <div><strong id="drawerBadges">0</strong><span>Badges</span></div>
+          <div><strong id="drawerCertificates">0</strong><span>Certificates</span></div>
+        </div>
+        <label>Full Name<input name="full_name" type="text" required maxlength="120"></label>
+        <div class="field-grid simple-grid">
+          <label>Grade Level<select name="grade_level" required><option>Grade 9</option><option>Grade 10</option></select></label>
+          <label>Section<select name="section"></select></label>
+        </div>
+        <label>Adviser<input name="adviser" type="text" maxlength="120"></label>
+        <label>Home Town<input name="home_town" type="text" maxlength="120"></label>
+        <label>Phone Number<input name="phone_number" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}"></label>
+        <label>Status<select name="status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="inactive">Inactive</option></select></label>
+        <div class="drawer-actions">
+          <button class="primary-button" type="submit">Save Changes</button>
+          <button class="small-button" type="button" data-view-full-profile><i data-lucide="id-card"></i><span>View Full Profile</span></button>
+          <button class="small-button" type="button" data-drawer-status="approved"><i data-lucide="check"></i><span>Approve</span></button>
+          <button class="small-button danger-action" type="button" data-drawer-status="rejected"><i data-lucide="x"></i><span>Reject</span></button>
+          <button class="small-button" type="button" data-drawer-status="pending"><i data-lucide="rotate-ccw"></i><span>Reset</span></button>
+          <button class="small-button warning-action" type="button" data-drawer-status="inactive"><i data-lucide="pause-circle"></i><span>Deactivate</span></button>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
