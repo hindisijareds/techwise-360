@@ -3182,11 +3182,24 @@ function renderTeacherMetricSparklines({ approvedStudents, summaries, publishedL
     .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.title || "").localeCompare(String(b.title || "")));
   const lessonLabels = lessonModules.map((module) => module.title || "Module");
   const lessonSeries = lessonModules.map((module) => publishedLessons.filter((lesson) => lesson.module_id === module.id).length);
+  const averageSeries = allCohorts.map((cohort) => {
+    const cohortScores = summaries
+      .filter((summary) => summary.student.status === "approved" && teacherCohortLabel(summary.student) === cohort)
+      .map((summary) => Number(summary.average))
+      .filter(Number.isFinite);
+    return cohortScores.length
+      ? Math.round(cohortScores.reduce((total, score) => total + score, 0) / cohortScores.length)
+      : 0;
+  });
 
   renderMetricSparkline("students", studentSeries, allCohorts, "Total students by class");
   renderMetricSparkline("on-track", onTrackSeries, allCohorts, "On-track students by class");
   renderMetricSparkline("support", supportSeries, allCohorts, "Students needing support by class");
   renderMetricSparkline("lessons", lessonSeries, lessonLabels, "Published lessons by module");
+  renderMetricSparkline("student-page-total", studentSeries, allCohorts, "Total students by class");
+  renderMetricSparkline("student-page-on-track", onTrackSeries, allCohorts, "On-track students by class");
+  renderMetricSparkline("student-page-support", supportSeries, allCohorts, "Students needing support by class");
+  renderMetricSparkline("student-page-average", averageSeries, allCohorts, "Average student score by class", "%");
 }
 
 function teacherCohortLabel(student) {

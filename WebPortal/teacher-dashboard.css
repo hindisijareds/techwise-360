@@ -808,17 +808,45 @@ body[data-page="teacher"] .achievement-panel-header h2 {
 
 /* Reference-style metric cards used across every teacher view. */
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) {
+  --teacher-metric-shell: var(--teacher-blue);
+  --teacher-metric-border: #d5e4fa;
   position: relative;
   isolation: isolate;
   min-width: 0;
   min-height: 138px;
   padding: 48px 14px 13px;
+  display: block;
   overflow: hidden;
-  border: 1px solid #d7e0e7;
+  border: 1px solid var(--teacher-metric-border);
   border-radius: var(--teacher-radius);
-  background-color: var(--teacher-blue);
+  background-color: var(--teacher-metric-shell);
   background-image: repeating-linear-gradient(118deg, rgba(255,255,255,.55) 0 2px, transparent 2px 7px);
   box-shadow: 0 2px 5px rgba(17, 19, 24, 0.06);
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card):has(> :is(.student-metric-icon, .lesson-metric-icon, .assessment-metric-icon, .report-metric-icon, .evaluation-metric-icon, .stat-icon).green) {
+  --teacher-metric-shell: #edf9f4;
+  --teacher-metric-border: #cfe8dc;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card):has(> :is(.student-metric-icon, .lesson-metric-icon, .assessment-metric-icon, .report-metric-icon, .evaluation-metric-icon, .stat-icon).orange) {
+  --teacher-metric-shell: #fff2ee;
+  --teacher-metric-border: #f0d5cd;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card):has(> :is(.student-metric-icon, .lesson-metric-icon, .assessment-metric-icon, .report-metric-icon, .evaluation-metric-icon, .stat-icon).purple) {
+  --teacher-metric-shell: #f5f1fc;
+  --teacher-metric-border: #ded5ef;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card):has(> :is(.student-metric-icon, .lesson-metric-icon, .assessment-metric-icon, .report-metric-icon, .evaluation-metric-icon, .stat-icon).red) {
+  --teacher-metric-shell: #fff1f3;
+  --teacher-metric-border: #efd3d9;
+}
+
+body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card):has(> :is(.student-metric-icon, .lesson-metric-icon, .assessment-metric-icon, .report-metric-icon, .evaluation-metric-icon, .stat-icon).silver) {
+  --teacher-metric-shell: #f1f4f7;
+  --teacher-metric-border: #dce2e8;
 }
 
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card)::before {
@@ -844,8 +872,7 @@ body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assess
 }
 
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) > div {
-  position: relative;
-  z-index: 1;
+  display: contents;
 }
 
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) > :is(span, .stat-icon) {
@@ -882,6 +909,8 @@ body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assess
 }
 
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) strong {
+  position: relative;
+  z-index: 1;
   display: block;
   margin: 0 0 6px;
   color: var(--teacher-ink);
@@ -891,6 +920,8 @@ body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assess
 }
 
 body[data-page="teacher"] :is(.student-metric-card, .lesson-metric-card, .assessment-metric-card, .report-metric-card, .leaderboard-metric-card, .evaluation-metric-card, .teacher-achievements-dashboard .stat-card) small {
+  position: relative;
+  z-index: 1;
   display: block;
   max-width: 100%;
   overflow: visible;
@@ -957,6 +988,18 @@ body[data-page="teacher"] .teacher-home-metrics .stat-card-body {
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(17, 19, 24, 0.05);
+}
+
+/* Students summary cards intentionally share the Home metric component. */
+body[data-page="teacher"] .student-management-header.teacher-home-metrics .student-summary-card {
+  min-height: 138px;
+}
+
+body[data-page="teacher"] .student-management-header .student-summary-card.top-performer .stat-card-value > strong {
+  max-width: 150px;
+  font-size: clamp(17px, 1.4vw, 23px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-metric-grid article {

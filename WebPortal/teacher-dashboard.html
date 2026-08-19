@@ -255,22 +255,42 @@
             <p>Review learner progress, performance, achievements, activity, and account status.</p>
           </div>
         </header>
-        <div class="student-management-header">
-          <article class="student-metric-card">
-            <span class="student-metric-icon blue"><i data-lucide="user-round"></i></span>
-            <div><p>Total Students</p><strong id="studentMetricTotal">0</strong><small>Across <b id="studentMetricClasses">0</b> Classes</small></div>
+        <div class="student-management-header teacher-home-metrics">
+          <article class="stat-card student-summary-card">
+            <div class="stat-card-heading"><p>Total Students</p><span class="stat-icon blue"><i data-lucide="user-round"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="studentMetricTotal">0</strong><small>Across <b id="studentMetricClasses">0</b> Classes</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="student-page-total" viewBox="0 0 100 46" role="img" aria-label="Total students across classes">
+                <title>Loading real student data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+              </svg>
+            </div>
           </article>
-          <article class="student-metric-card">
-            <span class="student-metric-icon green"><i data-lucide="user-round-check"></i></span>
-            <div><p>On Track</p><strong id="studentMetricTrack">0</strong><small><b id="studentMetricTrackPct">0%</b> of total students</small></div>
+          <article class="stat-card student-summary-card">
+            <div class="stat-card-heading"><p>On Track</p><span class="stat-icon green"><i data-lucide="user-round-check"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="studentMetricTrack">0</strong><small><b id="studentMetricTrackPct">0%</b> of total students</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="student-page-on-track" viewBox="0 0 100 46" role="img" aria-label="On-track students across classes">
+                <title>Loading real on-track data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+              </svg>
+            </div>
           </article>
-          <article class="student-metric-card">
-            <span class="student-metric-icon orange"><i data-lucide="user-round-x"></i></span>
-            <div><p>Needs Support</p><strong id="studentMetricSupport">0</strong><small><b id="studentMetricSupportPct">0%</b> of total students</small></div>
+          <article class="stat-card student-summary-card">
+            <div class="stat-card-heading"><p>Needs Support</p><span class="stat-icon orange"><i data-lucide="user-round-x"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="studentMetricSupport">0</strong><small><b id="studentMetricSupportPct">0%</b> of total students</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="student-page-support" viewBox="0 0 100 46" role="img" aria-label="Students needing support across classes">
+                <title>Loading real support data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+              </svg>
+            </div>
           </article>
-          <article class="student-metric-card top-performer">
-            <span class="student-metric-icon gold"><i data-lucide="bar-chart-3"></i></span>
-            <div><p>Highest Average</p><strong id="studentMetricTop">-</strong><small>Average score <b id="studentMetricTopScore">0%</b></small></div>
+          <article class="stat-card student-summary-card top-performer">
+            <div class="stat-card-heading"><p>Highest Average</p><span class="stat-icon purple"><i data-lucide="bar-chart-3"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="studentMetricTop">-</strong><small>Average score <b id="studentMetricTopScore">0%</b></small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="student-page-average" viewBox="0 0 100 46" role="img" aria-label="Average student scores across classes">
+                <title>Loading real average score data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+              </svg>
+            </div>
           </article>
         </div>
 
