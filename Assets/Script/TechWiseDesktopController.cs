@@ -82,6 +82,11 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void Awake()
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        enabled = false;
+        SetDesktopActive(false);
+        return;
+#endif
         ResolveReferences();
         currentHoldDistance = Mathf.Clamp(holdDistance, minHoldDistance, maxHoldDistance);
         LimitVrUiRegistration();
@@ -196,6 +201,7 @@ public class TechWiseDesktopController : MonoBehaviour
             rayInteractor = rayObject.AddComponent<XRRayInteractor>();
 
         rayInteractor.lineType = XRRayInteractor.LineType.StraightLine;
+        rayInteractor.interactionLayers = ~0;
         rayInteractor.maxRaycastDistance = maxRayDistance;
         rayInteractor.hitDetectionType = XRRayInteractor.HitDetectionType.Raycast;
         rayInteractor.enableUIInteraction = false;
@@ -267,6 +273,12 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void ApplyActiveState()
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (desktopActive)
+            SetDesktopActive(false);
+        enabled = false;
+        return;
+#endif
         ResolveReferences();
         var shouldBeActive = MainMenu.IsDesktopModeSelected(desktopModeOverridesVrWhenHeadsetPresent) && IsGameplayScene(SceneManager.GetActiveScene().name);
         if (shouldBeActive == desktopActive)
@@ -277,6 +289,9 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void SetDesktopActive(bool active)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        active = false;
+#endif
         if (active)
             ResolveReferences();
 
@@ -337,6 +352,8 @@ public class TechWiseDesktopController : MonoBehaviour
         if (!cursorLocked || xrCamera == null || Mouse.current == null)
             return;
 
+        if (selectedManipulationTarget != null && Mouse.current.rightButton.isPressed) return;
+
         var delta = Mouse.current.delta.ReadValue() * mouseSensitivity;
         transform.Rotate(Vector3.up, delta.x, Space.World);
 
@@ -346,7 +363,7 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void HandleMove()
     {
-        if (characterController == null || Keyboard.current == null)
+        if (!cursorLocked || characterController == null || Keyboard.current == null)
             return;
 
         CacheDesktopSafePose();
@@ -535,6 +552,15 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void HandleHeldObjectManipulation()
     {
+        if (TechWiseSimulationRuntime.Instance != null && TechWiseSimulationRuntime.Instance.ManipulationLocked)
+        {
+            selectHeld = false;
+            QueueSelectState(false);
+            RestoreSelectedGrabTrackRotation();
+            selectedManipulationTarget = null;
+            heldRotationLockTarget = null;
+            return;
+        }
         if (Keyboard.current != null &&
             WasKeyPressedThisFrame(Keyboard.current, resetHeldComponentKey) &&
             (rayInteractor == null || rayInteractor.interactablesSelected.Count == 0))

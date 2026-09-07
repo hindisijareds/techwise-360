@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -16,6 +17,17 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
     const string SingleplayerSceneName = "Singleplayer";
     const string PracticeSceneName = "Multiplayer";
     const string ControlModeExplicitKey = "TechWise360.ControlModeExplicit";
+    const string ControlsGuideVisibleKey = "TechWise360.ControlsGuideVisible";
+
+    sealed class ControlsGuideView
+    {
+        public GameObject root;
+        public GameObject panel;
+        public GameObject tab;
+        public TMP_Text title;
+        public TMP_Text body;
+        public RectTransform scrollContent;
+    }
 
     Canvas canvas;
     Image dimmer;
@@ -28,6 +40,10 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
     TMP_Text progressText;
     TMP_Text detailsTitleText;
     TMP_Text detailsBodyText;
+    ControlsGuideView screenControlsView;
+    ControlsGuideView vrControlsView;
+    Canvas vrControlsCanvas;
+    string lastControlMode;
     bool isOpen;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -63,10 +79,13 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
 
         if (isOpen)
             RefreshStatus();
+
+        RefreshControlsGuide();
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        EnsureEventSystem();
         EnsureUi();
         RefreshVisibility();
     }
@@ -92,13 +111,21 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         CreateDimmer(canvasObject.transform);
         CreateMenuButton(canvasObject.transform);
         CreateMenuPanel(canvasObject.transform);
+        screenControlsView = CreateControlsGuideView(canvasObject.transform, false);
         SetMenuOpen(false);
     }
 
     static void EnsureEventSystem()
     {
-        if (FindAnyObjectByType<EventSystem>() != null)
-            return;
+        EventSystem fallback = null;
+        EventSystem sceneSystem = null;
+        foreach (var system in FindObjectsByType<EventSystem>(FindObjectsInactive.Include))
+        {
+            if (system.name == "TechWise In-Game EventSystem") fallback = system;
+            else if (system.gameObject.activeInHierarchy && system.enabled) sceneSystem = system;
+        }
+        if (fallback != null) fallback.gameObject.SetActive(sceneSystem == null);
+        if (sceneSystem != null || fallback != null) return;
 
         var eventSystemObject = new GameObject("TechWise In-Game EventSystem", typeof(EventSystem));
         DontDestroyOnLoad(eventSystemObject);
@@ -136,6 +163,67 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         CreateStatusCard(menuPanel);
         CreateActionGrid(menuPanel);
         CreateDetailsPanel(menuPanel);
+    }
+
+    ControlsGuideView CreateControlsGuideView(Transform parent, bool worldSpace)
+    {
+        var view = new ControlsGuideView();
+        var root = CreateRect(worldSpace ? "VR Controls Guide Root" : "Controls Guide Root", parent, Vector2.zero, Vector2.one);
+        view.root = root.gameObject;
+
+        var panel = CreateRect("Controls Guide Panel", root, Vector2.zero, Vector2.zero);
+        panel.anchorMin = worldSpace ? Vector2.zero : new Vector2(0f, 1f);
+        panel.anchorMax = worldSpace ? Vector2.one : new Vector2(0f, 1f);
+        panel.pivot = worldSpace ? new Vector2(0.5f, 0.5f) : new Vector2(0f, 1f);
+        panel.anchoredPosition = worldSpace ? Vector2.zero : new Vector2(22f, -88f);
+        panel.sizeDelta = worldSpace ? Vector2.zero : new Vector2(430f, 650f);
+        var panelImage = panel.gameObject.AddComponent<Image>();
+        panelImage.color = new Color32(5, 20, 30, 235);
+        view.panel = panel.gameObject;
+
+        var title = CreateText(panel, "Controls Guide Title", "Desktop Controls", 26f, FontStyles.Bold, TextAlignmentOptions.Left);
+        title.color = Color.white;
+        Stretch(title.rectTransform, new Vector2(0.055f, 0.89f), new Vector2(0.7f, 0.97f));
+        view.title = title;
+
+        var hide = CreateFlatButton(panel, "Hide Controls Button", "Hide", () => SetControlsExpanded(false), new Color32(31, 57, 72, 255), Color.white);
+        Stretch(hide.GetComponent<RectTransform>(), new Vector2(0.73f, 0.9f), new Vector2(0.95f, 0.965f));
+
+        var scrollObject = CreateRect("Controls Scroll View", panel, new Vector2(0.04f, 0.04f), new Vector2(0.96f, 0.87f));
+        var scrollRect = scrollObject.gameObject.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.scrollSensitivity = 34f;
+
+        var viewport = CreateRect("Viewport", scrollObject, Vector2.zero, Vector2.one);
+        var viewportImage = viewport.gameObject.AddComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.015f);
+        viewport.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+        scrollRect.viewport = viewport;
+
+        var content = CreateRect("Controls Content", viewport, new Vector2(0f, 1f), new Vector2(1f, 1f));
+        content.pivot = new Vector2(0.5f, 1f);
+        content.sizeDelta = new Vector2(0f, 760f);
+        scrollRect.content = content;
+        view.scrollContent = content;
+
+        var body = CreateText(content, "Controls Guide Body", string.Empty, 22f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        body.color = Color.white;
+        body.fontSizeMin = 13f;
+        body.overflowMode = TextOverflowModes.Overflow;
+        Stretch(body.rectTransform, Vector2.zero, Vector2.one, new Vector2(14f, 8f), new Vector2(-14f, -8f));
+        view.body = body;
+
+        var tab = CreateFlatButton(root, "Show Controls Tab", "Controls", () => SetControlsExpanded(true), TechWiseUITheme.PrimaryBlue, Color.white);
+        var tabRect = tab.GetComponent<RectTransform>();
+        tabRect.anchorMin = new Vector2(0f, 1f);
+        tabRect.anchorMax = new Vector2(0f, 1f);
+        tabRect.pivot = new Vector2(0f, 1f);
+        tabRect.anchoredPosition = worldSpace ? new Vector2(18f, -18f) : new Vector2(22f, -88f);
+        tabRect.sizeDelta = worldSpace ? new Vector2(220f, 62f) : new Vector2(146f, 46f);
+        view.tab = tab.gameObject;
+
+        return view;
     }
 
     void CreateHeader(Transform parent)
@@ -335,6 +423,187 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         rect.localScale = Vector3.one;
     }
 
+    void RefreshControlsGuide()
+    {
+        if (!IsGameplayScene(SceneManager.GetActiveScene().name))
+            return;
+
+        var mode = GetActiveControlMode();
+        if (mode == MainMenu.VrModeValue)
+            EnsureVrControlsGuide();
+
+        if (mode != lastControlMode)
+        {
+            lastControlMode = mode;
+            UpdateControlsGuideText(mode);
+        }
+
+        var expanded = PlayerPrefs.GetInt(ControlsGuideVisibleKey, 1) != 0;
+        ApplyControlsViewState(screenControlsView, !isOpen && mode != MainMenu.VrModeValue, expanded);
+        ApplyControlsViewState(vrControlsView, !isOpen && mode == MainMenu.VrModeValue, expanded);
+    }
+
+    void EnsureVrControlsGuide()
+    {
+        var camera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+        if (camera == null)
+            return;
+
+        if (vrControlsCanvas != null)
+        {
+            if (vrControlsCanvas.transform.parent != camera.transform)
+                vrControlsCanvas.transform.SetParent(camera.transform, false);
+            return;
+        }
+
+        var canvasObject = new GameObject("TechWise VR Controls Guide", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        canvasObject.transform.SetParent(camera.transform, false);
+        canvasObject.transform.localPosition = new Vector3(-0.56f, -0.02f, 1.25f);
+        canvasObject.transform.localRotation = Quaternion.identity;
+
+        vrControlsCanvas = canvasObject.GetComponent<Canvas>();
+        vrControlsCanvas.renderMode = RenderMode.WorldSpace;
+        vrControlsCanvas.worldCamera = camera;
+        vrControlsCanvas.sortingOrder = 1600;
+
+        var rect = canvasObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(780f, 680f);
+        rect.localScale = Vector3.one * 0.001f;
+
+        var scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.dynamicPixelsPerUnit = 20f;
+
+        var trackedRaycasterType = Type.GetType(
+            "UnityEngine.XR.Interaction.Toolkit.UI.TrackedDeviceGraphicRaycaster, Unity.XR.Interaction.Toolkit");
+        if (trackedRaycasterType != null && canvasObject.GetComponent(trackedRaycasterType) == null)
+            canvasObject.AddComponent(trackedRaycasterType);
+
+        vrControlsView = CreateControlsGuideView(canvasObject.transform, true);
+        UpdateControlsGuideText(MainMenu.VrModeValue);
+    }
+
+    void SetControlsExpanded(bool expanded)
+    {
+        PlayerPrefs.SetInt(ControlsGuideVisibleKey, expanded ? 1 : 0);
+        PlayerPrefs.Save();
+        RefreshControlsGuide();
+    }
+
+    static void ApplyControlsViewState(ControlsGuideView view, bool modeVisible, bool expanded)
+    {
+        if (view == null || view.root == null)
+            return;
+
+        view.root.SetActive(modeVisible);
+        if (!modeVisible)
+            return;
+
+        if (view.panel != null)
+            view.panel.SetActive(expanded);
+        if (view.tab != null)
+            view.tab.SetActive(!expanded);
+    }
+
+    void UpdateControlsGuideText(string mode)
+    {
+        var isVr = mode == MainMenu.VrModeValue;
+        var title = isVr ? "VR Controls" : "Desktop Controls";
+        var body = isVr ? BuildVrControlsText() : BuildDesktopControlsText();
+        UpdateControlsViewText(screenControlsView, title, body);
+        UpdateControlsViewText(vrControlsView, title, body);
+    }
+
+    static void UpdateControlsViewText(ControlsGuideView view, string title, string body)
+    {
+        if (view == null)
+            return;
+
+        if (view.title != null)
+            view.title.text = title;
+        if (view.body != null)
+        {
+            view.body.text = body;
+            view.body.ForceMeshUpdate();
+            if (view.scrollContent != null)
+                view.scrollContent.sizeDelta = new Vector2(0f, Mathf.Max(640f, view.body.preferredHeight + 36f));
+        }
+    }
+
+    static string BuildDesktopControlsText()
+    {
+        return
+            "W A S D   Move\n" +
+            "Mouse   Look around\n" +
+            "Hold Left Mouse   Grab; release to drop / place\n" +
+            "Left Click   Lock cursor / press UI\n" +
+            "Right Mouse + Drag   Rotate held component\n" +
+            "Mouse Wheel   Rotate on selected axis\n" +
+            "R   Cycle rotation axis (Y / X / Z)\n" +
+            "Shift + Wheel   Move held component nearer or farther\n" +
+            "F   Reset held component rotation\n" +
+            "Backspace   Reset held or most recent component\n" +
+            "Enter / Space   Start Competition\n" +
+            "Esc   Unlock cursor / open or close Menu\n" +
+            "Menu / Controls   Open menus and hide this guide";
+    }
+
+    static string BuildVrControlsText()
+    {
+        var leftMove = ResolveVrBinding("XRI Left Locomotion/Move", "Left joystick");
+        var leftTeleport = ResolveVrBinding("XRI Left Locomotion/Teleport Mode", "Left joystick");
+        var rightTurn = ResolveVrBinding("XRI Right Locomotion/Turn", "Right joystick");
+        var leftGrip = ResolveVrBinding("XRI Left Interaction/Select", "Left grip");
+        var rightGrip = ResolveVrBinding("XRI Right Interaction/Select", "Right grip");
+        var leftTrigger = ResolveVrBinding("XRI Left Interaction/UI Press", "Left trigger");
+        var rightTrigger = ResolveVrBinding("XRI Right Interaction/UI Press", "Right trigger");
+        var scaleToggle = ResolveVrBinding("XRI Right Interaction/Scale Toggle", "Right joystick click");
+        var jump = ResolveVrBinding("XRI Right Locomotion/Jump", "Right primary button");
+
+        return
+            $"{leftMove}   Move\n" +
+            $"{rightTurn}   Turn / snap turn\n" +
+            $"{leftTeleport}   Aim or activate teleport\n" +
+            $"{leftGrip} / {rightGrip}   Grab and release components\n" +
+            $"{leftTrigger} / {rightTrigger}   Activate held items\n" +
+            $"Point + {rightTrigger}   Press UI buttons\n" +
+            "Either joystick while holding   Translate or rotate a component\n" +
+            $"{scaleToggle}   Toggle scale manipulation\n" +
+            $"{jump}   Jump when locomotion allows it\n" +
+            "Menu / Controls buttons   Open menus and hide this guide";
+    }
+
+    static string ResolveVrBinding(string actionPath, string fallback)
+    {
+#if ENABLE_INPUT_SYSTEM
+        foreach (var asset in Resources.FindObjectsOfTypeAll<InputActionAsset>())
+        {
+            if (asset == null)
+                continue;
+
+            var action = asset.FindAction(actionPath, false);
+            if (action == null)
+                continue;
+
+            for (var index = 0; index < action.bindings.Count; index++)
+            {
+                var binding = action.bindings[index];
+                var path = binding.effectivePath;
+                if (binding.isComposite || binding.isPartOfComposite ||
+                    string.IsNullOrWhiteSpace(path) ||
+                    path.IndexOf("XRController", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                var display = action.GetBindingDisplayString(index);
+                if (!string.IsNullOrWhiteSpace(display))
+                    return display.Replace("Primary 2D Axis", "Joystick").Replace("Button", "button");
+            }
+        }
+#endif
+        return fallback;
+    }
+
     void ToggleMenu()
     {
         SetMenuOpen(!isOpen);
@@ -350,6 +619,8 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
 
         if (open)
             RefreshStatus();
+
+        RefreshControlsGuide();
     }
 
     void RefreshVisibility()
@@ -357,9 +628,13 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         var active = IsGameplayScene(SceneManager.GetActiveScene().name);
         if (canvas != null)
             canvas.gameObject.SetActive(active);
+        if (vrControlsCanvas != null)
+            vrControlsCanvas.gameObject.SetActive(active);
 
         if (!active)
             SetMenuOpen(false);
+        else
+            RefreshControlsGuide();
     }
 
     void RefreshStatus()
@@ -381,7 +656,14 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         if (timeText != null)
             timeText.text = FormatSeconds(hasSnapshot ? snapshot.durationSeconds : 0);
         if (mistakesText != null)
+        {
+            var hiddenCompetitionResult = hasSnapshot &&
+                TechWiseSimulationModeManager.IsCompetitionMode &&
+                !snapshot.resultsRevealed;
+            if (mistakesText.transform.parent != null)
+                mistakesText.transform.parent.gameObject.SetActive(!hiddenCompetitionResult);
             mistakesText.text = hasSnapshot ? snapshot.mistakes.ToString() : "0";
+        }
         if (progressText != null)
             progressText.text = hasSnapshot ? $"{snapshot.completedSteps} / {snapshot.totalSteps}" : "0 / 0";
     }
@@ -397,14 +679,21 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         StartCoroutine(RefreshAfterDelay());
     }
 
+    static string GetActiveControlMode()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return MainMenu.VrModeValue;
+#else
+        return PlayerPrefs.GetString(MainMenu.ControlModeKey, MainMenu.DesktopModeValue);
+#endif
+    }
+
     void ShowControlsHelp()
     {
+        var mode = GetActiveControlMode();
         ShowMessage(
-            "Controls",
-            "WASD move | Mouse look | Left click grab/drop or press button\n" +
-            "Right mouse drag rotate | Wheel rotate | R cycle axis\n" +
-            "Shift + wheel distance | F reset rotation | Backspace reset part\n" +
-            "Enter/Space start prompt | Esc menu/unlock cursor");
+            mode == MainMenu.VrModeValue ? "VR Controls" : "Desktop Controls",
+            mode == MainMenu.VrModeValue ? BuildVrControlsText() : BuildDesktopControlsText());
     }
 
     void ShowSettingsHelp()
@@ -412,7 +701,7 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         var network = Application.internetReachability == NetworkReachability.NotReachable ? "Offline" : "Online";
         ShowMessage(
             "Settings",
-            $"Control mode: {PlayerPrefs.GetString(MainMenu.ControlModeKey, MainMenu.DesktopModeValue)}\n" +
+            $"Control mode: {GetActiveControlMode()}\n" +
             $"Network: {network}\n" +
             $"Pending sync: {TechWiseOfflineAttemptQueue.PendingCount}\n" +
             $"Portal: {TechWisePortalClient.PortalBaseUrl}");
@@ -432,11 +721,17 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
         RefreshStatus();
     }
 
-    static void SetControlMode(string mode)
+    void SetControlMode(string mode)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        mode = MainMenu.VrModeValue;
+#endif
         PlayerPrefs.SetString(MainMenu.ControlModeKey, mode);
         PlayerPrefs.SetInt(ControlModeExplicitKey, 1);
         PlayerPrefs.Save();
+        lastControlMode = null;
+        RefreshControlsGuide();
+        ShowControlsHelp();
     }
 
     void Logout()

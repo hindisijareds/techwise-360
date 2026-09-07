@@ -15,7 +15,7 @@ public sealed class TechWisePracticeModeRuntime : MonoBehaviour
     const string PracticeSceneName = "Multiplayer";
     const float BoundsMinHeight = -2.5f;
     const float BoundsMaxHorizontalDistance = 40f;
-    static readonly Vector3 FallbackSpawn = new(0f, 0.5f, -12f);
+    static readonly Vector3 FallbackSpawn = new(0f, 0f, 0f);
 
     static readonly string[] OnlineUiObjectNames =
     {
@@ -182,6 +182,9 @@ public sealed class TechWisePracticeModeRuntime : MonoBehaviour
 
     static void DisableOnlineComponents()
     {
+        foreach (var networkObject in FindObjectsByType<NetworkObject>(FindObjectsInactive.Include))
+            if (!networkObject.IsSpawned) networkObject.AutoObjectParentSync = false;
+
         foreach (var networkManager in FindObjectsByType<NetworkManager>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (networkManager == null)
@@ -355,7 +358,7 @@ public sealed class TechWisePracticeModeRuntime : MonoBehaviour
         foreach (var transformInScene in FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
             if (transformInScene != null && transformInScene.name == "ResetPosition")
-                return transformInScene.position;
+                return new Vector3(transformInScene.position.x, 0f, transformInScene.position.z);
         }
 
         return FallbackSpawn;

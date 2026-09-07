@@ -11,6 +11,11 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using UnityEngine.XR;
+using UnityEngine.XR.Interaction.Toolkit.Inputs;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 
 public class MainMenu : MonoBehaviour
 {
@@ -33,6 +38,7 @@ public class MainMenu : MonoBehaviour
     string portalStatusMessage = string.Empty;
 
     Canvas rootCanvas;
+    bool vrMenuPlaced;
     RectTransform modernRoot;
     RectTransform loginGroup;
     RectTransform signedInGroup;
@@ -77,6 +83,138 @@ public class MainMenu : MonoBehaviour
     RectTransform accountArea;
 
     readonly List<TechWiseVrCompetition> activeCompetitions = new();
+
+    // Some Quest/OpenXR runtimes expose the Touch trigger through the legacy XR
+    // feature API before (or instead of) resolving the Starter Assets UI Press
+    // InputAction binding. Feed both sources into XRI's normal UI pointer model so
+    // a physical trigger press always produces the expected pointer down/up/click.
+    sealed class ControllerTriggerButtonReader : IXRInputButtonReader
+    {
+        readonly XRInputButtonReader actionReader;
+        readonly XRNode node;
+        int sampledFrame = -1;
+        bool hasSample;
+        bool previousPressed;
+        bool currentPressed;
+        float currentValue;
+
+        public ControllerTriggerButtonReader(XRInputButtonReader actionReader, XRNode node)
+        {
+            this.actionReader = actionReader;
+            this.node = node;
+        }
+
+        public bool ReadIsPerformed()
+        {
+            SampleDevice();
+            return actionReader.ReadIsPerformed() || currentPressed;
+        }
+
+        public bool ReadWasPerformedThisFrame()
+        {
+            SampleDevice();
+            return actionReader.ReadWasPerformedThisFrame() || (currentPressed && !previousPressed);
+        }
+
+        public bool ReadWasCompletedThisFrame()
+        {
+            SampleDevice();
+            return actionReader.ReadWasCompletedThisFrame() || (!currentPressed && previousPressed);
+        }
+
+        public float ReadValue()
+        {
+            SampleDevice();
+            return Mathf.Max(actionReader.ReadValue(), currentValue);
+        }
+
+        public bool TryReadValue(out float value)
+        {
+            SampleDevice();
+            var readAction = actionReader.TryReadValue(out var actionValue);
+            value = Mathf.Max(actionValue, currentValue);
+            return readAction || currentValue > 0f;
+        }
+
+        void SampleDevice()
+        {
+            if (sampledFrame == Time.frameCount)
+                return;
+
+            sampledFrame = Time.frameCount;
+            var pressed = false;
+            var val = 0f;
+
+            var device = InputDevices.GetDeviceAtXRNode(node);
+            if (device.isValid)
+            {
+                if (device.TryGetFeatureValue(CommonUsages.triggerButton, out var tb) && tb)
+                    pressed = true;
+                if (device.TryGetFeatureValue(CommonUsages.trigger, out var tv))
+                {
+                    val = Mathf.Max(val, tv);
+                    if (tv >= 0.5f) pressed = true;
+                }
+                if (device.TryGetFeatureValue(CommonUsages.primaryButton, out var pb) && pb)
+                    pressed = true;
+                if (device.TryGetFeatureValue(CommonUsages.secondaryButton, out var sb) && sb)
+                    pressed = true;
+                if (device.TryGetFeatureValue(CommonUsages.gripButton, out var gb) && gb)
+                    pressed = true;
+                if (device.TryGetFeatureValue(CommonUsages.grip, out var gv) && gv >= 0.5f)
+                    pressed = true;
+            }
+
+#if ENABLE_INPUT_SYSTEM
+            var isLeft = node == XRNode.LeftHand;
+            foreach (var dev in UnityEngine.InputSystem.InputSystem.devices)
+            {
+                if (dev is UnityEngine.InputSystem.XR.XRController controller)
+                {
+                    var name = controller.name;
+                    var sideMatch = isLeft
+                        ? name.IndexOf("Left", StringComparison.OrdinalIgnoreCase) >= 0
+                        : name.IndexOf("Right", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (sideMatch)
+                    {
+                        var triggerBtn = controller.TryGetChildControl<UnityEngine.InputSystem.Controls.ButtonControl>("triggerButton");
+                        if (triggerBtn != null && triggerBtn.isPressed) pressed = true;
+
+                        var triggerVal = controller.TryGetChildControl<UnityEngine.InputSystem.Controls.AxisControl>("trigger");
+                        if (triggerVal != null)
+                        {
+                            var tv = triggerVal.ReadValue();
+                            val = Mathf.Max(val, tv);
+                            if (tv >= 0.5f) pressed = true;
+                        }
+
+                        var primaryBtn = controller.TryGetChildControl<UnityEngine.InputSystem.Controls.ButtonControl>("primaryButton");
+                        if (primaryBtn != null && primaryBtn.isPressed) pressed = true;
+
+                        var secondaryBtn = controller.TryGetChildControl<UnityEngine.InputSystem.Controls.ButtonControl>("secondaryButton");
+                        if (secondaryBtn != null && secondaryBtn.isPressed) pressed = true;
+
+                        var gripBtn = controller.TryGetChildControl<UnityEngine.InputSystem.Controls.ButtonControl>("gripButton");
+                        if (gripBtn != null && gripBtn.isPressed) pressed = true;
+                    }
+                }
+            }
+#endif
+
+            if (!hasSample)
+            {
+                hasSample = true;
+                previousPressed = pressed;
+            }
+            else
+            {
+                previousPressed = currentPressed;
+            }
+
+            currentPressed = pressed;
+            currentValue = pressed ? Mathf.Max(val, 1f) : val;
+        }
+    }
 
     public event Action MenuStateChanged;
 
@@ -131,6 +269,9 @@ public class MainMenu : MonoBehaviour
 
     public static bool IsDesktopModeSelected(bool desktopModeOverridesVrWhenHeadsetPresent = false)
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        return false;
+#endif
         var selectedMode = PlayerPrefs.GetString(ControlModeKey, DesktopModeValue);
         var userExplicitlySelectedMode = PlayerPrefs.GetInt(ControlModeExplicitKey, 0) == 1;
 
@@ -142,6 +283,10 @@ public class MainMenu : MonoBehaviour
 
     public static bool IsVrHardwareAvailable()
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // Quest initializes tracking after some scene Awake callbacks.
+        return true;
+#else
         if (XRSettings.isDeviceActive)
             return true;
 
@@ -154,13 +299,11 @@ public class MainMenu : MonoBehaviour
         }
 
         return false;
+#endif
     }
 
     public void SinglePlayer()
     {
-        if (!EnsureLoggedInForMode())
-            return;
-
         StartAssemblyLesson();
     }
 
@@ -176,9 +319,6 @@ public class MainMenu : MonoBehaviour
 
     public void ShowPracticeChooser()
     {
-        if (!EnsureLoggedInForMode())
-            return;
-
         HideModal(competitionModal);
         HideModal(settingsModal);
         EnsurePracticeModal();
@@ -201,9 +341,6 @@ public class MainMenu : MonoBehaviour
 
     public void ShowSettings()
     {
-        if (!EnsureLoggedInForMode())
-            return;
-
         HideModal(practiceModal);
         HideModal(competitionModal);
         EnsureSettingsModal();
@@ -235,9 +372,6 @@ public class MainMenu : MonoBehaviour
 
     public void StartAssemblyPractice()
     {
-        if (!EnsureLoggedInForMode())
-            return;
-
         TechWiseSimulationModeManager.SetMode(
             TechWiseSimulationModeManager.AssemblyType,
             TechWiseSimulationModeManager.PracticeMode);
@@ -246,9 +380,6 @@ public class MainMenu : MonoBehaviour
 
     public void StartDisassemblyPractice()
     {
-        if (!EnsureLoggedInForMode())
-            return;
-
         TechWiseSimulationModeManager.SetMode(
             TechWiseSimulationModeManager.DisassemblyType,
             TechWiseSimulationModeManager.PracticeMode);
@@ -290,6 +421,10 @@ public class MainMenu : MonoBehaviour
 
     public void UseDesktopMode()
     {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        SetControlMode(VrModeValue);
+        return;
+#endif
         SetControlMode(DesktopModeValue);
     }
 
@@ -308,12 +443,20 @@ public class MainMenu : MonoBehaviour
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+        PlayerPrefs.SetString(ControlModeKey, VrModeValue);
+        PlayerPrefs.SetInt(ControlModeExplicitKey, 1);
+        PlayerPrefs.Save();
+#else
         if (!PlayerPrefs.HasKey(ControlModeKey))
-            PlayerPrefs.SetString(ControlModeKey, DesktopModeValue);
+            PlayerPrefs.SetString(ControlModeKey, IsVrHardwareAvailable() ? VrModeValue : DesktopModeValue);
+#endif
 
         EnsureEventSystem();
+        if (IsVrHardwareAvailable())
+            StartCoroutine(RefreshVrUiInteractors());
 
-        if (useUiToolkitMenu)
+        if (useUiToolkitMenu && !IsVrHardwareAvailable())
         {
             uiToolkitMenu = GetComponent<TechWiseMenuController>();
             if (uiToolkitMenu == null)
@@ -331,6 +474,128 @@ public class MainMenu : MonoBehaviour
         RefreshPortalStatus();
         TechWiseOfflineAttemptQueue.SyncNow();
         StartCoroutine(LoadCompetitionsCoroutine());
+    }
+
+    void LateUpdate()
+    {
+        if (IsVrHardwareAvailable())
+            MaintainVrInteractors();
+
+        if (vrMenuPlaced || rootCanvas == null || !IsVrHardwareAvailable())
+            return;
+
+        var camera = Camera.main;
+        if (camera == null || !camera.isActiveAndEnabled)
+            return;
+
+        ConfigureVrMenu(camera);
+        // Allow the XR origin to establish its initial tracked pose before fixing the panel in place.
+        vrMenuPlaced = Time.timeSinceLevelLoad > 1f;
+    }
+
+    void ConfigureVrMenu(Camera camera)
+    {
+        EnsureEventSystem();
+        rootCanvas.renderMode = RenderMode.WorldSpace;
+        rootCanvas.worldCamera = camera;
+        var rect = rootCanvas.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(1920f, 1080f);
+        rect.localScale = Vector3.one * 0.00125f;
+        var forward = Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up).normalized;
+        if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+        rect.SetPositionAndRotation(camera.transform.position + forward * 1.8f,
+            Quaternion.LookRotation(forward, Vector3.up));
+        var scaler = rootCanvas.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        scaler.dynamicPixelsPerUnit = 10f;
+        var trRaycaster = rootCanvas.GetComponent<TrackedDeviceGraphicRaycaster>() ?? rootCanvas.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+        trRaycaster.ignoreReversedGraphics = false;
+        trRaycaster.checkFor3DOcclusion = false;
+        trRaycaster.checkFor2DOcclusion = false;
+        trRaycaster.enabled = true;
+
+        var standardRaycaster = rootCanvas.GetComponent<GraphicRaycaster>();
+        if (standardRaycaster != null)
+            standardRaycaster.enabled = false;
+
+        Canvas.ForceUpdateCanvases();
+    }
+
+    void MaintainVrInteractors()
+    {
+        EnsureEventSystem();
+        var xrModule = FindAnyObjectByType<XRUIInputModule>();
+        if (xrModule == null)
+            return;
+
+        xrModule.enableXRInput = true;
+        xrModule.enabled = true;
+
+        foreach (var interactor in FindObjectsByType<NearFarInteractor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (interactor == null) continue;
+            interactor.enableFarCasting = true;
+            interactor.enableUIInteraction = true;
+            xrModule.RegisterInteractor(interactor);
+
+            if (interactor.transform.parent != null &&
+                interactor.transform.parent.name.IndexOf("Controller", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                var isLeftController = interactor.transform.parent.name.IndexOf("Left", StringComparison.OrdinalIgnoreCase) >= 0;
+                var triggerReader = interactor.uiPressInput;
+                if (triggerReader != null && triggerReader.bypass is not ControllerTriggerButtonReader)
+                    triggerReader.bypass = new ControllerTriggerButtonReader(
+                        triggerReader,
+                        isLeftController ? XRNode.LeftHand : XRNode.RightHand);
+
+                var visual = interactor.GetComponentInChildren<CurveVisualController>(true);
+                if (visual != null)
+                {
+                    visual.gameObject.SetActive(true);
+                    visual.enabled = true;
+                    visual.extendLineToEmptyHit = true;
+                    visual.maxVisualCurveDistance = 10f;
+                    visual.restingVisualLineLength = 0.5f;
+                    var lr = visual.GetComponentInChildren<LineRenderer>(true);
+                    if (lr != null)
+                    {
+                        lr.enabled = true;
+                        lr.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        foreach (var ray in FindObjectsByType<XRRayInteractor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (ray == null) continue;
+            ray.enableUIInteraction = true;
+            xrModule.RegisterInteractor(ray);
+        }
+
+        foreach (var poke in FindObjectsByType<XRPokeInteractor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (poke == null) continue;
+            poke.enableUIInteraction = true;
+            xrModule.RegisterInteractor(poke);
+        }
+    }
+
+    IEnumerator RefreshVrUiInteractors()
+    {
+        yield return null;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        foreach (var modality in FindObjectsByType<XRInputModalityManager>(FindObjectsInactive.Include))
+        {
+            modality.enabled = false;
+            if (modality.leftHand != null) modality.leftHand.SetActive(false);
+            if (modality.rightHand != null) modality.rightHand.SetActive(false);
+            if (modality.leftController != null) modality.leftController.SetActive(true);
+            if (modality.rightController != null) modality.rightController.SetActive(true);
+        }
+        yield return null;
+#endif
+        MaintainVrInteractors();
     }
 
     public void LoginToPortal(string identifier, string password, Action<bool, string> onComplete = null)
@@ -363,6 +628,25 @@ public class MainMenu : MonoBehaviour
     public void LogoutFromPortal()
     {
         LogoutPortal();
+    }
+
+    public void ConnectWebsiteAccount()
+    {
+        var code = portalIdentifierInput.text.Trim();
+        if (string.IsNullOrEmpty(code))
+        {
+            Application.OpenURL(TechWisePortalClient.PortalBaseUrl + "/vr-connect.html");
+            SetPortalStatus("Generate a website code, paste it above, then press Connect Code.");
+            return;
+        }
+        SetPortalStatus("Connecting website account...");
+        StartCoroutine(TechWisePortalClient.EnsureInstance().ExchangeConnectionCodeCoroutine(code, (ok, message) =>
+        {
+            portalIdentifierInput.text = "";
+            portalPasswordInput.text = "";
+            SetPortalStatus(message);
+            if (ok) { RefreshMenuAuthState(); StartCoroutine(LoadCompetitionsCoroutine()); }
+        }));
     }
 
     public void RefreshActivitiesFromMenu()
@@ -473,6 +757,16 @@ public class MainMenu : MonoBehaviour
         if (modernRoot != null)
             return;
 
+        // Hide any pre-baked overlay canvas from the scene so it doesn't block the VR world space menu
+        foreach (var c in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (c.gameObject.name.IndexOf("TechWise", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                c.gameObject.name.IndexOf("Runtime", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                c.gameObject.SetActive(false);
+            }
+        }
+
         var canvasObject = new GameObject("TechWise 360 Runtime Menu Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         canvasObject.SetActive(true);
         rootCanvas = canvasObject.GetComponent<Canvas>();
@@ -509,19 +803,29 @@ public class MainMenu : MonoBehaviour
     void CreateBackground(Transform parent)
     {
         var background = CreateRect("Flat Background", parent, Vector2.zero, Vector2.one);
-        background.gameObject.AddComponent<Image>().color = new Color32(239, 248, 255, 255);
+        var bgImg = background.gameObject.AddComponent<Image>();
+        bgImg.color = new Color32(239, 248, 255, 255);
+        bgImg.raycastTarget = false;
 
         var leftWash = CreateRect("Left Pale Blue Area", parent, new Vector2(0f, 0f), new Vector2(0.56f, 1f));
-        leftWash.gameObject.AddComponent<Image>().color = new Color32(226, 242, 253, 255);
+        var leftImg = leftWash.gameObject.AddComponent<Image>();
+        leftImg.color = new Color32(226, 242, 253, 255);
+        leftImg.raycastTarget = false;
 
         var rightWhite = CreateRect("Right White Area", parent, new Vector2(0.56f, 0f), new Vector2(1f, 1f));
-        rightWhite.gameObject.AddComponent<Image>().color = new Color32(250, 253, 255, 255);
+        var rightImg = rightWhite.gameObject.AddComponent<Image>();
+        rightImg.color = new Color32(250, 253, 255, 255);
+        rightImg.raycastTarget = false;
 
         var divider = CreateRect("Vertical Section Divider", parent, new Vector2(0.56f, 0f), new Vector2(0.5615f, 1f));
-        divider.gameObject.AddComponent<Image>().color = new Color32(207, 231, 245, 255);
+        var divImg = divider.gameObject.AddComponent<Image>();
+        divImg.color = new Color32(207, 231, 245, 255);
+        divImg.raycastTarget = false;
 
         var bottomLine = CreateRect("Bottom Blue Line", parent, new Vector2(0.045f, 0.055f), new Vector2(0.955f, 0.06f));
-        bottomLine.gameObject.AddComponent<Image>().color = new Color32(60, 181, 235, 255);
+        var botImg = bottomLine.gameObject.AddComponent<Image>();
+        botImg.color = new Color32(60, 181, 235, 255);
+        botImg.raycastTarget = false;
     }
 
     void BuildBranding(Transform parent)
@@ -540,13 +844,17 @@ public class MainMenu : MonoBehaviour
 
         var underline = CreateRect("Brand Underline", parent, new Vector2(0.21f, 0.68f), new Vector2(0.25f, 0.685f));
         Stretch(underline, new Vector2(0.043f, 0.742f), new Vector2(0.073f, 0.747f));
-        underline.gameObject.AddComponent<Image>().color = TechWiseUITheme.PrimaryBlue;
+        var underImg = underline.gameObject.AddComponent<Image>();
+        underImg.color = TechWiseUITheme.PrimaryBlue;
+        underImg.raycastTarget = false;
     }
 
     void BuildStudentSyncCard(Transform parent)
     {
         var card = CreateRect("Student Sync Card", parent, new Vector2(0.04f, 0.295f), new Vector2(0.53f, 0.735f));
-        TechWiseUITheme.StylePanel(card.gameObject.AddComponent<Image>(), Color.white, true);
+        var cardImg = card.gameObject.AddComponent<Image>();
+        TechWiseUITheme.StylePanel(cardImg, Color.white, true);
+        cardImg.raycastTarget = false;
 
         var icon = CreateIconBadge(card, "Sync Icon", "User", TechWiseUITheme.PrimaryBlue, new Vector2(0.045f, 0.785f), new Vector2(0.125f, 0.93f));
         icon.fontSizeMax = 28f;
@@ -560,16 +868,20 @@ public class MainMenu : MonoBehaviour
         Stretch(syncCardSubtitleText.rectTransform, new Vector2(0.165f, 0.765f), new Vector2(0.72f, 0.835f));
 
         var pill = CreateRect("Sync Status Pill", card, new Vector2(0.745f, 0.805f), new Vector2(0.92f, 0.895f));
-        TechWiseUITheme.StylePanel(pill.gameObject.AddComponent<Image>(), new Color32(220, 252, 231, 245), false);
+        var pillImg = pill.gameObject.AddComponent<Image>();
+        TechWiseUITheme.StylePanel(pillImg, new Color32(220, 252, 231, 245), false);
+        pillImg.raycastTarget = false;
         syncPillText = CreateText(pill, "Sync Pill Text", "SYNCED", 15f, FontStyles.Bold, TextAlignmentOptions.Center);
         syncPillText.color = TechWiseUITheme.Green;
         Stretch(syncPillText.rectTransform, Vector2.zero, Vector2.one);
 
         var line = CreateRect("Sync Divider", card, new Vector2(0.04f, 0.735f), new Vector2(0.96f, 0.739f));
-        line.gameObject.AddComponent<Image>().color = new Color32(215, 226, 242, 255);
+        var lineImg = line.gameObject.AddComponent<Image>();
+        lineImg.color = new Color32(215, 226, 242, 255);
+        lineImg.raycastTarget = false;
 
         loginGroup = CreateRect("Logged Out Group", card, new Vector2(0.06f, 0.075f), new Vector2(0.94f, 0.69f));
-        portalIdentifierInput = CreateInput(loginGroup, "Student Username or Email", new Vector2(0f, 0.68f), new Vector2(1f, 0.9f), "User");
+        portalIdentifierInput = CreateInput(loginGroup, "Username, email or website code", new Vector2(0f, 0.68f), new Vector2(1f, 0.9f), "User");
         portalPasswordInput = CreateInput(loginGroup, "Password", new Vector2(0f, 0.43f), new Vector2(1f, 0.65f), "Lock");
         portalPasswordInput.contentType = TMP_InputField.ContentType.Password;
 
@@ -577,7 +889,8 @@ public class MainMenu : MonoBehaviour
         portalStatusText.color = TechWiseUITheme.MutedText;
         Stretch(portalStatusText.rectTransform, new Vector2(0f, 0.24f), new Vector2(1f, 0.36f));
 
-        portalLoginButton = CreateLargeButton(loginGroup, "Login Button", "Log In", "", LoginToPortal, new Vector2(0f, 0.02f), new Vector2(1f, 0.2f), TechWiseUITheme.PrimaryBlue, Color.white);
+        portalLoginButton = CreateLargeButton(loginGroup, "Login Button", "Log In", "", LoginToPortal, new Vector2(0f, 0.02f), new Vector2(0.46f, 0.2f), TechWiseUITheme.PrimaryBlue, Color.white);
+        CreateLargeButton(loginGroup, "Connect Website Button", "Connect Code", "", ConnectWebsiteAccount, new Vector2(0.5f, 0.02f), new Vector2(1f, 0.2f), TechWiseUITheme.PrimaryBlue, Color.white);
 
         signedInGroup = CreateRect("Logged In Group", card, new Vector2(0.06f, 0.065f), new Vector2(0.94f, 0.68f));
         signedInNameText = CreateInfoLine(signedInGroup, "Signed In Name", "Logged in as Student.", "User", 0.73f);
@@ -591,7 +904,9 @@ public class MainMenu : MonoBehaviour
     void BuildNavigationPanel(Transform parent)
     {
         var panel = CreateRect("Action Panel", parent, new Vector2(0.585f, 0.075f), new Vector2(0.965f, 0.975f));
-        TechWiseUITheme.StylePanel(panel.gameObject.AddComponent<Image>(), Color.white, true);
+        var panelImg = panel.gameObject.AddComponent<Image>();
+        TechWiseUITheme.StylePanel(panelImg, Color.white, true);
+        panelImg.raycastTarget = false;
 
         var modeLabel = CreateText(panel, "Mode Label", "SELECT MODE", 17f, FontStyles.Bold, TextAlignmentOptions.Left);
         modeLabel.color = TechWiseUITheme.MutedText;
@@ -613,16 +928,16 @@ public class MainMenu : MonoBehaviour
         layout.childForceExpandHeight = false;
         layout.childForceExpandWidth = true;
 
-        startVisual = CreateMenuAction(stack, "Start Button", "Start", "Launch the selected activity.", "Play", TechWiseUITheme.PrimaryBlue, SinglePlayer, true, false);
-        practiceVisual = CreateMenuAction(stack, "Practice Mode Button", "Practice Mode", "Choose assembly or disassembly practice.", "Aim", TechWiseUITheme.PrimaryBlue, PracticeMode, true, false);
+        startVisual = CreateMenuAction(stack, "Start Button", "Start", "Launch the assembly tutorial.", "Play", TechWiseUITheme.PrimaryBlue, SinglePlayer, false, false);
+        practiceVisual = CreateMenuAction(stack, "Practice Mode Button", "Practice Mode", "Choose assembly or disassembly practice.", "Aim", TechWiseUITheme.PrimaryBlue, PracticeMode, false, false);
         competitionVisual = CreateMenuAction(stack, "Competition Button", "Competition", "Compete and sync leaderboard attempts.", "Cup", TechWiseUITheme.PrimaryBlue, ShowCompetitionChooser, true, false);
         controlsVisual = CreateMenuAction(stack, "Controls Button", "Controls", "View keyboard, mouse, and VR controls.", "Pad", TechWiseUITheme.PrimaryBlue, ShowControls, false, false);
-        settingsVisual = CreateMenuAction(stack, "Settings Button", "Settings", "Adjust preferences and sync details.", "Gear", TechWiseUITheme.PrimaryBlue, ShowSettings, true, false);
+        settingsVisual = CreateMenuAction(stack, "Settings Button", "Settings", "View preferences and sync details.", "Gear", TechWiseUITheme.PrimaryBlue, ShowSettings, false, false);
         quitVisual = CreateMenuAction(stack, "Quit Button", "Quit", "Exit TechWise 360.", "Power", TechWiseUITheme.Red, QuitGame, false, true);
-        startVisual.signedOutSubtitle = "Log in required to start.";
-        practiceVisual.signedOutSubtitle = "Log in required to practice.";
+        startVisual.signedOutSubtitle = "Launch the assembly tutorial.";
+        practiceVisual.signedOutSubtitle = "Choose assembly or disassembly practice.";
         competitionVisual.signedOutSubtitle = "Log in required to compete.";
-        settingsVisual.signedOutSubtitle = "Log in required to adjust preferences.";
+        settingsVisual.signedOutSubtitle = "View preferences and sync details.";
 
         startButton = startVisual.button;
         practiceButton = practiceVisual.button;
@@ -643,7 +958,12 @@ public class MainMenu : MonoBehaviour
     void BuildModalBackdrop(Transform parent)
     {
         modalBackdrop = CreateRect("Modal Backdrop", parent, Vector2.zero, Vector2.one);
-        modalBackdrop.gameObject.AddComponent<Image>().color = new Color32(9, 28, 64, 82);
+        var backdropImg = modalBackdrop.gameObject.AddComponent<Image>();
+        backdropImg.color = new Color32(9, 28, 64, 82);
+        backdropImg.raycastTarget = true;
+        var backdropBtn = modalBackdrop.gameObject.AddComponent<Button>();
+        backdropBtn.targetGraphic = backdropImg;
+        backdropBtn.onClick.AddListener(CloseModals);
         modalBackdrop.gameObject.SetActive(false);
     }
 
@@ -655,7 +975,9 @@ public class MainMenu : MonoBehaviour
         BuildBranding(controls);
 
         var card = CreateRect("Controls Card", controls, new Vector2(0.095f, 0.075f), new Vector2(0.905f, 0.79f));
-        TechWiseUITheme.StylePanel(card.gameObject.AddComponent<Image>(), Color.white, true);
+        var cardImg = card.gameObject.AddComponent<Image>();
+        TechWiseUITheme.StylePanel(cardImg, Color.white, true);
+        cardImg.raycastTarget = false;
 
         var title = CreateText(card, "Controls Title", "Controls", 44f, FontStyles.Bold, TextAlignmentOptions.Center);
         title.color = TechWiseUITheme.Navy;
@@ -1110,10 +1432,10 @@ public class MainMenu : MonoBehaviour
         if (accountArea != null)
             accountArea.gameObject.SetActive(signedIn);
 
-        SetActionAvailability(startVisual, signedIn);
-        SetActionAvailability(practiceVisual, signedIn);
+        SetActionAvailability(startVisual, true);
+        SetActionAvailability(practiceVisual, true);
         SetActionAvailability(competitionVisual, signedIn);
-        SetActionAvailability(settingsVisual, signedIn);
+        SetActionAvailability(settingsVisual, true);
         SetActionAvailability(logoutVisual, signedIn);
         SetActionAvailability(controlsVisual, true);
         SetActionAvailability(quitVisual, true);
@@ -1289,17 +1611,22 @@ public class MainMenu : MonoBehaviour
             eventSystem = new GameObject("TechWise Menu EventSystem", typeof(EventSystem)).GetComponent<EventSystem>();
 
         eventSystem.enabled = true;
-#if ENABLE_INPUT_SYSTEM
-        var inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
-        if (inputModule == null)
-            inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
-        inputModule.enabled = true;
-#else
-        var inputModule = eventSystem.GetComponent<StandaloneInputModule>();
-        if (inputModule == null)
-            inputModule = eventSystem.gameObject.AddComponent<StandaloneInputModule>();
-        inputModule.enabled = true;
-#endif
+        // XRUIInputModule handles both tracked XR pointers and desktop mouse/gamepad.
+        // Keeping one input module avoids duplicate clicks and guarantees interactors
+        // can register during scene activation instead of after a runtime conversion.
+        foreach (var module in eventSystem.GetComponents<BaseInputModule>())
+            if (!(module is XRUIInputModule)) module.enabled = false;
+
+        var xrModule = eventSystem.GetComponent<XRUIInputModule>();
+        if (xrModule == null)
+            xrModule = eventSystem.gameObject.AddComponent<XRUIInputModule>();
+        xrModule.enableXRInput = true;
+        xrModule.enableMouseInput = true;
+        xrModule.enableTouchInput = true;
+        xrModule.enableGamepadInput = true;
+        xrModule.enableJoystickInput = true;
+        xrModule.enableBuiltinActionsAsFallback = true;
+        xrModule.enabled = true;
     }
 
     static RectTransform CreateRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax)
