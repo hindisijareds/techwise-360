@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TechWise 360 - Meta Quest 2 VR & Web Portal Architecture Guide</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm 20mm 15mm;
+    @bottom-center {
+      content: "Page " counter(page);
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 10pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  .header-cover {
+    border-bottom: 3px solid #0284c7;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+
+  .badge-tag {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 8.5pt;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  h1 {
+    font-size: 20pt;
+    color: #0f365c;
+    margin: 0 0 6px;
+    line-height: 1.25;
+  }
+
+  .subtitle {
+    font-size: 11pt;
+    color: #475569;
+    margin: 0 0 10px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 8.5pt;
+    margin-top: 10px;
+  }
+
+  .meta-grid strong {
+    display: block;
+    color: #0f172a;
+  }
+
+  h2 {
+    font-size: 13pt;
+    color: #0369a1;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 11pt;
+    color: #1e3a8a;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    page-break-after: avoid;
+  }
+
+  p {
+    margin: 0.5em 0;
+    text-align: justify;
+  }
+
+  ul, ol {
+    margin: 0.4em 0;
+    padding-left: 20px;
+  }
+
+  li {
+    margin-bottom: 0.3em;
+  }
+
+  .callout {
+    background: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+
+  .callout-warning {
+    background: #fefce8;
+    border-left: 4px solid #eab308;
+  }
+
+  .callout-security {
+    background: #fdf2f8;
+    border-left: 4px solid #db2777;
+  }
+
+  .table-box {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 9pt;
+  }
+
+  .table-box th, .table-box td {
+    border: 1px solid #cbd5e1;
+    padding: 6px 10px;
+    text-align: left;
+  }
+
+  .table-box th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .table-box tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  code {
+    background: #f1f5f9;
+    padding: 1.5px 5px;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.8pt;
+    color: #0f172a;
+  }
+
+  .diagram-box {
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.2pt;
+    line-height: 1.45;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-cover">
+  <span class="badge-tag">Capstone Technical Architecture</span>
+  <h1>TechWise 360: Meta Quest 2 VR &amp; Web Portal Architecture</h1>
+  <div class="subtitle">Authentication Bridges, Offline Store-and-Forward Synchronization, and Anti-Cheating Threat Models</div>
+  <div class="meta-grid">
+    <div><strong>Project:</strong> TechWise 360</div>
+    <div><strong>Target VR:</strong> Meta Quest 2 (Unity Android)</div>
+    <div><strong>Web Platform:</strong> Cloudflare Pages &amp; Supabase</div>
+    <div><strong>Curriculum:</strong> DepEd TVL-ICT CSS</div>
+  </div>
+</div>
+
+<h2>1. Executive Summary &amp; The Dual-Device Challenge</h2>
+<p>
+  In the TechWise 360 ecosystem, learning is divided into two synergistic environments: the <strong>Web-Based Learning Management Portal</strong> (used on desktop computers for lessons, interactive guides, quizzes, and analytics) and the <strong>Meta Quest 2 Virtual Reality Simulation</strong> (used for immersive 6DoF PC hardware assembly and disassembly).
+</p>
+<p>
+  A primary architectural challenge is <strong>Single Sign-On (SSO) and Session Handshake</strong>. The desktop PC browser and the Meta Quest 2 headset are two physically separate computing devices on different hardware platforms. A student logged into their browser cannot automatically pass their browser's local memory (<code>localStorage</code>) to the standalone Quest 2 headset without an orchestrated server bridge.
+</p>
+
+<h2>2. Authentication &amp; Station Pairing Models</h2>
+
+<h3>2.1 Comparison of Connection Architectures</h3>
+<table class="table-box">
+  <thead>
+    <tr>
+      <th>Architecture</th>
+      <th>User Workflow</th>
+      <th>Advantages</th>
+      <th>Limitations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Option A: 6-Digit Quick Sync Code</strong></td>
+      <td>Student clicks "Generate Code" on portal; enters 6 digits on VR keypad.</td>
+      <td>Highly secure, eliminates password typing in VR, works across any headset.</td>
+      <td>Requires punching in 6 numbers with the VR laser controller.</td>
+    </tr>
+    <tr>
+      <td><strong>Option B: Lab Station Pairing (Recommended)</strong></td>
+      <td>Student selects assigned lab desk (e.g. <em>Headset 01</em>) and clicks "Launch". Headset wakes up automatically.</td>
+      <td>100% automatic for the student. Zero typing in VR. Matches real enterprise training labs.</td>
+      <td>Requires headsets to be mapped to stations in the lab inventory.</td>
+    </tr>
+    <tr>
+      <td><strong>Option C: Meta Quest Browser Deep Link</strong></td>
+      <td>Student logs in inside Quest built-in browser; clicks "Launch VR", triggering <code>techwise360://</code> deep link.</td>
+      <td>Direct OS launch.</td>
+      <td>Requires typing credentials inside VR browser; clumsy workflow.</td>
+    </tr>
+    <tr>
+      <td><strong>Option D: Optical Passthrough QR Code</strong></td>
+      <td>Headset scans a QR code displayed on the student's PC monitor via Quest passthrough.</td>
+      <td>Touchless pairing.</td>
+      <td>Relies on Quest 2 camera clarity, room lighting, and optical permissions.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>2.2 Option B Detailed Workflow (Lab Station Polling Handshake)</h3>
+<div class="diagram-box">
+[Student PC Web Portal]             [Cloudflare / Supabase]              [Quest 2: Headset-01]
+         |                                     |                                   |
+         |                                     |&lt;----- (Heartbeat every 2s) -------|
+         |                                     |       GET /api/vr/station-status  |
+         |                                     |------ Status: Idle (No user) -----&gt;|
+         |                                     |                                   |
+         |-- Student clicks "Pair Station 1" -&gt;|                                   |
+         |   (Streams Jared's Token &amp; ID)      |                                   |
+         |                                     |                                   |
+         |                                     |&lt;----- (Next 2s Heartbeat) --------|
+         |                                     |       GET /api/vr/station-status  |
+         |                                     |                                   |
+         |                                     |====== Status: Active =============&gt;|
+         |                                     |   User: Jared Estabillo (Gr. 10)  |
+         |                                     |   Module: PC Hardware Assembly    |
+         |                                     |                                   |
+         |                                     |                     [Unity VR Starts Jared's Run]
+</div>
+
+<div class="page-break"></div>
+
+<h2>3. Offline Mode &amp; Store-and-Forward Synchronization</h2>
+<p>
+  In Philippine TVL-ICT public school laboratories, internet connectivity can be intermittent or completely unavailable during scheduled class periods. TechWise 360 incorporates a <strong>Store-and-Forward Offline Architecture</strong> to guarantee zero instructional interruption.
+</p>
+
+<h3>3.1 Local Offline Execution Cycle</h3>
+<ol>
+  <li><strong>Offline Fallback Detection:</strong> At boot, the Unity VR client pings the local gateway and Supabase API. If no network response is received within 3 seconds, it switches to <code>OFFLINE_MODE</code>.</li>
+  <li><strong>Local Roster Verification:</strong> The headset utilizes cached class rosters previously synchronized during online charging or teacher setup.</li>
+  <li><strong>Local Attempt Record:</strong> When the learner completes the simulation, performance metrics (time, accuracy, mistakes, component sequence) are packaged into an immutable JSON ledger entry stored in the headset's persistent internal storage (<code>Application.persistentDataPath</code>).</li>
+  <li><strong>Reconnection Auto-Flush:</strong> A background daemon in Unity polls network liveness. When internet connectivity is restored, all attempts flagged with <code>synced: false</code> are dispatched via HTTPS POST to <code>/api/student/vr-attempts</code>, validated server-side, and marked <code>synced: true</code>.</li>
+</ol>
+
+<h2>4. Adversarial Threat Model &amp; Security Countermeasures</h2>
+<p>
+  A rigorous defense panel evaluates whether students can game the system, sabotage peers, or dispute their bad scores. We have designed a multi-layer defense matrix addressing both external and internal threats.
+</p>
+
+<h3>4.1 Threat Scenario 1: Identity Spoofing / Peer Sabotage in Offline Mode</h3>
+<div class="callout callout-warning">
+  <strong>The Threat:</strong> Student B enters Student A's (Jared's) Student ID on an offline headset and intentionally fails the simulation (or records 50 mistakes) to ruin Jared's grade and leaderboard standing.
+</div>
+<ul>
+  <li><strong>Countermeasure 1 — Highest Score Retention Policy:</strong> In TechWise 360, a learner's official competency grade and leaderboard position only update when a new attempt achieves a <em>higher competency score</em>. Lower scores never overwrite or reduce an existing passing score.</li>
+  <li><strong>Countermeasure 2 — Secret 4-Digit Offline PIN:</strong> Student IDs are public, but personal PINs are private. The headset requires both the Student ID and a private 4-digit PIN (hashed locally against the cached roster). Student B cannot log in as Student A without the secret PIN.</li>
+  <li><strong>Countermeasure 3 — Station &amp; Device Fingerprinting:</strong> Every offline record logs the physical headset serial number (<code>device_id</code>) and physical station name. If Student A is assigned to Desk 1 but an attempt originates from Desk 4, an anomaly alert is raised.</li>
+</ul>
+
+<h3>4.2 Threat Scenario 2: The "False Sabotage / Cheating" Repudiation Attack</h3>
+<div class="callout callout-security">
+  <strong>The Threat:</strong> Student A plays 10 times, performs poorly with multiple resets, and finally gets a high score on run #10. Student A then lies to the teacher, claiming: <em>"Teacher, someone else used my account for the first 9 runs! Please delete those bad attempts so I have 1 attempt and 0 mistakes on the leaderboard!"</em>
+</div>
+
+<p>To eliminate this exploit, TechWise 360 implements the following verification mechanisms:</p>
+
+<table class="table-box">
+  <thead>
+    <tr>
+      <th>Verification Mechanism</th>
+      <th>Technical Data Captured</th>
+      <th>Forensic Value / Evidence</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Hardware Proximity Sensor</strong></td>
+      <td>Quest 2 IR proximity sensor mount/unmount event timestamps.</td>
+      <td>Proves whether the headset was continuously worn on the exact same face across runs #1 through #10 without ever being removed.</td>
+    </tr>
+    <tr>
+      <td><strong>Continuous Session Timeline</strong></td>
+      <td>Inter-attempt interval delta (e.g. 30 seconds between attempts).</td>
+      <td>Proves that no second person physically had time to swap headsets inside a monitored computer lab.</td>
+    </tr>
+    <tr>
+      <td><strong>Immutable Audit Trail</strong></td>
+      <td>Attempts marked <code>disputed</code> are never deleted from Supabase.</td>
+      <td>Preserves full historical proof of all attempts, scores, and timestamps.</td>
+    </tr>
+    <tr>
+      <td><strong>Supervised Re-Test Policy</strong></td>
+      <td>Institutional policy requiring live, in-person re-testing.</td>
+      <td>If a student claims fraud, they must perform the simulation in front of the instructor. Honest students succeed; liars fail to reproduce lucky scores.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>5. Pre-Defense Presentation Cheat Sheet &amp; Panel Q&amp;A</h2>
+
+<div class="callout">
+  <strong>Question 1:</strong> <em>"How does the student automatically log in to the Meta Quest 2 if they already logged in on the web portal?"</em><br>
+  <strong>Your Answer:</strong><br>
+  "Because the Meta Quest 2 and the PC operate on separate physical hardware, our system uses a cloud-synchronized **Station Pairing Handshake**. The student selects their assigned lab headset station on their dashboard. The headset, which continuously polls our Supabase/Cloudflare backend, receives the active student session and transitions directly into the 3D simulation without requiring tedious virtual keyboard typing."
+</div>
+
+<div class="callout">
+  <strong>Question 2:</strong> <em>"What happens if our school internet connection drops while students are doing VR assembly?"</em><br>
+  <strong>Your Answer:</strong><br>
+  "TechWise 360 implements a **Store-and-Forward Offline Architecture**. The headset operates autonomously using cached section rosters, evaluates component assemblies locally, and records performance metrics to encrypted internal storage. Once the headset re-establishes internet connectivity, pending records are automatically batch-uploaded to Supabase."
+</div>
+
+<div class="callout">
+  <strong>Question 3:</strong> <em>"What stops a student from maliciously logging in as another student in offline mode to ruin their grades or leaderboard standing?"</em><br>
+  <strong>Your Answer:</strong><br>
+  "We employ a three-layer defense: First, offline access requires a private 4-digit PIN in addition to the Student ID. Second, our grading algorithm enforces a **Best-Score Evaluation Policy**, meaning a lower score can never overwrite or reduce an established grade. Third, hardware proximity sensor telemetry and physical headset IDs are permanently bound to every attempt, enabling instructors to audit and invalidate fraudulent records."
+</div>
+
+<div class="callout">
+  <strong>Question 4:</strong> <em>"What if a student lies and claims someone else caused their failed attempts just to improve their leaderboard ranking?"</em><br>
+  <strong>Your Answer:</strong><br>
+  "The Meta Quest 2 hardware proximity sensor logs whether the headset was continuously mounted to a user's face across consecutive attempts. If attempts occur back-to-back without headset removal, forensic evidence confirms it was the same student. Furthermore, our institutional policy requires students requesting an attempt reset to perform a proctored, in-person re-test in front of the teacher."
+</div>
+
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechWise 360 | Connect VR Simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="student-dashboard.css">
+</head>
+<body data-page="student">
+  <main class="app-shell" style="grid-template-columns: 1fr;">
+    <section class="app-main" style="margin-left: 0; max-width: 1000px; margin: 0 auto; width: 100%; padding: 24px 20px 48px;">
+      <header class="app-topbar" style="margin-bottom: 24px; border-radius: 14px;">
+        <div class="topbar-leading">
+          <a class="sidebar-collapse-toggle" href="student-dashboard.html" aria-label="Back to dashboard" title="Back to dashboard" style="display: grid; place-items: center; text-decoration: none;">
+            <i data-lucide="arrow-left"></i>
+          </a>
+          <div class="topbar-breadcrumb" aria-label="Breadcrumb">
+            <i data-lucide="layout-grid"></i>
+            <span>Student portal</span>
+            <i data-lucide="chevron-right"></i>
+            <strong>Connect VR Simulation</strong>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="theme-toggle-wrap">
+            <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+              <span class="theme-toggle-track">
+                <i data-lucide="sun"></i>
+                <i data-lucide="moon"></i>
+              </span>
+              <span class="theme-toggle-thumb"></span>
+            </button>
+          </div>
+          <a class="primary-button compact-action" href="student-dashboard.html" style="text-decoration: none;">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="section-heading vr-connect-heading">
+        <div>
+          <h1>Connect VR Simulation</h1>
+          <p>Pair your student account with the lab headset to launch 3D PC Hardware Assembly and Disassembly.</p>
+        </div>
+        <div class="vr-connect-header-badge">
+          <span class="status-indicator-dot live"></span>
+          <span>Lab Simulation: Ready</span>
+        </div>
+      </div>
+
+      <div class="metric-grid vr-connect-metrics">
+        <article class="stat-card">
+          <div class="stat-card-heading"><p>Headset Model</p><span class="stat-icon purple"><i data-lucide="glasses"></i></span></div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">
+              <strong>Meta Quest 2</strong>
+              <small>6DoF Standalone Headset</small>
+            </div>
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card-heading"><p>Assigned Lab</p><span class="stat-icon blue"><i data-lucide="school"></i></span></div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">
+              <strong>ICT Computer Lab</strong>
+              <small>DepEd TVL-ICT Workstation</small>
+            </div>
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card-heading"><p>Simulation Modules</p><span class="stat-icon green"><i data-lucide="cpu"></i></span></div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">
+              <strong>PC Assembly &amp; Disassembly</strong>
+              <small>Interactive Virtual Training</small>
+            </div>
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card-heading"><p>Offline Protection</p><span class="stat-icon gold"><i data-lucide="shield-check"></i></span></div>
+          <div class="stat-card-body">
+            <div class="stat-card-value">
+              <strong>Store &amp; Auto-Sync</strong>
+              <small>Local Queue &amp; PIN Security</small>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Lab Headset Station Pairing -->
+      <section class="panel-card vr-station-main-card">
+        <div class="panel-title-row">
+          <div class="vr-card-title-wrap">
+            <h2>Lab Headset Station Pairing</h2>
+          </div>
+        </div>
+        <p class="vr-card-lead">Pair your active student session directly to the physical Meta Quest 2 headset at your lab desk. The headset will automatically log in to your account with zero typing in VR.</p>
+
+        <div class="vr-station-hub-layout">
+          <div class="vr-station-selector-box">
+            <div class="station-picker-header">
+              <span class="station-picker-label"><i data-lucide="monitor"></i> Choose Your Lab Desk Station:</span>
+            </div>
+            <div class="station-buttons-grid" id="directStationButtonsGrid">
+              <button type="button" class="station-select-btn active" data-station="station-01">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 01</strong>
+                  <small>Lab Desk 1</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+              <button type="button" class="station-select-btn" data-station="station-02">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 02</strong>
+                  <small>Lab Desk 2</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+              <button type="button" class="station-select-btn" data-station="station-03">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 03</strong>
+                  <small>Lab Desk 3</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+              <button type="button" class="station-select-btn" data-station="station-04">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 04</strong>
+                  <small>Lab Desk 4</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+              <button type="button" class="station-select-btn" data-station="station-05">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 05</strong>
+                  <small>Lab Desk 5</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+              <button type="button" class="station-select-btn" data-station="station-06">
+                <i data-lucide="glasses"></i>
+                <div class="station-btn-meta">
+                  <strong>Station 06</strong>
+                  <small>Lab Desk 6</small>
+                </div>
+                <span class="station-mini-dot"></span>
+              </button>
+            </div>
+
+            <input type="hidden" id="directStationValue" value="station-01">
+
+            <div class="station-status-strip">
+              <div class="station-status-info">
+                <span class="status-indicator-dot pulse" id="directStationDot"></span>
+                <div>
+                  <strong id="directStationTitle">Station 01 — Meta Quest 2</strong>
+                  <small id="directStationSubtitle">Standby &middot; Ready for student pairing</small>
+                </div>
+              </div>
+              <span class="station-chip" id="directStationChip">Ready to Pair</span>
+            </div>
+
+            <div class="station-action-row">
+              <button id="directPairBtn" class="primary-button vr-pair-btn" type="button">
+                <i data-lucide="link"></i>
+                <span>Pair &amp; Launch on Headset</span>
+              </button>
+              <button id="directUnpairBtn" class="outline-button vr-unpair-btn" type="button" style="display: none;">
+                <i data-lucide="unlink"></i>
+                <span>Unpair Station</span>
+              </button>
+            </div>
+            <p id="directPairStatus" class="status-message" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="vr-guide-steps-card">
+            <h4><i data-lucide="check-check"></i> How Station Pairing Works:</h4>
+            <ol>
+              <li><strong>Locate Station:</strong> Check the station label on your desk or headset (e.g., <em>Station 01</em>).</li>
+              <li><strong>Click Pair:</strong> Select your station above and click <strong>Pair &amp; Launch on Headset</strong>.</li>
+              <li><strong>Put On Headset:</strong> Put on the Meta Quest 2. The VR simulation automatically recognizes your account, displays your name, and unlocks your learning modules!</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script type="module">
+    if (window.lucide) window.lucide.createIcons();
+
+    let selectedStation = "station-01";
+    const grid = document.getElementById("directStationButtonsGrid");
+    const hiddenVal = document.getElementById("directStationValue");
+    const titleEl = document.getElementById("directStationTitle");
+    const subEl = document.getElementById("directStationSubtitle");
+    const chipEl = document.getElementById("directStationChip");
+    const pairBtn = document.getElementById("directPairBtn");
+    const unpairBtn = document.getElementById("directUnpairBtn");
+    const statusEl = document.getElementById("directPairStatus");
+
+    grid?.querySelectorAll(".station-select-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        grid.querySelectorAll(".station-select-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedStation = btn.dataset.station;
+        if (hiddenVal) hiddenVal.value = selectedStation;
+        const metaName = btn.querySelector("strong")?.textContent || "Station";
+        if (titleEl) titleEl.textContent = `${metaName} — Meta Quest 2`;
+        if (subEl) subEl.textContent = "Standby · Ready for student pairing";
+        if (chipEl) {
+          chipEl.textContent = "Ready to Pair";
+          chipEl.classList.remove("paired");
+        }
+        if (unpairBtn) unpairBtn.style.display = "none";
+        if (pairBtn) pairBtn.style.display = "inline-flex";
+        if (statusEl) statusEl.textContent = "";
+      });
+    });
+
+    pairBtn?.addEventListener("click", async () => {
+      pairBtn.disabled = true;
+      statusEl.textContent = "Pairing with lab station...";
+      statusEl.className = "status-message";
+
+      try {
+        const token = localStorage.getItem("techwise_token") || sessionStorage.getItem("techwise_token");
+        const res = await fetch("/api/vr/station-pair", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ station_id: selectedStation })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to pair station.");
+
+        if (subEl) subEl.innerHTML = `<span style="color:#059669;font-weight:600;">Paired with ${data.student_name || "Student"}</span>`;
+        if (chipEl) {
+          chipEl.textContent = "Paired";
+          chipEl.classList.add("paired");
+        }
+        if (unpairBtn) unpairBtn.style.display = "inline-flex";
+        if (pairBtn) pairBtn.style.display = "none";
+        statusEl.textContent = `Station ${selectedStation.toUpperCase()} paired successfully! Put on your Meta Quest 2 headset to begin.`;
+        statusEl.className = "status-message success";
+      } catch (err) {
+        statusEl.textContent = err.message || "Failed to pair with headset.";
+        statusEl.className = "status-message error";
+      } finally {
+        pairBtn.disabled = false;
+      }
+    });
+
+    unpairBtn?.addEventListener("click", async () => {
+      unpairBtn.disabled = true;
+      try {
+        const token = localStorage.getItem("techwise_token") || sessionStorage.getItem("techwise_token");
+        await fetch("/api/vr/station-unpair", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ station_id: selectedStation })
+        });
+        if (subEl) subEl.textContent = "Standby · Ready for student pairing";
+        if (chipEl) {
+          chipEl.textContent = "Ready to Pair";
+          chipEl.classList.remove("paired");
+        }
+        if (unpairBtn) unpairBtn.style.display = "none";
+        if (pairBtn) pairBtn.style.display = "inline-flex";
+        statusEl.textContent = "Station unpaired. Ready for a new session.";
+        statusEl.className = "status-message";
+      } catch (err) {
+        statusEl.textContent = err.message || "Failed to unpair station.";
+        statusEl.className = "status-message error";
+      } finally {
+        unpairBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

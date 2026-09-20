@@ -552,9 +552,6 @@ public sealed class TechWiseMenuController : MonoBehaviour
 
     void ShowSettingsModal()
     {
-        if (!RequireSignedIn("Log in before opening settings."))
-            return;
-
         SetSelected(settingsItem, true);
         modalOverlay.Clear();
         BuildSimpleModal(
@@ -574,9 +571,6 @@ public sealed class TechWiseMenuController : MonoBehaviour
 
     void ShowPracticeModal()
     {
-        if (!RequireSignedIn("Log in before opening practice modes."))
-            return;
-
         SetSelected(practiceItem, true);
         SetSelected(competitionItem, false);
         modalOverlay.Clear();
@@ -714,10 +708,10 @@ public sealed class TechWiseMenuController : MonoBehaviour
         desktopButton.EnableInClassList("is-active", menu.IsDesktopSelected);
         vrButton.EnableInClassList("is-active", !menu.IsDesktopSelected);
 
-        SetActionEnabled(startItem, signedIn, signedIn ? "Launch the selected activity." : "Log in required to start.");
-        SetActionEnabled(practiceItem, signedIn, signedIn ? "Choose assembly or disassembly practice." : "Log in required to practice.");
+        SetActionEnabled(startItem, true, "Launch the assembly tutorial.");
+        SetActionEnabled(practiceItem, true, "Choose assembly or disassembly practice.");
         SetActionEnabled(competitionItem, signedIn, signedIn ? "Compete and sync leaderboard attempts." : "Log in required to compete.");
-        SetActionEnabled(settingsItem, signedIn, signedIn ? "Adjust preferences and sync details." : "Log in required to adjust preferences.");
+        SetActionEnabled(settingsItem, true, "View preferences and sync details.");
         SetActionEnabled(accountLogoutItem, signedIn, "Sign out of your account.");
 
         controlsItem.SetEnabled(true);

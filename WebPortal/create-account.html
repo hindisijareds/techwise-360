@@ -10,34 +10,81 @@
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="auth.css">
 </head>
 <body data-page="register">
   <main class="auth-shell create-shell">
     <section class="brand-panel" aria-label="TechWise 360 account creation">
-      <a class="brand-mark" href="index.html">TechWise <span>360</span></a>
-      <h1>Create your<br>TechWise <span>360</span><br>account</h1>
-      <p>Learn ICT skills through structured lessons, guided practice, and immersive VR experiences.</p>
-      <div class="asset-stage">
-        <img class="asset pc-case" src="assets/pc-case.png" alt="">
-        <img class="asset fan" src="assets/fan.png" alt="">
-        <img class="asset gpu" src="assets/gpu.png" alt="">
-        <img class="asset vr" src="assets/vr-headset.png" alt="">
-        <img class="asset word" src="assets/word.png" alt="">
-        <img class="asset excel" src="assets/excel.png" alt="">
-        <img class="asset ppt" src="assets/powerpoint.png" alt="">
+      <a class="auth-brand-header" href="index.html">
+        <span class="auth-logo-mark" aria-hidden="true">
+          <svg class="techwise-cube-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <path d="M20.5 7.25 12 12.1 3.5 7.25"></path>
+            <path d="M12 12.1V21.5"></path>
+            <path d="M21 16.55V7.45a2 2 0 0 0-1-1.73l-6-3.42a4 4 0 0 0-4 0L4 5.72a2 2 0 0 0-1 1.73v9.1a2 2 0 0 0 1 1.73l6 3.42a4 4 0 0 0 4 0l6-3.42a2 2 0 0 0 1-1.73Z"></path>
+          </svg>
+        </span>
+        <div class="auth-brand-text">
+          <strong>TechWise <span>360</span></strong>
+          <small>Learn. Practice. Grow.</small>
+        </div>
+      </a>
+
+      <div class="auth-hero-copy">
+        <span class="auth-pill-badge"><i data-lucide="user-plus"></i> Student Enrollment</span>
+        <h1>Start Your Learning<br><span>Journey in VR</span></h1>
+        <p class="auth-lead">Create your official student account to access DepEd TVL-ICT modules, practice computer assembly in VR, and earn certifications.</p>
       </div>
-      <div class="feature-strip" role="group" aria-label="TechWise features">
-        <div><i data-lucide="book-open-check"></i><span>Guided<br>Learning</span></div>
-        <div><i data-lucide="monitor"></i><span>Real-World<br>ICT Skills</span></div>
-        <div><i data-lucide="headphones"></i><span>Immersive<br>VR Lab</span></div>
-        <div><i data-lucide="trophy"></i><span>Track<br>Progress</span></div>
+
+      <!-- Feature Badges -->
+      <div class="auth-feature-grid" role="group" aria-label="TechWise key features">
+        <div class="feature-card">
+          <div class="feature-icon blue"><i data-lucide="book-open-check"></i></div>
+          <div class="feature-info">
+            <strong>Guided Lessons</strong>
+            <small>Structured ICT modules</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple"><i data-lucide="glasses"></i></div>
+          <div class="feature-info">
+            <strong>VR Simulation</strong>
+            <small>Immersive hardware lab</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon gold"><i data-lucide="trophy"></i></div>
+          <div class="feature-info">
+            <strong>Leaderboard</strong>
+            <small>Live competency ranking</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green"><i data-lucide="award"></i></div>
+          <div class="feature-info">
+            <strong>Achievements</strong>
+            <small>Badges &amp; certificates</small>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="form-card create-card" aria-labelledby="create-title">
+      <div class="card-top-bar">
+        <a class="card-back-btn" href="index.html">
+          <i data-lucide="arrow-left"></i>
+          <span>Back to Login</span>
+        </a>
+        <span class="auth-card-pill"><i data-lucide="user-plus"></i> Student Registration</span>
+      </div>
+
       <div class="form-heading">
         <h2 id="create-title">Create Account</h2>
         <p>Enter your details to create your student account.</p>
+      </div>
+
+      <div class="academic-context-banner">
+        <i data-lucide="calendar-days"></i>
+        <span id="registrationAcademicContext" role="status">Loading academic year and term...</span>
       </div>
 
       <form id="registerForm" class="form-stack compact" novalidate>
@@ -58,29 +105,23 @@
           </label>
         </div>
 
-        <label class="field">
-          <span>Full Name</span>
-          <span class="input-wrap">
-            <i data-lucide="user-round"></i>
-            <input name="full_name" type="text" autocomplete="name" placeholder="Enter your full name" required>
-          </span>
-        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>Username</span>
+            <span class="input-wrap">
+              <i data-lucide="badge-check"></i>
+              <input name="username" type="text" autocomplete="username" placeholder="Create a username" required>
+            </span>
+          </label>
 
-        <label class="field">
-          <span>Username</span>
-          <span class="input-wrap">
-            <i data-lucide="badge"></i>
-            <input name="username" type="text" autocomplete="username" placeholder="Create a username" required>
-          </span>
-        </label>
-
-        <label class="field">
-          <span>Email</span>
-          <span class="input-wrap">
-            <i data-lucide="mail"></i>
-            <input name="email" type="email" autocomplete="email" placeholder="Enter your email address" required>
-          </span>
-        </label>
+          <label class="field">
+            <span>Email Address</span>
+            <span class="input-wrap">
+              <i data-lucide="mail"></i>
+              <input name="email" type="email" autocomplete="email" placeholder="Enter your email" required>
+            </span>
+          </label>
+        </div>
 
         <div class="field-grid">
           <label class="field">
@@ -115,8 +156,8 @@
             <span>Section</span>
             <span class="input-wrap select-wrap">
               <i data-lucide="users-round"></i>
-              <select name="section" required disabled>
-                <option value="">Select grade level first</option>
+              <select name="section_id" required disabled>
+                <option value="">Loading active sections...</option>
               </select>
             </span>
           </label>
@@ -132,7 +173,9 @@
 
         <div class="field-grid">
           <div class="field">
-            <label for="password">Password</label>
+            <div class="field-label-row">
+              <label for="password">Password</label>
+            </div>
             <span class="input-wrap">
               <i data-lucide="lock"></i>
               <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Create a password" minlength="10" required>
@@ -140,10 +183,12 @@
                 <i data-lucide="eye"></i>
               </button>
             </span>
-            <small class="field-hint">Use 10+ characters with uppercase, lowercase, number, and symbol.</small>
+            <small class="field-hint"><i data-lucide="info"></i> Use 10+ characters with uppercase, lowercase, number, and symbol.</small>
           </div>
           <div class="field">
-            <label for="confirmPassword">Confirm Password</label>
+            <div class="field-label-row">
+              <label for="confirmPassword">Confirm Password</label>
+            </div>
             <span class="input-wrap">
               <i data-lucide="lock"></i>
               <input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" placeholder="Confirm your password" required>
@@ -156,16 +201,19 @@
 
         <label class="check-label terms">
           <input name="terms" type="checkbox" required>
-          <span>I agree to the <a href="#" class="text-link">Terms</a> and <a href="#" class="text-link">Privacy Policy</a>.</span>
+          <span>I agree to the <a href="#" class="text-link">Terms of Service</a> and <a href="#" class="text-link">Privacy Policy</a>.</span>
         </label>
 
         <p id="registerMessage" class="status-message" role="status" aria-live="polite"></p>
 
-        <button class="primary-button" type="submit">Create account</button>
-        <a class="outline-button centered" href="index.html">
-          <i data-lucide="arrow-left"></i>
-          <span>Back to Login</span>
-        </a>
+        <button class="primary-button" type="submit">
+          <span>Create account</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+
+        <p class="auth-form-footer">
+          Already have an account? <a class="text-link" href="index.html">Sign in here</a>
+        </p>
       </form>
     </section>
   </main>

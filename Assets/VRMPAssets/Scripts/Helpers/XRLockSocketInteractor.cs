@@ -10,7 +10,7 @@ namespace UnityEngine.XR.Content.Interaction
         [Space]
         [SerializeField]
         [Tooltip("The required keys to interact with this socket.")]
-        Lock m_Lock;
+        Lock m_Lock = new Lock();
 
         /// <summary>
         /// The required keys to interact with this socket.
@@ -21,6 +21,16 @@ namespace UnityEngine.XR.Content.Interaction
             set => m_Lock = value;
         }
 
+        public System.Func<UnityEngine.XR.Interaction.Toolkit.Interactables.IXRHoverInteractable, bool> placementPreviewValid { get; set; }
+
+        protected override Material GetHoveredInteractableMaterial(UnityEngine.XR.Interaction.Toolkit.Interactables.IXRHoverInteractable interactable)
+        {
+            if (placementPreviewValid != null)
+                return placementPreviewValid(interactable)
+                    ? interactableHoverMeshMaterial : interactableCantHoverMeshMaterial;
+            return base.GetHoveredInteractableMaterial(interactable);
+        }
+
         /// <inheritdoc />
         public override bool CanHover(UnityEngine.XR.Interaction.Toolkit.Interactables.IXRHoverInteractable interactable)
         {
@@ -28,7 +38,7 @@ namespace UnityEngine.XR.Content.Interaction
                 return false;
 
             var keyChain = interactable.transform.GetComponent<IKeychain>();
-            return m_Lock.CanUnlock(keyChain);
+            return m_Lock != null && m_Lock.CanUnlock(keyChain);
         }
 
         /// <inheritdoc />
@@ -38,7 +48,7 @@ namespace UnityEngine.XR.Content.Interaction
                 return false;
 
             var keyChain = interactable.transform.GetComponent<IKeychain>();
-            return m_Lock.CanUnlock(keyChain);
+            return m_Lock != null && m_Lock.CanUnlock(keyChain);
         }
     }
 }

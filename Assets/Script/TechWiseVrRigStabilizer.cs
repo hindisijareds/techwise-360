@@ -98,8 +98,6 @@ public sealed class TechWiseVrRigStabilizer : MonoBehaviour
                 if (device.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondary) && secondary)
                     pressed = true;
 
-                if (device.TryGetFeatureValue(CommonUsages.gripButton, out var grip) && grip)
-                    pressed = true;
             }
 
             var inputDevice = node == XRNode.LeftHand
@@ -269,9 +267,20 @@ public sealed class TechWiseVrRigStabilizer : MonoBehaviour
     static void MaintainInteractors()
     {
         var xrModule = FindAnyObjectByType<XRUIInputModule>();
+        if (xrModule == null)
+        {
+            var eventSystem = FindAnyObjectByType<EventSystem>();
+            if (eventSystem != null)
+            {
+                foreach (var module in eventSystem.GetComponents<BaseInputModule>())
+                    if (!(module is XRUIInputModule)) module.enabled = false;
+                xrModule = eventSystem.GetComponent<XRUIInputModule>() ?? eventSystem.gameObject.AddComponent<XRUIInputModule>();
+            }
+        }
         if (xrModule != null)
         {
             xrModule.enableXRInput = true;
+            xrModule.enableBuiltinActionsAsFallback = true;
             xrModule.enabled = true;
         }
 
@@ -283,7 +292,7 @@ public sealed class TechWiseVrRigStabilizer : MonoBehaviour
             interactor.enableFarCasting = true;
             interactor.enableUIInteraction = true;
 
-            if (xrModule != null)
+            if (xrModule != null && interactor.isActiveAndEnabled)
                 xrModule.RegisterInteractor(interactor);
 
             if (interactor.transform.parent != null &&
@@ -316,7 +325,9 @@ public sealed class TechWiseVrRigStabilizer : MonoBehaviour
 
         foreach (var ray in FindObjectsByType<XRRayInteractor>(FindObjectsInactive.Include))
         {
-            if (ray == null)
+            // XRRayInteractor's UI setter also registers with UI Toolkit. Registering
+            // disabled teleport rays leaks slots when their never-enabled objects unload.
+            if (ray == null || !ray.isActiveAndEnabled)
                 continue;
 
             ray.enableUIInteraction = true;
@@ -326,7 +337,7 @@ public sealed class TechWiseVrRigStabilizer : MonoBehaviour
 
         foreach (var poke in FindObjectsByType<XRPokeInteractor>(FindObjectsInactive.Include))
         {
-            if (poke == null)
+            if (poke == null || !poke.isActiveAndEnabled)
                 continue;
 
             if (xrModule != null)

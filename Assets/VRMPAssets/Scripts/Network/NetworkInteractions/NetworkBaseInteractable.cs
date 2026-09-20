@@ -742,6 +742,7 @@ namespace XRMultiplayer
         /// <returns></returns>
         public bool Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
         {
+            if (!IsSpawned) return true;
             return IsOwner || allowOverrideOwnership || (!IsOwner & !isInteracting);
         }
 
@@ -753,6 +754,7 @@ namespace XRMultiplayer
         /// <returns></returns>
         public bool Process(IXRHoverInteractor interactor, IXRHoverInteractable interactable)
         {
+            if (!IsSpawned) return true;
             return IsOwner || allowOverrideOwnership || (!IsOwner & !isInteracting);
         }
     }

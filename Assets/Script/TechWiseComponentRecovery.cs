@@ -17,6 +17,11 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
 
     static TechWiseComponentRecovery instance;
     public static event System.Action<string> ComponentRecovered;
+    public static void RefreshTracking() => instance?.RefreshSceneRecords();
+    internal static void TrackTutorialPart(XRGrabInteractable part)
+    {
+        if (TechWiseTutorialRuntime.InTutorial) instance?.TrackInteractable(part);
+    }
 
     readonly Dictionary<XRGrabInteractable, ComponentRecord> recordsByInteractable = new();
     readonly Dictionary<Transform, ComponentRecord> recordsByTransform = new();
@@ -113,9 +118,22 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
             return;
 
         foreach (var interactable in FindObjectsByType<XRGrabInteractable>(FindObjectsInactive.Exclude))
+            TrackInteractable(interactable);
+
+        sockets.Clear();
+        foreach (var socket in FindObjectsByType<XRLockSocketInteractor>(FindObjectsInactive.Exclude))
         {
-            if (!ShouldTrack(interactable))
+            if (socket == null)
                 continue;
+
+            sockets.Add(socket);
+            ConfigureSocketHover(socket);
+        }
+    }
+
+    void TrackInteractable(XRGrabInteractable interactable)
+    {
+            if (!ShouldTrack(interactable) || recordsByInteractable.ContainsKey(interactable)) return;
 
             var record = new ComponentRecord
             {
@@ -134,22 +152,11 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
             recordsByTransform[interactable.transform] = record;
             interactable.selectEntered.AddListener(OnSelectEntered);
             interactable.selectExited.AddListener(OnSelectExited);
-        }
-
-        sockets.Clear();
-        foreach (var socket in FindObjectsByType<XRLockSocketInteractor>(FindObjectsInactive.Exclude))
-        {
-            if (socket == null)
-                continue;
-
-            sockets.Add(socket);
-            ConfigureSocketHover(socket);
-        }
     }
 
     static bool ShouldTrack(XRGrabInteractable interactable)
     {
-        if (interactable == null)
+        if (interactable == null || interactable.GetComponent<TechWiseFastener>() != null)
             return false;
 
         return interactable.GetComponent<IKeychain>() != null ||
@@ -218,9 +225,13 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
 
     void MonitorRecords()
     {
+        if (TechWiseSimulationRuntime.Instance != null && TechWiseSimulationRuntime.Instance.ManipulationLocked) return;
         foreach (var record in records)
         {
             if (record == null || record.transform == null)
+                continue;
+
+            if (TechWiseDetailedAssemblyRuntime.Active && (TechWiseDetailedAssemblyRuntime.Instance.IsRetiredPaste(record.transform) || TechWiseDetailedAssemblyRuntime.Instance.IsConditionallyHidden(record.transform)))
                 continue;
 
             if (IsSocketed(record))
@@ -274,6 +285,7 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
 
     bool TryResetHeldOrLast(Transform selectedTransform)
     {
+        if (TechWiseSimulationRuntime.Instance != null && TechWiseSimulationRuntime.Instance.ManipulationLocked) return false;
         var record = ResolveRecord(selectedTransform) ?? heldRecord ?? lastGrabbedRecord;
         if (record == null || IsSocketed(record))
             return false;
@@ -413,6 +425,9 @@ public sealed class TechWiseComponentRecovery : MonoBehaviour
 
     static void SetSocketHoverVisible(XRLockSocketInteractor socket, bool visible)
     {
+        if (socket == null) return;
+        visible = visible && TechWiseSimulationModeManager.IsPracticeMode &&
+            !TechWiseSimulationModeManager.IsKnowledgeDisplay(socket.transform);
         if (socket != null && socket.showInteractableHoverMeshes != visible)
             socket.showInteractableHoverMeshes = visible;
     }

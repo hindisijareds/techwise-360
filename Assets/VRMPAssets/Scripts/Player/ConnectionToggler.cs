@@ -18,6 +18,7 @@ namespace XRMultiplayer
         /// Disables all objects on connect.
         /// </summary>
         [SerializeField] GameObject[] objectsToEnableOffline;
+        XRINetworkGameManager subscribedManager;
 
         /// <inheritdoc/>
         void OnEnable()
@@ -28,18 +29,15 @@ namespace XRMultiplayer
 
         void Start()
         {
-            XRINetworkGameManager.Instance.connectionFailedAction += (reason) =>
-            {
-                ToggleNetworkObjects(false);
-            };
+            subscribedManager = XRINetworkGameManager.Instance;
+            if (subscribedManager != null) subscribedManager.connectionFailedAction += OnConnectionFailed;
         }
+
+        void OnConnectionFailed(string reason) => ToggleNetworkObjects(false);
 
         void OnDestroy()
         {
-            XRINetworkGameManager.Instance.connectionFailedAction -= (reason) =>
-            {
-                ToggleNetworkObjects(false);
-            };
+            if (subscribedManager != null) subscribedManager.connectionFailedAction -= OnConnectionFailed;
         }
 
         /// <inheritdoc/>

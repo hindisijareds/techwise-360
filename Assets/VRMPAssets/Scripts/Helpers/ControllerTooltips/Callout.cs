@@ -61,7 +61,7 @@ namespace Unity.VRTemplate
 
         public void GazeHoverStart()
         {
-            if (!m_UseGazeCallout)
+            if (!m_UseGazeCallout || !isActiveAndEnabled)
             {
                 DisableCallout();
                 return;
@@ -77,7 +77,7 @@ namespace Unity.VRTemplate
 
         public void GazeHoverEnd()
         {
-            if (!m_UseGazeCallout)
+            if (!m_UseGazeCallout || !isActiveAndEnabled)
             {
                 DisableCallout();
                 return;
@@ -119,6 +119,7 @@ namespace Unity.VRTemplate
 
         void DisableCallout()
         {
+            m_Gazing = false;
             if (m_StartCo != null)
                 StopCoroutine(m_StartCo);
             if (m_EndCo != null)

@@ -26,6 +26,7 @@ import {
   readJson,
   requireEnv,
   requireTeacher,
+  selectRows,
   updateStudentProfile
 } from "../_utils.js";
 
@@ -66,16 +67,18 @@ export async function onRequestGet({ request, env }) {
     ]);
 
     const selectedQuarter = quarters.find((quarter) => quarter.id === selectedQuarterId) || activeQuarter || quarters[0] || null;
+    const enrollments = selectedQuarter ? await selectRows(env,'student_enrollments',`student_id=eq.${student.id}&quarter_id=eq.${selectedQuarter.id}&select=*&order=created_at.desc`) : [];
+    const historicalGrade = enrollments[0]?.grade_level || progress.find(p => p.quarter_id === selectedQuarter?.id)?.grade_level || student.grade_level;
     const visibleModules = modules.filter((module) =>
-      module.grade_level === student.grade_level
+      module.grade_level === historicalGrade
       && module.quarter_id === selectedQuarter?.id
-      && module.status === "published"
+      && ["published", "archived"].includes(module.status)
     );
     const visibleModuleIds = new Set(visibleModules.map((module) => module.id));
     const visibleLessons = lessons.filter((lesson) =>
       visibleModuleIds.has(lesson.module_id)
       && lesson.quarter_id === selectedQuarter?.id
-      && lesson.status === "published"
+      && ["published", "archived"].includes(lesson.status)
     );
     const visibleLessonIds = new Set(visibleLessons.map((lesson) => lesson.id));
     const studentAttempts = attempts.filter((attempt) => attempt.student_id === student.id && visibleLessonIds.has(attempt.lesson_id));
@@ -89,6 +92,7 @@ export async function onRequestGet({ request, env }) {
       student: publicProfile(student),
       active_quarter: activeQuarter ? publicQuarter(activeQuarter) : null,
       selected_quarter: selectedQuarter ? publicQuarter(selectedQuarter) : null,
+      enrollments,
       quarters: quarters.map(publicQuarter),
       modules: visibleModules.map(publicModule),
       lessons: visibleLessons.map(publicLesson),
@@ -110,7 +114,7 @@ export async function onRequestPatch({ request, env }) {
     const { profile: teacher } = await requireTeacher(request, env);
     const body = await readJson(request);
     const previous = body.id || body.student_id ? await getProfileById(env, body.id || body.student_id) : null;
-    const student = await updateStudentProfile(env, body);
+    const student = await updateStudentProfile(env, body, teacher.id);
     if (student.status === "approved" && previous?.status !== "approved") {
       await createStudentNotification(env, {
         student_id: student.id,

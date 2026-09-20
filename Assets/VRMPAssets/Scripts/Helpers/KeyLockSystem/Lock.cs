@@ -16,7 +16,7 @@ namespace UnityEngine.XR.Content.Interaction
         [SerializeField]
         [Tooltip("The required keys to unlock this lock" +
             "Create new keys by selecting \"Assets/Create/XR/Key Lock System/Key\"")]
-        List<Key> m_RequiredKeys;
+        List<Key> m_RequiredKeys = new();
 
         /// <summary>
         /// Returns the required keys to unlock this lock.

@@ -1,0 +1,12 @@
+{
+  "version": "complete-build-v2",
+  "resetPreviousPenalty": 3,
+  "minorPenalty": 4,
+  "standardPenalty": 8,
+  "criticalPenalty": 16,
+  "maximumTimePenalty": 20,
+  "overtimeIntervalSeconds": 30,
+  "penaltyPerInterval": 2,
+  "assemblyTargetSeconds": 600,
+  "disassemblyTargetSeconds": 420
+}

@@ -35,7 +35,8 @@ namespace XRMultiplayer
 
         public void OnDestroy()
         {
-            XRINetworkGameManager.Instance.playerStateChanged -= ConnectedPlayerStateChange;
+            if (XRINetworkGameManager.Instance != null)
+                XRINetworkGameManager.Instance.playerStateChanged -= ConnectedPlayerStateChange;
             XRINetworkGameManager.Connected.Unsubscribe(OnConnected);
         }
 

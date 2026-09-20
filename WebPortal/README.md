@@ -6,7 +6,7 @@ Cloudflare Pages portal for TechWise 360 student registration, teacher approval,
 
 - `index.html`: student/teacher login.
 - `create-account.html`: student registration form with strong password and Phone Number validation.
-- `teacher-dashboard.html`: mockup-style teacher dashboard for students, terms, and lesson management with uploads.
+- `teacher-dashboard.html`: teacher dashboard for students, sections, terms, lessons, reporting, and achievements.
 - `student-dashboard.html`: mockup-style student dashboard with progress, lessons, and profile details.
 - `functions/api/*`: Cloudflare Pages Functions backed by Supabase.
 - `supabase/schema.sql`: online Supabase migration for profiles, terms, modules, lessons, lesson files, and progress.
@@ -24,6 +24,8 @@ Cloudflare Pages portal for TechWise 360 student registration, teacher approval,
 7. In `Authentication > Providers > Email`, keep email confirmation disabled for this capstone version because teacher approval is the login gate.
 
 The migration keeps existing student accounts and copies legacy `cp_number` values into the new `phone_number` column.
+
+For an already deployed database, run `supabase/migrations/20260822_teacher_sections.sql` before deploying the updated portal. It is idempotent, imports the six existing Grade 9/10 sections, links matching student profiles, and creates assignment history. If the project contains legacy names such as `1`, `Section 1`, or `Eagle`, run `supabase/migrations/20260822130000_cleanup_legacy_sections.sql` immediately afterward to remap those students and remove obsolete 2026-2027 section rows.
 
 ## Cloudflare Pages Setup
 
@@ -67,10 +69,14 @@ Deploy the current folder directly to the existing Cloudflare Pages project:
 npm run deploy
 ```
 
+The deploy script always targets the Cloudflare Pages `production` branch, so the
+main `https://techwise360-web-portal.pages.dev` domain is updated instead of creating
+a branch preview. It also runs the JavaScript checks before uploading.
+
 If you want to run Wrangler directly without the npm script:
 
 ```powershell
-npx wrangler pages deploy . --project-name techwise360-web-portal
+npx wrangler pages deploy . --project-name techwise360-web-portal --branch production --commit-dirty=true
 ```
 
 ## Automated System Screenshots
@@ -101,6 +107,8 @@ npm run screenshots:pdf
 - Try duplicate username/email and confirm validation appears.
 - Log in as teacher and approve/reject pending students.
 - Use Student Management to search, filter, export, edit, deactivate/reactivate, and reset students.
+- Use Sections to create a draft, activate it, edit its adviser/capacity, transfer a student, and verify the activity log.
+- Confirm archived and draft sections never appear on student registration.
 - Confirm inactive students are blocked from logging in.
 - Confirm student badges and certificates render after running the latest schema and seed scripts.
 - Create or activate a term.

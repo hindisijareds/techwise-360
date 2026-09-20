@@ -116,6 +116,14 @@ public class TechWiseDesktopController : MonoBehaviour
         if (!desktopActive)
             return;
 
+        if (TechWisePauseSession.Active)
+        {
+            selectHeld = false;
+            QueueSelectState(false);
+            UnlockCursor();
+            return;
+        }
+
         HandleCursorLock();
         HandleLook();
         HandleMove();
@@ -280,7 +288,7 @@ public class TechWiseDesktopController : MonoBehaviour
         return;
 #endif
         ResolveReferences();
-        var shouldBeActive = MainMenu.IsDesktopModeSelected(desktopModeOverridesVrWhenHeadsetPresent) && IsGameplayScene(SceneManager.GetActiveScene().name);
+        var shouldBeActive = false; // Enforce VR mode only for Meta Quest 2
         if (shouldBeActive == desktopActive)
             return;
 
@@ -289,9 +297,7 @@ public class TechWiseDesktopController : MonoBehaviour
 
     void SetDesktopActive(bool active)
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
         active = false;
-#endif
         if (active)
             ResolveReferences();
 

@@ -20,29 +20,8 @@ public static class TechWiseSimulationModeManager
 
     static readonly FieldInfo KeychainKeysField = typeof(Keychain).GetField("m_Keys", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    public static readonly string[] AssemblyOrder =
-    {
-        "CPU",
-        "RAM",
-        "M2",
-        "CPUCooler",
-        "Motherboard",
-        "GPU",
-        "Storage",
-        "PSU",
-    };
-
-    public static readonly string[] DisassemblyOrder =
-    {
-        "CPUCooler",
-        "PSU",
-        "Storage",
-        "GPU",
-        "M2",
-        "RAM",
-        "CPU",
-        "Motherboard",
-    };
+    public static readonly string[] AssemblyOrder = TechWiseBuildDefinition.AssemblyOrder;
+    public static readonly string[] DisassemblyOrder = TechWiseBuildDefinition.DisassemblyOrder;
 
     public static string SimulationType => PlayerPrefs.GetString(SimulationTypeKey, AssemblyType);
     public static string GameMode => PlayerPrefs.GetString(GameModeKey, PracticeMode);
@@ -75,15 +54,28 @@ public static class TechWiseSimulationModeManager
 
     public static string ResolveStepId(Transform transform)
     {
-        if (transform == null)
+        if (transform == null || IsKnowledgeDisplay(transform))
             return null;
+
+        var identity = transform.GetComponent<TechWiseAssemblyPartId>();
+        if (identity != null) return identity.step;
 
         var keyName = GetKeySearchName(transform);
         var stepFromKeys = ResolveStepFromSearchName(keyName);
+        if (keyName.Contains("gpuconnectersocketkey") || keyName.Contains("thermalpaste") || keyName.Contains("thermal paste"))
+            return null;
         if (!string.IsNullOrEmpty(stepFromKeys))
             return stepFromKeys;
 
-        return ResolveStepFromSearchName(GetSearchName(transform));
+        return ResolveStepFromSearchName(transform.name.ToLowerInvariant());
+    }
+
+    public static bool IsKnowledgeDisplay(Transform target)
+    {
+        for (var current = target; current != null; current = current.parent)
+            if (current.name.IndexOf("Knowledge", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        return false;
     }
 
     static string ResolveStepFromSearchName(string name)
@@ -161,14 +153,10 @@ public static class TechWiseSimulationModeManager
 
     static void AppendKeySearchName(StringBuilder builder, Transform transform)
     {
-        var keychain = transform.GetComponent<Keychain>() ??
-            transform.GetComponentInParent<Keychain>() ??
-            transform.GetComponentInChildren<Keychain>(true);
+        var keychain = transform.GetComponent<Keychain>();
         AppendKeychain(builder, keychain);
 
-        var socket = transform.GetComponent<XRLockSocketInteractor>() ??
-            transform.GetComponentInParent<XRLockSocketInteractor>() ??
-            transform.GetComponentInChildren<XRLockSocketInteractor>(true);
+        var socket = transform.GetComponent<XRLockSocketInteractor>();
         if (socket != null && socket.keychainLock != null)
         {
             foreach (var key in socket.keychainLock.requiredKeys)

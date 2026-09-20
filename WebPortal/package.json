@@ -5,13 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "npx wrangler pages dev . --compatibility-date=2026-06-15",
-    "deploy": "npx wrangler pages deploy . --project-name techwise360-web-portal",
-    "check": "node --check app.js && node --check scripts/capture-system.mjs",
+    "predeploy": "npm run check",
+    "deploy": "wrangler pages deploy . --project-name techwise360-web-portal --branch production --commit-dirty=true",
+    "postdeploy": "node scripts/verify-deploy.mjs",
+    "check": "node --check app.js && node --check scripts/capture-system.mjs && node --check scripts/verify-deploy.mjs",
     "screenshots": "node scripts/capture-system.mjs",
+    "test:vr": "node scripts/test-vr-integration.mjs",
+    "test:vr-ui": "node scripts/test-vr-ui.mjs",
     "screenshots:pdf": "node scripts/capture-system.mjs --pdf-only",
     "screenshots:install": "playwright install chromium"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "playwright": "^1.62.1",
     "wrangler": "^4.0.0"
   }

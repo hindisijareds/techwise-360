@@ -67,6 +67,19 @@
   background: var(--theme-bg);
 }
 
+:root[data-theme="dark"] body[data-page="student"] {
+  --student-ink: #f4f7fb;
+  --student-ink-soft: #dce3ed;
+  --student-muted: #9eabba;
+  --student-line: #2d3949;
+  --student-line-soft: #222c39;
+  --student-primary: #327ff0;
+  --student-primary-hover: #4d92f6;
+  --student-blue: #15263b;
+  --student-blue-strong: #1b314c;
+  background: var(--theme-bg);
+}
+
 html,
 body,
 .app-shell,
@@ -188,7 +201,7 @@ body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
 
 :root[data-theme="dark"] body :is(input, select, textarea) {
   border-color: var(--theme-border);
-  background: #101722;
+  background-color: #101722;
   color: var(--theme-text);
 }
 
@@ -246,16 +259,22 @@ body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
   color: var(--theme-text-soft);
 }
 
-:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button) {
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button, .sidebar-collapse-toggle) {
   border-color: var(--theme-border);
   background: #151d28;
   color: #d7e1ee;
 }
 
-:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button):hover {
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.notification-button, .icon-shell, .small-button, .secondary-button, .link-button, .sidebar-collapse-toggle):hover,
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .notification-button[aria-expanded="true"] {
   border-color: #43536a;
   background: #1b293a;
   color: #ffffff;
+}
+
+:root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) .notification-badge,
+:root[data-theme="dark"] .notification-badge {
+  border-color: #151d28 !important;
 }
 
 :root[data-theme="dark"] :is(.notification-panel, .feedback-modal, .app-toast) {
@@ -278,6 +297,88 @@ body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
 
 :root[data-theme="dark"] :is(.notification-item:hover, .notification-item.unread) { background: #17283d; }
 :root[data-theme="dark"] .feedback-modal-overlay { background: rgba(2, 6, 12, 0.74); }
+
+/* VR Connect Dark Theme */
+:root[data-theme="dark"] body[data-page="student"] :is(.vr-method-card, .vr-station-main-card) {
+  background: var(--theme-surface, #151b24);
+  border-color: var(--theme-border, #2d3949);
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-card {
+  background: var(--theme-surface, #151b24);
+  border-color: var(--theme-border, #2d3949);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-card:hover {
+  border-color: #3b495b;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-card-heading p {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-card-value strong {
+  color: #f4f7fb;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-card-value small {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-icon.purple { background: rgba(168, 85, 247, 0.18); color: #c084fc; }
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-icon.blue   { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-icon.green  { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-metrics .stat-icon.gold   { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+
+:root[data-theme="dark"] body[data-page="student"] :is(.vr-code-box-wrapper, .vr-station-selector-box, .station-status-strip, .vr-guide-steps-card) {
+  background: #10151d;
+  border-color: var(--theme-border, #2d3949);
+}
+
+:root[data-theme="dark"] body[data-page="student"] .station-select-btn {
+  background: #151b24;
+  border-color: var(--theme-border, #2d3949);
+}
+
+:root[data-theme="dark"] body[data-page="student"] .station-select-btn:hover {
+  background: #1b2330;
+  border-color: #3b495b;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .station-select-btn.active {
+  background: #16263b;
+  border-color: #327ff0;
+  box-shadow: 0 0 0 1px #327ff0;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .station-btn-meta strong {
+  color: #f4f7fb;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .station-picker-label,
+:root[data-theme="dark"] body[data-page="student"] .vr-guide-steps-card h4 {
+  color: #f4f7fb;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-security-features span {
+  background: #17283d;
+  color: #9fc5ff;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-banner-text h3 {
+  color: #f4f7fb;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-banner-text p {
+  color: #a8b3c4;
+}
+
+:root[data-theme="dark"] body[data-page="student"] .vr-connect-header-badge {
+  background: #12281e;
+  border-color: #1a4d33;
+  color: #4ade80;
+}
 
 /* Cards, panels, tables, forms, drawers, and generated dashboard content */
 :root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(
@@ -363,12 +464,13 @@ body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
 
 :root[data-theme="dark"] body[data-page="student"] .nav-item.active,
 :root[data-theme="dark"] body[data-page="student"] .nav-item:hover {
-  background: #eaf2ff;
-  color: #1f6feb;
+  border-color: #315987;
+  background: #15263b;
+  color: #9fc5ff;
 }
 
 :root[data-theme="dark"] body[data-page="student"] .app-sidebar {
-  background: linear-gradient(180deg, #143a72 0%, #102b55 100%);
+  background: #10151d;
 }
 
 :root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) :is(.student-search, .lesson-search, .assessment-search, .search-field, .filter-control, .input-wrap) {
@@ -379,6 +481,49 @@ body:is([data-page="teacher"], [data-page="student"]) .theme-toggle {
 
 :root[data-theme="dark"] body:is([data-page="teacher"], [data-page="student"]) svg text {
   fill: var(--theme-text-soft);
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] :is(
+  .capstone-evidence-header,
+  .performance-chart-summary > div,
+  .performance-chart-canvas,
+  .evidence-performance-empty,
+  .evidence-performance-single
+) {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-raised);
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-chart-summary strong,
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .capstone-evidence-header h1,
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .evidence-performance-single strong {
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-grid-line {
+  stroke: #344257;
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-callout rect {
+  fill: #182231;
+  stroke: #3a485c;
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-point,
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-point-group.is-context .performance-point {
+  fill: #111923;
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-point-group:is(:hover, :focus, .is-active, .is-latest):not(.is-context) .performance-point {
+  fill: #2d74f5;
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-chart-summary .is-positive strong {
+  color: #5fd19e;
+}
+
+:root[data-theme="dark"] body[data-page="teacher"] .teacher-section[data-view="overview"] .performance-chart-summary .is-negative strong {
+  color: #ff8490;
 }
 
 :root[data-theme="dark"] body :is(.good-text, b.good, .success-text) { color: #5fd19e !important; }
@@ -643,13 +788,15 @@ body[data-page="teacher"] .home-update-tabs button.active:hover {
   }
 
   body[data-page="teacher"] .app-sidebar .sidebar-profile-card,
-  body[data-page="student"] .app-sidebar .sidebar-help-card {
+  body[data-page="student"] .app-sidebar .sidebar-help-card,
+  body[data-page="student"] .app-sidebar .sidebar-profile-card {
     width: 100%;
     margin: auto 0 0;
     flex: 0 0 auto;
   }
 
-  body[data-page="teacher"] .app-sidebar .sidebar-profile-card {
+  body[data-page="teacher"] .app-sidebar .sidebar-profile-card,
+  body[data-page="student"] .app-sidebar .sidebar-profile-card {
     min-height: 60px;
     height: 60px;
     padding: 7px;
@@ -670,5 +817,560 @@ body[data-page="teacher"] .home-update-tabs button.active:hover {
   .teacher-section,
   .student-section {
     transition: none !important;
+  }
+}
+
+/* Shared dropdown system. Kept in the final theme layer so every static and
+   JavaScript-generated select uses the same TechWise 360 control treatment. */
+body {
+  --select-control-bg: #ffffff;
+  --select-control-text: #1b2737;
+  --select-control-muted: #66758a;
+  --select-control-border: #d7e1ec;
+  --select-control-hover-border: #aebfd2;
+  --select-control-focus: #2878e8;
+  --select-control-arrow-zone: #f5f8fc;
+  --select-control-option-bg: #ffffff;
+  --select-control-option-selected: #eaf3ff;
+  --select-control-chevron: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%235f6f82%22%20stroke-width%3D%222.25%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m7%2010%205%205%205-5%22%2F%3E%3C%2Fsvg%3E");
+}
+
+body select {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 0 46px 0 14px;
+  padding-right: 46px !important;
+  border: 1px solid var(--select-control-border);
+  border-radius: 11px;
+  outline: 0;
+  color: var(--select-control-text);
+  background-color: var(--select-control-bg);
+  background-image:
+    var(--select-control-chevron),
+    linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(100% - 40px),
+      var(--select-control-arrow-zone) calc(100% - 40px),
+      var(--select-control-arrow-zone) 100%
+    ) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center, 0 0 !important;
+  background-size: 16px 16px, 100% 100% !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+body select:hover:not(:disabled) {
+  --select-control-arrow-zone: #edf4fc;
+  border-color: var(--select-control-hover-border);
+  box-shadow: 0 3px 10px rgba(31, 111, 235, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+body select:focus,
+body select:focus-visible {
+  --select-control-arrow-zone: #e7f1ff;
+  border-color: var(--select-control-focus);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(40, 120, 232, 0.15), 0 3px 10px rgba(31, 111, 235, 0.09);
+}
+
+@supports selector(select:open) {
+  body select:open {
+    --select-control-arrow-zone: #e7f1ff;
+    border-color: var(--select-control-focus);
+    box-shadow: 0 0 0 3px rgba(40, 120, 232, 0.15), 0 6px 16px rgba(31, 111, 235, 0.1);
+  }
+}
+
+body select:disabled {
+  --select-control-arrow-zone: #f1f4f8;
+  color: var(--select-control-muted);
+  border-color: #e1e7ee;
+  background-color: #f7f9fb;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+body select option,
+body select optgroup {
+  color: var(--select-control-text);
+  background: var(--select-control-option-bg);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+body select option {
+  min-height: 36px;
+  padding: 9px 12px;
+  font-weight: 500;
+}
+
+body select option:checked {
+  color: #185fcf;
+  background: var(--select-control-option-selected);
+  font-weight: 700;
+}
+
+/* Registration controls already have a shared outer field; keep that single
+   border while retaining the custom arrow, readable text, and even spacing. */
+body .input-wrap select {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+body .input-wrap select:hover:not(:disabled),
+body .input-wrap select:focus,
+body .input-wrap select:focus-visible {
+  border: 0;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] select {
+  font-size: 12px;
+}
+
+body[data-page="teacher"] :is(
+  .student-toolbar,
+  .lesson-toolbar,
+  .assessment-toolbar,
+  .report-toolbar,
+  .reports-toolbar,
+  .leaderboard-toolbar,
+  .achievement-toolbar,
+  .evidence-toolbar
+) select {
+  height: 42px;
+  min-height: 42px;
+  padding-right: 46px;
+  padding-left: 14px;
+  font-size: 12px;
+}
+
+:root[data-theme="dark"] body {
+  --select-control-bg: #111925;
+  --select-control-text: #eef4fb;
+  --select-control-muted: #8e9bad;
+  --select-control-border: #354255;
+  --select-control-hover-border: #52647b;
+  --select-control-focus: #5b9cff;
+  --select-control-arrow-zone: #192434;
+  --select-control-option-bg: #151d28;
+  --select-control-option-selected: #1a3658;
+  --select-control-chevron: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23b8c6d8%22%20stroke-width%3D%222.25%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m7%2010%205%205%205-5%22%2F%3E%3C%2Fsvg%3E");
+}
+
+:root[data-theme="dark"] body select {
+  color-scheme: dark;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+:root[data-theme="dark"] body select:hover:not(:disabled) {
+  --select-control-arrow-zone: #203047;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="dark"] body select:focus,
+:root[data-theme="dark"] body select:focus-visible {
+  --select-control-arrow-zone: #1b3555;
+  box-shadow: 0 0 0 3px rgba(91, 156, 255, 0.2), 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="dark"] body select option:checked {
+  color: #b9d6ff;
+}
+
+@media (max-width: 620px) {
+  body select {
+    min-height: 44px;
+    padding-right: 46px;
+    padding-left: 13px;
+    font-size: 13px;
+  }
+}
+
+/* Interactive dropdown menu: the native select remains connected to its form,
+   while these controls provide the visible trigger and clickable option list. */
+body .tw-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body select.tw-select-native {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body .tw-select-trigger {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 46px 0 14px;
+  border: 1px solid var(--select-control-border);
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  color: var(--select-control-text);
+  background: var(--select-control-bg);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+body[data-page="teacher"] .tw-select-trigger {
+  font-size: 12px;
+}
+
+body .tw-select-value {
+  position: relative;
+  z-index: 1;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body .tw-select-chevron {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 40px;
+  border-left: 1px solid color-mix(in srgb, var(--select-control-border) 70%, transparent);
+  display: grid;
+  place-items: center;
+  background: var(--select-control-arrow-zone);
+  pointer-events: none;
+  transition: background-color 160ms ease;
+}
+
+body .tw-select-chevron::before {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--select-control-muted);
+  border-bottom: 2px solid var(--select-control-muted);
+  content: "";
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 180ms ease, border-color 160ms ease;
+}
+
+body .tw-select-trigger:hover:not(:disabled) {
+  border-color: var(--select-control-hover-border);
+  background: color-mix(in srgb, var(--select-control-bg) 96%, #eaf3ff);
+  box-shadow: 0 4px 12px rgba(31, 111, 235, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+body .tw-select-trigger:focus-visible,
+body .tw-select.is-open .tw-select-trigger {
+  border-color: var(--select-control-focus);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(40, 120, 232, 0.15), 0 4px 12px rgba(31, 111, 235, 0.09);
+}
+
+body .tw-select.is-open .tw-select-chevron {
+  background: #e7f1ff;
+}
+
+body .tw-select.is-open .tw-select-chevron::before {
+  border-color: var(--select-control-focus);
+  transform: translateY(2px) rotate(225deg);
+}
+
+body .tw-select.is-placeholder .tw-select-value {
+  color: var(--select-control-muted);
+}
+
+body .tw-select.is-disabled .tw-select-trigger,
+body .tw-select-trigger:disabled {
+  border-color: #e1e7ee;
+  color: var(--select-control-muted);
+  background: #f7f9fb;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+body .tw-select.is-invalid .tw-select-trigger {
+  border-color: #dc4b5c;
+  box-shadow: 0 0 0 3px rgba(220, 75, 92, 0.13);
+}
+
+body .tw-select-menu {
+  position: fixed;
+  z-index: 3400;
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid var(--select-control-border);
+  border-radius: 13px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--select-control-text);
+  background: var(--select-control-option-bg);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08);
+  scrollbar-color: #bcc9d8 transparent;
+  scrollbar-width: thin;
+  animation: tw-select-menu-in 150ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+body .tw-select-menu[hidden] {
+  display: none !important;
+}
+
+body .tw-select-menu[data-placement="bottom"] {
+  transform-origin: top center;
+}
+
+body .tw-select-menu[data-placement="top"] {
+  transform-origin: bottom center;
+}
+
+body .tw-select-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+body .tw-select-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body .tw-select-menu::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #bcc9d8;
+  background-clip: padding-box;
+}
+
+body .tw-select-option {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--select-control-text);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: color 130ms ease, border-color 130ms ease, background-color 130ms ease, transform 130ms ease;
+}
+
+body .tw-select-option:hover:not(:disabled),
+body .tw-select-option:focus-visible {
+  border-color: #d7e6f8;
+  outline: 0;
+  color: #185fcf;
+  background: #f1f6fd;
+}
+
+body .tw-select-option:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+body .tw-select-option.is-selected {
+  border-color: #c8dcf8;
+  color: #185fcf;
+  background: var(--select-control-option-selected);
+  font-weight: 700;
+}
+
+body .tw-select-option:disabled {
+  color: var(--select-control-muted);
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+body .tw-select-option-check {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d8e2ee;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: transparent;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+body .tw-select-option.is-selected .tw-select-option-check {
+  border-color: var(--select-control-focus);
+  color: #fff;
+  background: var(--select-control-focus);
+  box-shadow: 0 3px 8px rgba(40, 120, 232, 0.2);
+}
+
+body .tw-select-option-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body .tw-select-group-label {
+  padding: 8px 10px 4px 38px;
+  color: var(--select-control-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body .tw-select-empty {
+  padding: 14px 12px;
+  color: var(--select-control-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+body .input-wrap .tw-select {
+  height: 100%;
+}
+
+body .input-wrap .tw-select-trigger {
+  height: 100%;
+  min-height: 0;
+  padding-left: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body .input-wrap .tw-select-trigger:hover:not(:disabled),
+body .input-wrap .tw-select-trigger:focus-visible,
+body .input-wrap .tw-select.is-open .tw-select-trigger {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-page="teacher"] .teacher-section[data-view="students"] .student-toolbar .tw-select-trigger {
+  height: 44px;
+  min-height: 44px;
+}
+
+body :is(.modal-form-stack, .management-form, .certificate-generator-form, .student-drawer-panel) .tw-select-trigger {
+  min-height: 46px;
+}
+
+:root[data-theme="dark"] body .tw-select-trigger {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+:root[data-theme="dark"] body .tw-select-trigger:hover:not(:disabled) {
+  background: #151f2e;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme="dark"] body .tw-select.is-open .tw-select-chevron {
+  background: #1b3555;
+}
+
+:root[data-theme="dark"] body .tw-select-menu {
+  border-color: #354255;
+  background: #151d28;
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.48), 0 5px 14px rgba(0, 0, 0, 0.26);
+}
+
+:root[data-theme="dark"] body .tw-select-option-check {
+  border-color: #3a485c;
+  background: #111925;
+}
+
+:root[data-theme="dark"] body .tw-select-option:hover:not(:disabled),
+:root[data-theme="dark"] body .tw-select-option:focus-visible {
+  border-color: #315987;
+  color: #b9d6ff;
+  background: #182a40;
+}
+
+:root[data-theme="dark"] body .tw-select-option.is-selected {
+  border-color: #315987;
+  color: #b9d6ff;
+  background: #1a3658;
+}
+
+:root[data-theme="dark"] body .tw-select.is-disabled .tw-select-trigger,
+:root[data-theme="dark"] body .tw-select-trigger:disabled {
+  border-color: #2b3645;
+  background: #111722;
+}
+
+@keyframes tw-select-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 620px) {
+  body .tw-select-trigger {
+    min-height: 44px;
+    padding-right: 46px;
+    padding-left: 13px;
+    font-size: 13px;
+  }
+
+  body .tw-select-menu {
+    max-width: calc(100vw - 16px);
+  }
+
+  body .tw-select-option {
+    min-height: 44px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .tw-select-menu,
+  body .tw-select-trigger,
+  body .tw-select-chevron,
+  body .tw-select-chevron::before,
+  body .tw-select-option {
+    animation: none;
+    transition: none;
   }
 }

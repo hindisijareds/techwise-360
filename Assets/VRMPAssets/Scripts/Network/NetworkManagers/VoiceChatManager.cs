@@ -149,7 +149,8 @@ namespace XRMultiplayer
         ///<inheritdoc/>
         private void OnDestroy()
         {
-            VivoxService.Instance.LoggedIn -= LocalUserLoggedIn;
+            if (VivoxService.Instance != null)
+                VivoxService.Instance.LoggedIn -= LocalUserLoggedIn;
             UnbindParticipantEvents();
         }
 
@@ -322,8 +323,12 @@ namespace XRMultiplayer
 
         void UnbindParticipantEvents()
         {
-            VivoxService.Instance.ParticipantAddedToChannel -= OnParticipantAdded;
-            VivoxService.Instance.ParticipantRemovedFromChannel -= OnParticipantRemoved;
+            var vivoxService = VivoxService.Instance;
+            if (vivoxService == null)
+                return;
+
+            vivoxService.ParticipantAddedToChannel -= OnParticipantAdded;
+            vivoxService.ParticipantRemovedFromChannel -= OnParticipantRemoved;
         }
 
         async void DisconnectAsync()

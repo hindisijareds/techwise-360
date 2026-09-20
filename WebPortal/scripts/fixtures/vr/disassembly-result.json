@@ -1,0 +1,181 @@
+{
+    "simulation_type": "disassembly",
+    "competition_id": "",
+    "score_percent": 96.0,
+    "duration_seconds": 0,
+    "mistakes": 1,
+    "started_at": "2026-09-06T12:57:52.1516521Z",
+    "completed_at": "2026-09-06T12:57:52.3629081Z",
+    "metadata": {
+        "schema_version": 2,
+        "elapsed_seconds": 0.2104120999999992,
+        "scoring_configuration": {
+            "version": "legacy-mistakes-time-v1",
+            "minorPenalty": 4,
+            "standardPenalty": 8,
+            "criticalPenalty": 16,
+            "maximumTimePenalty": 20,
+            "overtimeIntervalSeconds": 30,
+            "penaltyPerInterval": 2,
+            "assemblyTargetSeconds": 600,
+            "disassemblyTargetSeconds": 420
+        },
+        "scoring_breakdown": {
+            "final_score": 96,
+            "accuracy_percent": 96,
+            "completion_percent": 100,
+            "mistake_penalty": 4,
+            "time_penalty": 0
+        },
+        "component_results": [
+            {
+                "component_id": "CPUCooler:1",
+                "component": "CPU cooler",
+                "step": "CPUCooler",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "PSU:1",
+                "component": "Power supply",
+                "step": "PSU",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "Storage:1",
+                "component": "SATA storage",
+                "step": "Storage",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "GPU:1",
+                "component": "GPU",
+                "step": "GPU",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "M2:1",
+                "component": "M.2 SSD",
+                "step": "M2",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "RAM:1",
+                "component": "RAM module 1",
+                "step": "RAM",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "RAM:2",
+                "component": "RAM module 2",
+                "step": "RAM",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "RAM:3",
+                "component": "RAM module 3",
+                "step": "RAM",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "RAM:4",
+                "component": "RAM module 4",
+                "step": "RAM",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "CPU:1",
+                "component": "CPU",
+                "step": "CPU",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            },
+            {
+                "component_id": "Motherboard:1",
+                "component": "Motherboard",
+                "step": "Motherboard",
+                "complete": true,
+                "issue": "",
+                "explanation": "",
+                "correction": ""
+            }
+        ],
+        "local_attempt_id": "3cb17f9cc330403bb9159989ab0d300c",
+        "mode": "competition",
+        "expected_order": [
+            "CPUCooler",
+            "PSU",
+            "Storage",
+            "GPU",
+            "M2",
+            "RAM",
+            "CPU",
+            "Motherboard"
+        ],
+        "completed_order": [
+            "CPUCooler",
+            "PSU",
+            "Storage",
+            "GPU",
+            "M2",
+            "RAM",
+            "CPU",
+            "Motherboard"
+        ],
+        "skipped_steps": [],
+        "wrong_order_count": 0,
+        "wrong_part_count": 1,
+        "reset_count": 0,
+        "time_penalty": 0,
+        "mistake_penalty": 4,
+        "mistake_details": [
+            {
+                "category": "Incorrect Orientation",
+                "severity": "minor",
+                "score_penalty": 4,
+                "order": 1,
+                "elapsed_seconds": 0.01280619999999999,
+                "component_id": "",
+                "kind": "incorrect_orientation",
+                "attempted_step": "CPU",
+                "expected_step": "",
+                "attempted_destination": "",
+                "expected_destination": "",
+                "explanation": "Secret assessment explanation",
+                "correction": "Secret correction",
+                "occurred_at_seconds": 0
+            }
+        ],
+        "game_version": "0.0.1",
+        "control_mode": "Desktop",
+        "offline_queued": true
+    }
+}

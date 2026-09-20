@@ -70,61 +70,48 @@ public sealed class TechWiseDisassemblyRuntime : MonoBehaviour
         if (string.IsNullOrEmpty(stepId))
             return false;
 
-        var interactable = FindStepInteractable(stepId);
-        var socket = FindStepSocket(stepId);
-        if (interactable == null || socket == null)
-            return false;
-
-        return InstallIntoSocket(interactable, socket);
+        bool found = false;
+        var sceneParts = TechWiseSimulationRuntime.Instance != null
+            ? TechWiseSimulationRuntime.Instance.Parts.ToArray()
+            : FindObjectsByType<XRGrabInteractable>(FindObjectsInactive.Exclude);
+        foreach (var interactable in sceneParts)
+        {
+            if (TechWiseSimulationModeManager.ResolveStepId(interactable.transform) != stepId) continue;
+            found = true;
+            XRLockSocketInteractor target = null;
+            foreach (var socket in FindObjectsByType<XRLockSocketInteractor>(FindObjectsInactive.Exclude))
+            {
+                if (TechWiseSimulationModeManager.ResolveStepId(socket.transform) != stepId || !TechWiseSimulationRuntime.Matches(socket, interactable.transform)) continue;
+                if (socket.IsSelecting(interactable)) { target = socket; break; }
+                if (!socket.hasSelection && target == null) target = socket;
+            }
+            if (target == null || !InstallIntoSocket(interactable, target)) return false;
+        }
+        return found;
     }
 
     IEnumerator AutoAssembleForDisassemblyCoroutine()
     {
-        IsPreparing = true;
-        LastSkippedSteps = Array.Empty<string>();
-
-        yield return null;
-        yield return new WaitForSeconds(0.2f);
-
-        var interactablesByStep = new Dictionary<string, XRGrabInteractable>();
-        foreach (var interactable in FindObjectsByType<XRGrabInteractable>(FindObjectsInactive.Exclude))
+        IsPreparing = true; LastSkippedSteps = Array.Empty<string>();
+        var deadline=Time.realtimeSinceStartup+15;
+        while(TechWiseDetailedAssemblyRuntime.Instance==null || !TechWiseDetailedAssemblyRuntime.Instance.Ready)
         {
-            var stepId = TechWiseSimulationModeManager.ResolveStepId(interactable.transform);
-            if (!string.IsNullOrEmpty(stepId) && !interactablesByStep.ContainsKey(stepId))
-                interactablesByStep[stepId] = interactable;
-        }
-
-        var socketsByStep = new Dictionary<string, XRLockSocketInteractor>();
-        foreach (var socket in FindObjectsByType<XRLockSocketInteractor>(FindObjectsInactive.Exclude))
-        {
-            var stepId = TechWiseSimulationModeManager.ResolveStepId(socket.transform);
-            if (!string.IsNullOrEmpty(stepId) && !socketsByStep.ContainsKey(stepId))
-                socketsByStep[stepId] = socket;
-        }
-
-        var skipped = new List<string>();
-        foreach (var stepId in TechWiseSimulationModeManager.DisassemblyOrder)
-        {
-            if (!interactablesByStep.ContainsKey(stepId) || !socketsByStep.ContainsKey(stepId))
-                skipped.Add(stepId);
-        }
-
-        foreach (var stepId in TechWiseSimulationModeManager.AssemblyOrder)
-        {
-            if (!interactablesByStep.TryGetValue(stepId, out var interactable) ||
-                !socketsByStep.TryGetValue(stepId, out var socket))
-            {
-                continue;
-            }
-
-            InstallIntoSocket(interactable, socket);
+            if(Time.realtimeSinceStartup>deadline) { LastSkippedSteps=TechWiseBuildDefinition.AssemblyOrder; IsPreparing=false; Debug.LogError("Complete disassembly hardware failed to initialize."); yield break; }
             yield return null;
         }
-
-        yield return new WaitForSeconds(0.25f);
-        LastSkippedSteps = skipped.ToArray();
-        IsPreparing = false;
-        prepareCoroutine = null;
+        var state=TechWiseSimulationRuntime.Instance;
+        foreach(var part in state.Parts)
+            for(var t=part.transform;t!=null;t=t.parent) if(!t.gameObject.activeSelf) t.gameObject.SetActive(true);
+        var skipped=new List<string>();
+        foreach(var step in TechWiseBuildDefinition.AssemblyOrder)
+        {
+            if(!InstallStepIntoSocket(step)) skipped.Add(step);
+            yield return null;
+        }
+        TechWiseDetailedAssemblyRuntime.Instance.PrepareDisassemblyHardware();
+        yield return null;
+        LastSkippedSteps=skipped.ToArray(); IsPreparing=false; prepareCoroutine=null;
+        if(skipped.Count>0) Debug.LogError("Incomplete disassembly preparation: "+string.Join(", ",skipped));
     }
 
     static XRGrabInteractable FindStepInteractable(string stepId)
@@ -155,50 +142,56 @@ public sealed class TechWiseDisassemblyRuntime : MonoBehaviour
             return false;
 
         if (socket.interactablesSelected.Count > 0)
-            return true;
+            return socket.IsSelecting(interactable);
+
+        if (!TechWiseSimulationRuntime.Matches(socket, interactable.transform))
+            return false;
 
         var manager = socket.interactionManager ?? interactable.interactionManager ?? FindAnyObjectByType<XRInteractionManager>();
         var rigidbody = interactable.GetComponent<Rigidbody>() ?? interactable.GetComponentInParent<Rigidbody>();
         var wasKinematic = rigidbody != null && rigidbody.isKinematic;
+        var originalPose = new Pose(interactable.transform.position, interactable.transform.rotation);
+        if (manager == null) return false;
 
         if (interactable.isSelected && interactable.interactionManager != null)
             interactable.interactionManager.CancelInteractableSelection((IXRSelectInteractable)interactable);
 
         if (rigidbody != null)
         {
-            rigidbody.linearVelocity = Vector3.zero;
-            rigidbody.angularVelocity = Vector3.zero;
+            if (!rigidbody.isKinematic)
+            {
+                rigidbody.linearVelocity = Vector3.zero;
+                rigidbody.angularVelocity = Vector3.zero;
+            }
             rigidbody.isKinematic = true;
         }
 
-        var target = socket.attachTransform != null ? socket.attachTransform : socket.transform;
-        interactable.transform.SetPositionAndRotation(target.position, target.rotation);
+        var target = socket.GetAttachTransform(interactable);
+        var partAttach = interactable.GetAttachTransform(socket);
+        interactable.transform.rotation = target.rotation * Quaternion.Inverse(partAttach.rotation) * interactable.transform.rotation;
+        interactable.transform.position += target.position - partAttach.position;
 
         if (manager != null)
         {
             try
             {
-                manager.SelectEnter((IXRSelectInteractor)socket, (IXRSelectInteractable)interactable);
-                if (socket.interactablesSelected.Count == 0)
-                    manager.SelectEnterUnconditionally((IXRSelectInteractor)socket, (IXRSelectInteractable)interactable);
+                if (manager.IsSelectPossible((IXRSelectInteractor)socket, (IXRSelectInteractable)interactable))
+                    manager.SelectEnter((IXRSelectInteractor)socket, (IXRSelectInteractable)interactable);
+                else
+                    Debug.LogWarning($"Preparation rejected for {interactable.name} in {socket.name}; part layers {interactable.interactionLayers.value}, socket layers {socket.interactionLayers.value}.");
             }
-            catch
+            catch (Exception exception)
             {
-                try
-                {
-                    manager.SelectEnterUnconditionally((IXRSelectInteractor)socket, (IXRSelectInteractable)interactable);
-                }
-                catch
-                {
-                    // The scoring runtime also recognizes moved-away parts, so a failed manual select is recoverable.
-                }
+                Debug.LogWarning($"Could not prepare {interactable.name}: {exception.Message}");
             }
         }
 
-        if (rigidbody != null)
+        var installed = socket.IsSelecting(interactable);
+        if (!installed) interactable.transform.SetPositionAndRotation(originalPose.position, originalPose.rotation);
+        if (rigidbody != null && !installed)
             rigidbody.isKinematic = wasKinematic;
 
-        return true;
+        return installed;
     }
 
     static bool IsGameplayScene(string sceneName)

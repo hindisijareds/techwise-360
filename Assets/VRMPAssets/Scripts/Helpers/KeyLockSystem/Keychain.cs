@@ -13,7 +13,7 @@ namespace UnityEngine.XR.Content.Interaction
         [SerializeField]
         [Tooltip("The keys on this keychain" +
             "Create new keys by selecting \"Assets/Create/XR/Key Lock System/Key\"")]
-        List<Key> m_Keys;
+        List<Key> m_Keys = new();
 
         HashSet<int> m_KeysHashSet = new HashSet<int>();
 

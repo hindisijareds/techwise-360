@@ -1,0 +1,7 @@
+#teacherVrClassRecord .reports-toolbar { justify-content: flex-start; max-width: none; width: 100%; margin: 16px 0; }
+#teacherVrClassRecord > button { margin: 0 8px 8px 0; }
+#teacherVrClassRecord table { min-width: 1100px; }
+#teacherVrClassRecord th, #teacherVrClassRecord td { vertical-align: top; }
+#teacherVrClassRecord td:nth-child(7) { min-width: 160px; }
+#teacherVrClassRecord details { min-width: 130px; max-width: 260px; }
+#teacherVrClassRecord summary { cursor: pointer; margin-top: 6px; }

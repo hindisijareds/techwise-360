@@ -1,15 +1,18 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.XR;
 using UnityEngine.XR.Content.Interaction;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 
 [DefaultExecutionOrder(-7600)]
 public sealed class TechWiseAttemptRecorder : MonoBehaviour
@@ -23,9 +26,12 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
     const float ScoringGraceSeconds = 0.35f;
     const float DisassemblyArmSeconds = 0.75f;
     const float MistakeCooldownSeconds = 1.5f;
-    const int WrongStepPenalty = 8;
-    const int ResetPenalty = 3;
-    const int MaxTimePenalty = 20;
+    readonly List<TechWiseVrMistakeDetail> mistakeDetails = new();
+    TechWiseAssessmentScoringSettings scoring = new();
+    TechWiseVrComponentResult[] submittedResults;
+    TechWiseAssessmentScore submittedScore;
+    internal TechWiseVrComponentResult[] SubmittedResults => submittedResults;
+    internal bool CanResetPrevious => CanSubmitMonitor && TechWiseAssemblyHistory.Count > 0;
 
     readonly List<XRGrabInteractable> grabInteractables = new();
     readonly List<XRLockSocketInteractor> sockets = new();
@@ -63,6 +69,19 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
     string lastAttemptId;
     string lastCompletionSummary;
     string lastHudExtraLine;
+    bool continuousPresence = true;
+    int unmountCount;
+    bool presenceSampled;
+    bool lastUserPresence = true;
+    internal bool CanSubmitMonitor => attemptActive && !attemptFinished;
+    internal void SubmitFromMonitor() => FinishAttempt();
+    public bool IsReadyToStart => attemptReady && !attemptActive && !attemptFinished;
+    public bool IsFinished => attemptFinished;
+    public string LastCompletionSummary => lastCompletionSummary;
+    public string CurrentSyncStatus => BuildSyncStatusLine(lastAttemptId);
+    public void StartCompetitionAttempt() => BeginAttempt();
+    public static bool LocalVerificationMode;
+    public string CurrentAttemptId => lastAttemptId;
 
     public readonly struct AttemptSnapshot
     {
@@ -73,6 +92,9 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         public readonly int mistakes;
         public readonly int completedSteps;
         public readonly int totalSteps;
+        public readonly bool resultsReady;
+        public readonly bool resultsRevealed;
+        public readonly int score;
 
         public AttemptSnapshot(
             bool available,
@@ -81,7 +103,10 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             int durationSeconds,
             int mistakes,
             int completedSteps,
-            int totalSteps)
+            int totalSteps,
+            bool resultsReady = true,
+            bool resultsRevealed = true,
+            int score = 0)
         {
             this.available = available;
             this.activity = activity;
@@ -90,6 +115,9 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             this.mistakes = mistakes;
             this.completedSteps = completedSteps;
             this.totalSteps = totalSteps;
+            this.resultsReady = resultsReady;
+            this.resultsRevealed = resultsRevealed;
+            this.score = score;
         }
     }
 
@@ -109,12 +137,14 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         SceneManager.sceneLoaded += OnSceneLoaded;
         TechWiseComponentRecovery.ComponentRecovered += OnComponentRecovered;
         TechWiseOfflineAttemptQueue.QueueChanged += OnQueueChanged;
+        TechWiseSimulationRuntime.MistakeRecorded += OnSimulationMistake;
         RefreshScene();
     }
 
     void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        TechWiseSimulationRuntime.MistakeRecorded -= OnSimulationMistake;
         TechWiseComponentRecovery.ComponentRecovered -= OnComponentRecovered;
         TechWiseOfflineAttemptQueue.QueueChanged -= OnQueueChanged;
         ClearListeners();
@@ -136,7 +166,7 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             else if (pendingDisassemblyRebaseline)
             {
                 RebaselineDisassemblyPositions();
-                UpdateReadyDisplay("Ready. Click Start Competition with the crosshair or press Enter/Space.");
+                UpdateReadyDisplay("Ready. Click START with laser, or pull Trigger / press A to begin.");
             }
 
             return;
@@ -145,9 +175,11 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         if (!attemptActive)
             return;
 
-        if (TechWiseSimulationModeManager.IsDisassembly)
-            CheckMovedDisassemblyParts();
+        UpdatePresenceTracking();
 
+        RefreshCompletedRequirements();
+
+        PositionVrFloatingHud(false);
         UpdateHud();
     }
 
@@ -160,14 +192,22 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         if (!IsGameplayScene(SceneManager.GetActiveScene().name) || !TechWiseSimulationModeManager.IsCompetitionMode)
             return;
 
-        RegisterSceneParts();
-        PrepareAttempt();
+        StopAllCoroutines();
+        StartCoroutine(PrepareWhenReady());
+    }
+
+    IEnumerator PrepareWhenReady()
+    {
+        while (TechWiseDetailedAssemblyRuntime.Instance == null || !TechWiseDetailedAssemblyRuntime.Instance.Ready || TechWiseDisassemblyRuntime.IsPreparing)
+            yield return null;
+        RegisterSceneParts(); PrepareAttempt();
     }
 
     void RegisterSceneParts()
     {
         foreach (var interactable in FindObjectsByType<XRGrabInteractable>(FindObjectsInactive.Exclude))
         {
+            if (interactable.GetComponent<TechWiseFastener>() != null) continue;
             var stepId = TechWiseSimulationModeManager.ResolveStepId(interactable.transform);
             if (string.IsNullOrEmpty(stepId))
                 continue;
@@ -177,12 +217,13 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             if (!interactableByStep.ContainsKey(stepId))
                 interactableByStep[stepId] = interactable;
 
-            interactable.selectEntered.AddListener(OnGrabSelected);
-            interactable.selectExited.AddListener(OnGrabReleased);
+
+
         }
 
         foreach (var socket in FindObjectsByType<XRLockSocketInteractor>(FindObjectsInactive.Exclude))
         {
+            if (socket.GetComponent<TechWiseScrewHole>() != null) continue;
             var stepId = TechWiseSimulationModeManager.ResolveStepId(socket.transform);
             if (string.IsNullOrEmpty(stepId))
                 continue;
@@ -192,8 +233,8 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             if (!socketByStep.ContainsKey(stepId))
                 socketByStep[stepId] = socket;
 
-            socket.selectEntered.AddListener(OnSocketSelected);
-            socket.selectExited.AddListener(OnSocketExited);
+
+
 
             var attach = socket.attachTransform != null ? socket.attachTransform : socket.transform;
             disassemblySocketPositions[stepId] = attach.position;
@@ -224,13 +265,12 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         attemptStartRealtime = Time.realtimeSinceStartup;
         attemptStartedAtUtc = DateTime.UtcNow;
 
-        foreach (var stepId in TechWiseSimulationModeManager.GetExpectedOrder())
-        {
-            if (interactableByStep.ContainsKey(stepId) && socketByStep.ContainsKey(stepId))
-                availableOrder.Add(stepId);
-            else
-                AddSkippedStep(stepId);
-        }
+        // Missing scene content must never reduce the assessment denominator.
+        availableOrder.AddRange(TechWiseSimulationModeManager.GetExpectedOrder());
+        var settingsAsset = Resources.Load<TextAsset>("TechWiseAssessmentScoring");
+        scoring = (settingsAsset != null ? JsonUtility.FromJson<TechWiseAssessmentScoringSettings>(settingsAsset.text) : new TechWiseAssessmentScoringSettings()).Snapshot();
+        mistakeDetails.Clear(); submittedResults = null; submittedScore = null;
+        TechWiseAssemblyHistory.Clear();
 
         EnsureHud();
 
@@ -248,13 +288,14 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         }
 
         attemptReady = true;
+        TechWiseSimulationRuntime.Instance?.SetManipulationLocked(true);
         ShowStartPrompt();
-        UpdateReadyDisplay("Ready. Click Start Competition with the crosshair or press Enter/Space.");
+        UpdateReadyDisplay("Ready. Click START with laser, or pull Trigger / press A to begin.");
     }
 
     void BeginAttempt()
     {
-        if (!attemptReady || attemptActive || attemptFinished)
+        if (!attemptReady || attemptActive || attemptFinished || TechWiseDetailedAssemblyRuntime.Instance == null || !TechWiseDetailedAssemblyRuntime.Instance.Ready)
             return;
 
         if (TechWiseSimulationModeManager.IsDisassembly && TechWiseDisassemblyRuntime.IsPreparing)
@@ -275,6 +316,10 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         wrongPartCount = 0;
         resetCount = 0;
         lastDurationSeconds = 0;
+        continuousPresence = true;
+        unmountCount = 0;
+        presenceSampled = false;
+        lastUserPresence = true;
         attemptReady = false;
         attemptActive = true;
         attemptFinished = false;
@@ -282,6 +327,8 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         attemptStartedAtUtc = DateTime.UtcNow;
         scoringEnabledRealtime = Time.realtimeSinceStartup + ScoringGraceSeconds;
         disassemblyArmedRealtime = Time.realtimeSinceStartup + DisassemblyArmSeconds;
+
+        TechWiseSimulationRuntime.Instance?.SetManipulationLocked(false);
 
         HideStartPrompt();
         UpdateHud("Run started. Step hints are hidden for competition mode.");
@@ -327,204 +374,95 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         pendingDisassemblyRebaseline = false;
     }
 
-    void OnGrabSelected(SelectEnterEventArgs args)
+    void OnGrabSelected(SelectEnterEventArgs args) { }
+    void OnGrabReleased(SelectExitEventArgs args) { }
+    void OnSocketSelected(SelectEnterEventArgs args) { }
+    void OnSocketExited(SelectExitEventArgs args) { }
+    void OnComponentRecovered(string stepId) { } // Recovery is not a placement attempt.
+
+    void RefreshCompletedRequirements()
     {
-        if (!attemptActive || attemptFinished || args?.interactorObject is XRSocketInteractor)
-            return;
+        var state = TechWiseSimulationRuntime.Instance;
+        completedSteps.Clear(); completedOrder.Clear();
+        if (state == null) return;
+        foreach (string step in availableOrder)
+            if (state.IsStepComplete(step)) { completedSteps.Add(step); completedOrder.Add(step); }
+    }
+    void OnSimulationMistake(TechWiseVrMistakeDetail source)
+    {
+        if (!CanSubmitMonitor || TechWiseAssemblyHistory.Restoring || source == null) return;
+        var detail = JsonUtility.FromJson<TechWiseVrMistakeDetail>(JsonUtility.ToJson(source));
+        TechWiseAssessmentScoring.Describe(detail, scoring, mistakeDetails.Count + 1, Time.realtimeSinceStartup - attemptStartRealtime);
+        mistakeDetails.Add(detail);
+        if (detail.kind == "wrong_order") wrongOrderCount++; else wrongPartCount++;
+        UpdateHud();
+    }
+    public void ResetToPreviousPoint()
+    {
+        if (!CanResetPrevious || !TechWiseAssemblyHistory.Undo()) return;
+        resetCount++;
+        var detail = new TechWiseVrMistakeDetail { kind="reset_previous", explanation="Previous completed action restored.", correction="Repeat that action to continue." };
+        TechWiseAssessmentScoring.Describe(detail, scoring, mistakeDetails.Count + 1, Time.realtimeSinceStartup - attemptStartRealtime);
+        mistakeDetails.Add(detail); RefreshCompletedRequirements(); UpdateHud(detail.explanation);
+    }
+    public void ResetToBeginning()
+    {
+        if (!TechWiseSimulationModeManager.IsCompetitionMode) return;
+        attemptActive=false; attemptReady=false;
 
-        var interactable = args?.interactableObject as XRGrabInteractable;
-        var stepId = interactable != null && stepByInteractable.TryGetValue(interactable, out var fromPart)
-            ? fromPart
-            : null;
-
-        if (string.IsNullOrEmpty(stepId) || completedSteps.Contains(stepId) || !availableOrder.Contains(stepId))
-            return;
-
-        playerTouchedSteps.Add(stepId);
-        if (TechWiseSimulationModeManager.IsDisassembly)
-            disassemblyRemovalCandidates.Add(stepId);
+        Time.timeScale=1;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    void OnGrabReleased(SelectExitEventArgs args)
+    void UpdatePresenceTracking()
     {
-        if (!attemptActive || attemptFinished || !TechWiseSimulationModeManager.IsDisassembly)
-            return;
-
-        if (args?.interactorObject is XRSocketInteractor)
-            return;
-
-        var interactable = args?.interactableObject as XRGrabInteractable;
-        var stepId = interactable != null && stepByInteractable.TryGetValue(interactable, out var fromPart)
-            ? fromPart
-            : null;
-
-        if (string.IsNullOrEmpty(stepId) || !disassemblyRemovalCandidates.Contains(stepId))
-            return;
-
-        TryRecordMovedDisassemblyStep(stepId);
-    }
-
-    void OnSocketSelected(SelectEnterEventArgs args)
-    {
-        if (!attemptActive || attemptFinished || !TechWiseSimulationModeManager.IsAssembly)
-            return;
-
-        var socket = args?.interactorObject as XRLockSocketInteractor;
-        var interactable = args?.interactableObject as XRGrabInteractable;
-        var socketStep = socket != null && stepBySocket.TryGetValue(socket, out var fromSocket) ? fromSocket : null;
-        var interactableStep = interactable != null && stepByInteractable.TryGetValue(interactable, out var fromPart) ? fromPart : null;
-
-        if (!string.IsNullOrEmpty(socketStep) && !string.IsNullOrEmpty(interactableStep) && socketStep != interactableStep)
+        var headDevice = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+        if (headDevice.isValid && headDevice.TryGetFeatureValue(UnityEngine.XR.CommonUsages.userPresence, out bool isPresent))
         {
-            if (RecordMistake("wrong_part", $"{interactableStep}->{socketStep}"))
-                UpdateHud($"Wrong part for that slot. Mistakes: {MistakeCount}");
-            return;
-        }
-
-        RecordStep(socketStep ?? interactableStep);
-    }
-
-    void OnSocketExited(SelectExitEventArgs args)
-    {
-        if (!attemptActive || attemptFinished || !TechWiseSimulationModeManager.IsDisassembly)
-            return;
-
-        var socket = args?.interactorObject as XRLockSocketInteractor;
-        var interactable = args?.interactableObject as XRGrabInteractable;
-        var socketStep = socket != null && stepBySocket.TryGetValue(socket, out var fromSocket) ? fromSocket : null;
-        var interactableStep = interactable != null && stepByInteractable.TryGetValue(interactable, out var fromPart) ? fromPart : null;
-        var stepId = socketStep ?? interactableStep;
-
-        if (string.IsNullOrEmpty(stepId) || !playerTouchedSteps.Contains(stepId))
-            return;
-
-        RecordStep(stepId);
-    }
-
-    void CheckMovedDisassemblyParts()
-    {
-        if (Time.realtimeSinceStartup < disassemblyArmedRealtime)
-            return;
-
-        foreach (var stepId in availableOrder)
-        {
-            if (completedSteps.Contains(stepId))
-                continue;
-
-            if (!interactableByStep.TryGetValue(stepId, out var interactable) ||
-                !disassemblySocketPositions.TryGetValue(stepId, out var socketPosition))
+            if (!presenceSampled)
             {
-                continue;
+                presenceSampled = true;
+                lastUserPresence = isPresent;
+                if (!isPresent)
+                {
+                    continuousPresence = false;
+                    unmountCount = 1;
+                }
             }
-
-            if (!disassemblyRemovalCandidates.Contains(stepId))
-                continue;
-
-            if (IsSelectedBySocket(interactable))
-                continue;
-
-            var distance = Vector3.Distance(interactable.transform.position, socketPosition);
-            if (distance >= DisassemblyMovedAwayDistance)
-                RecordStep(stepId);
+            else
+            {
+                if (lastUserPresence && !isPresent)
+                {
+                    continuousPresence = false;
+                    unmountCount++;
+                }
+                lastUserPresence = isPresent;
+            }
         }
-    }
-
-    void TryRecordMovedDisassemblyStep(string stepId)
-    {
-        if (string.IsNullOrEmpty(stepId) ||
-            completedSteps.Contains(stepId) ||
-            !disassemblyRemovalCandidates.Contains(stepId) ||
-            !interactableByStep.TryGetValue(stepId, out var interactable) ||
-            !disassemblySocketPositions.TryGetValue(stepId, out var socketPosition))
-        {
-            return;
-        }
-
-        if (Vector3.Distance(interactable.transform.position, socketPosition) >= DisassemblyMovedAwayDistance)
-            RecordStep(stepId);
-    }
-
-    void RecordStep(string stepId)
-    {
-        if (!attemptActive || string.IsNullOrEmpty(stepId) || completedSteps.Contains(stepId) || !availableOrder.Contains(stepId))
-            return;
-
-        var expectedStep = GetCurrentExpectedStep();
-        if (!string.IsNullOrEmpty(expectedStep) && stepId != expectedStep)
-            RecordMistake("wrong_order", $"{stepId}_before_{expectedStep}");
-
-        completedSteps.Add(stepId);
-        completedOrder.Add(stepId);
-
-        if (completedSteps.Count >= availableOrder.Count)
-            FinishAttempt();
-        else
-            UpdateHud();
-    }
-
-    bool RecordMistake(string kind, string key)
-    {
-        if (!attemptActive || attemptFinished || Time.realtimeSinceStartup < scoringEnabledRealtime)
-            return false;
-
-        if (kind == "reset")
-            return false;
-
-        var cooldownKey = $"{kind}:{key}";
-        if (mistakeCooldowns.TryGetValue(cooldownKey, out var lastRecordedAt) &&
-            Time.realtimeSinceStartup - lastRecordedAt < MistakeCooldownSeconds)
-        {
-            return false;
-        }
-
-        mistakeCooldowns[cooldownKey] = Time.realtimeSinceStartup;
-
-        if (kind == "reset")
-            resetCount++;
-        else if (kind == "wrong_part")
-            wrongPartCount++;
-        else
-            wrongOrderCount++;
-
-        return true;
-    }
-
-    void OnComponentRecovered(string stepId)
-    {
-        if (!attemptActive || attemptFinished || string.IsNullOrEmpty(stepId) || completedSteps.Contains(stepId))
-            return;
-
-        if (!playerTouchedSteps.Contains(stepId))
-            return;
-
-        var counted = RecordMistake("reset", stepId);
-        if (TechWiseSimulationModeManager.IsDisassembly)
-        {
-            TechWiseDisassemblyRuntime.InstallStepIntoSocket(stepId);
-            disassemblyArmedRealtime = Time.realtimeSinceStartup + DisassemblyArmSeconds;
-        }
-
-        if (counted)
-            UpdateHud($"Part reset recorded. Mistakes: {MistakeCount}");
     }
 
     void FinishAttempt()
     {
-        if (attemptFinished)
+        if (!CanSubmitMonitor)
             return;
 
         attemptFinished = true;
         attemptActive = false;
         attemptReady = false;
+        RefreshCompletedRequirements();
+        var componentResults = TechWiseSimulationRuntime.Instance?.CaptureAssessmentState();
+        submittedResults = componentResults;
+        TechWiseSimulationRuntime.Instance?.SetManipulationLocked(true);
 
         var completedAt = DateTime.UtcNow;
         var durationSeconds = Mathf.Max(0, Mathf.RoundToInt(Time.realtimeSinceStartup - attemptStartRealtime));
         lastDurationSeconds = durationSeconds;
-        var mistakePenalty = wrongOrderCount * WrongStepPenalty + wrongPartCount * WrongStepPenalty + resetCount * ResetPenalty;
-        var overtimeSeconds = Mathf.Max(0, durationSeconds - TechWiseSimulationModeManager.TargetSecondsForCurrentMode());
-        var timePenalty = Mathf.Min(MaxTimePenalty, (overtimeSeconds / 30) * 2);
-        var score = CalculateScore(durationSeconds);
+        submittedScore = Score(durationSeconds, componentResults);
+        var mistakePenalty = submittedScore.mistake_penalty;
+        var timePenalty = submittedScore.time_penalty;
+        var score = submittedScore.final_score;
         var localAttemptId = Guid.NewGuid().ToString("N");
+        var profile = TechWiseSessionStore.GetProfile();
 
         var payload = new TechWiseVrAttemptPayload
         {
@@ -548,8 +486,16 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
                 time_penalty = timePenalty,
                 mistake_penalty = mistakePenalty,
                 game_version = Application.version,
-                control_mode = PlayerPrefs.GetString(MainMenu.ControlModeKey, MainMenu.DesktopModeValue),
+                control_mode = MainMenu.VrModeValue,
                 offline_queued = true,
+                station_id = MainMenu.CurrentStationId,
+                device_id = SystemInfo.deviceUniqueIdentifier,
+                headset_present_continuous = continuousPresence,
+                headset_unmount_count = unmountCount,
+                component_results = componentResults,
+                schema_version = 2, elapsed_seconds = durationSeconds,
+                scoring_configuration = scoring.Snapshot(), scoring_breakdown = submittedScore,
+                mistake_details = mistakeDetails.ToArray(),
             },
         };
 
@@ -557,9 +503,11 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         lastCompletionSummary = $"Complete. Score {score}% | Time {FormatSeconds(durationSeconds)} | Mistakes {MistakeCount}";
         lastHudExtraLine = $"{lastCompletionSummary}\nSaved locally. Syncing with dashboard...";
 
-        TechWiseOfflineAttemptQueue.Enqueue(payload);
+        if (!LocalVerificationMode)
+        { TechWiseOfflineAttemptQueue.Enqueue(payload, profile?.id, TechWisePortalClient.PortalBaseUrl); TechWiseOfflineAttemptQueue.SyncNow(); }
         UpdateHud(lastHudExtraLine);
-        StartCoroutine(RefreshCompletionSyncStatusCoroutine());
+        if (!LocalVerificationMode) StartCoroutine(RefreshCompletionSyncStatusCoroutine());
+        TechWiseCompetitionMonitor.ReceiveAssessment(componentResults, null);
     }
 
     IEnumerator RefreshCompletionSyncStatusCoroutine()
@@ -590,8 +538,12 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
 
     string BuildSyncStatusLine(string localAttemptId)
     {
-        if (!TechWiseOfflineAttemptQueue.HasPending(localAttemptId))
+        if (LocalVerificationMode) return "Local verification; no upload.";
+        if (TechWiseOfflineAttemptQueue.HasSynced(localAttemptId))
             return "Synced to dashboard.";
+
+        if (!TechWiseOfflineAttemptQueue.HasPending(localAttemptId))
+            return "Syncing with dashboard...";
 
         if (!TechWiseSessionStore.HasSession)
             return $"Saved locally. Log in to sync. Pending uploads: {TechWiseOfflineAttemptQueue.PendingCount}";
@@ -645,7 +597,7 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
             duration,
             MistakeCount,
             completedSteps.Count,
-            availableOrder.Count);
+            availableOrder.Count, attemptFinished, attemptFinished, CalculateScore(duration));
     }
 
     string GetCurrentExpectedStep()
@@ -703,39 +655,107 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         var canvasObject = new GameObject("TechWise Competition HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         DontDestroyOnLoad(canvasObject);
         hudCanvas = canvasObject.GetComponent<Canvas>();
-        hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        bool isVr = UnityEngine.XR.XRSettings.isDeviceActive || Application.platform == RuntimePlatform.Android;
+        hudCanvas.renderMode = isVr ? RenderMode.WorldSpace : RenderMode.ScreenSpaceOverlay;
         hudCanvas.sortingOrder = 500;
 
         var scaler = canvasObject.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        if (isVr)
+        {
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.dynamicPixelsPerUnit = 20f;
+            hudCanvas.worldCamera = ResolveCamera();
+            var rect = canvasObject.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(850f, 440f);
+            rect.localScale = Vector3.one * 0.0012f;
+            PositionVrFloatingHud(true);
+        }
+        else
+        {
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+        }
 
         var panel = new GameObject("HUD Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(canvasObject.transform, false);
         var panelRect = panel.GetComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.015f, 0.72f);
-        panelRect.anchorMax = new Vector2(0.36f, 0.92f);
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        if (isVr)
+        {
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+        }
+        else
+        {
+            panelRect.anchorMin = new Vector2(0.015f, 0.72f);
+            panelRect.anchorMax = new Vector2(0.36f, 0.92f);
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+        }
         var panelImage = panel.GetComponent<Image>();
-        panelImage.color = new Color(0.02f, 0.05f, 0.1f, 0.92f);
+        panelImage.color = new Color(0.015f, 0.05f, 0.12f, 0.90f);
         panelImage.raycastTarget = false;
 
         var textObject = new GameObject("HUD Text", typeof(RectTransform), typeof(TextMeshProUGUI));
         textObject.transform.SetParent(panel.transform, false);
         hudText = textObject.GetComponent<TextMeshProUGUI>();
-        hudText.rectTransform.anchorMin = new Vector2(0.04f, 0.08f);
-        hudText.rectTransform.anchorMax = new Vector2(0.96f, 0.92f);
+        hudText.rectTransform.anchorMin = new Vector2(0.05f, 0.06f);
+        hudText.rectTransform.anchorMax = new Vector2(0.95f, 0.94f);
         hudText.rectTransform.offsetMin = Vector2.zero;
         hudText.rectTransform.offsetMax = Vector2.zero;
         hudText.enableAutoSizing = true;
-        hudText.fontSizeMin = 14f;
-        hudText.fontSizeMax = 26f;
+        hudText.fontSizeMin = 16f;
+        hudText.fontSizeMax = 30f;
         hudText.textWrappingMode = TextWrappingModes.Normal;
         hudText.overflowMode = TextOverflowModes.Ellipsis;
         hudText.alignment = TextAlignmentOptions.TopLeft;
         hudText.color = Color.white;
         hudText.raycastTarget = false;
+        if (isVr)
+        {
+            canvasObject.AddComponent<TrackedDeviceGraphicRaycaster>().checkFor3DOcclusion=false;
+            canvasObject.AddComponent<TechWiseDraggableUiPanel>().SetBounds(new Vector2(850,55), new Vector2(0,192));
+            hudText.rectTransform.anchorMax=new Vector2(.95f,.85f);
+            TechWiseScrollableText.Wrap(hudText);
+        }
+    }
+
+    void PositionVrFloatingHud(bool snap = false)
+    {
+        if (!snap || hudCanvas == null || hudCanvas.renderMode != RenderMode.WorldSpace)
+            return;
+
+        var cam = ResolveCamera();
+        if (cam == null)
+            return;
+
+        var camFwd = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized;
+        if (camFwd.sqrMagnitude < 0.01f)
+            camFwd = Vector3.forward;
+
+        var right = Vector3.Cross(Vector3.up, camFwd).normalized;
+        var targetPos = cam.transform.position + camFwd * 1.35f + Vector3.up * 0.32f - right * 0.44f;
+        var targetRot = Quaternion.LookRotation(camFwd, Vector3.up);
+
+        if (snap || hudCanvas.transform.position == Vector3.zero)
+        {
+            hudCanvas.transform.position = targetPos;
+            hudCanvas.transform.rotation = targetRot;
+        }
+        else
+        {
+            hudCanvas.transform.position = Vector3.Lerp(hudCanvas.transform.position, targetPos, Time.deltaTime * 5f);
+            hudCanvas.transform.rotation = Quaternion.Slerp(hudCanvas.transform.rotation, targetRot, Time.deltaTime * 5f);
+        }
+    }
+
+    public (string time, int score, int mistakes, string progress) GetLiveMetrics()
+    {
+        var duration = attemptFinished || attemptActive
+            ? Mathf.Max(0, Mathf.RoundToInt((attemptFinished ? lastDurationSeconds : Time.realtimeSinceStartup - attemptStartRealtime)))
+            : 0;
+        return (FormatSeconds(duration), CalculateScore(duration), MistakeCount, $"{completedSteps.Count}/{availableOrder.Count}");
     }
 
     void HideHud()
@@ -769,6 +789,10 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         canvasRect.sizeDelta = promptSize;
         canvasRect.localScale = Vector3.one * promptScale;
 
+        var trRaycaster = canvasObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+        trRaycaster.checkFor3DOcclusion = false;
+        trRaycaster.checkFor2DOcclusion = false;
+
         var panel = new GameObject("Start Prompt Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(canvasObject.transform, false);
         var panelRect = panel.GetComponent<RectTransform>();
@@ -777,21 +801,26 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         panelRect.offsetMin = Vector2.zero;
         panelRect.offsetMax = Vector2.zero;
         var image = panel.GetComponent<Image>();
-        image.color = new Color(0.02f, 0.05f, 0.1f, 0f);
+        image.color = new Color(0.02f, 0.05f, 0.1f, 0.88f);
         image.raycastTarget = false;
 
         var buttonObject = new GameObject("Start Competition Button", typeof(RectTransform), typeof(Image), typeof(Button));
         buttonObject.transform.SetParent(panel.transform, false);
         var buttonRect = buttonObject.GetComponent<RectTransform>();
-        buttonRect.anchorMin = new Vector2(0.27f, 0.34f);
-        buttonRect.anchorMax = new Vector2(0.73f, 0.52f);
+        buttonRect.anchorMin = new Vector2(0.12f, 0.14f);
+        buttonRect.anchorMax = new Vector2(0.88f, 0.52f);
         buttonRect.offsetMin = Vector2.zero;
         buttonRect.offsetMax = Vector2.zero;
         var buttonImage = buttonObject.GetComponent<Image>();
         buttonImage.color = new Color32(18, 101, 210, 255);
+        buttonImage.raycastTarget = true;
         startPromptButton = buttonObject.GetComponent<Button>();
         startPromptButton.targetGraphic = buttonImage;
         startPromptButton.onClick.AddListener(BeginAttempt);
+
+        var boxCol = buttonObject.AddComponent<BoxCollider>();
+        boxCol.size = new Vector3(promptSize.x * 0.76f, promptSize.y * 0.38f, 15f);
+        boxCol.center = Vector3.zero;
 
         var textObject = new GameObject("Start Prompt Text", typeof(RectTransform), typeof(TextMeshProUGUI));
         textObject.transform.SetParent(buttonObject.transform, false);
@@ -802,7 +831,7 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         startPromptText.rectTransform.offsetMax = Vector2.zero;
         startPromptText.enableAutoSizing = true;
         startPromptText.fontSizeMin = 18f;
-        startPromptText.fontSizeMax = 34f;
+        startPromptText.fontSizeMax = 36f;
         startPromptText.alignment = TextAlignmentOptions.Center;
         startPromptText.textWrappingMode = TextWrappingModes.Normal;
         startPromptText.color = Color.white;
@@ -811,18 +840,18 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         var helperTextObject = new GameObject("Start Prompt Helper", typeof(RectTransform), typeof(TextMeshProUGUI));
         helperTextObject.transform.SetParent(panel.transform, false);
         var helperText = helperTextObject.GetComponent<TextMeshProUGUI>();
-        helperText.rectTransform.anchorMin = new Vector2(0.12f, 0.58f);
-        helperText.rectTransform.anchorMax = new Vector2(0.88f, 0.82f);
+        helperText.rectTransform.anchorMin = new Vector2(0.08f, 0.56f);
+        helperText.rectTransform.anchorMax = new Vector2(0.92f, 0.90f);
         helperText.rectTransform.offsetMin = Vector2.zero;
         helperText.rectTransform.offsetMax = Vector2.zero;
         helperText.enableAutoSizing = true;
-        helperText.fontSizeMin = 18f;
-        helperText.fontSizeMax = 30f;
+        helperText.fontSizeMin = 16f;
+        helperText.fontSizeMax = 28f;
         helperText.alignment = TextAlignmentOptions.Center;
         helperText.textWrappingMode = TextWrappingModes.Normal;
-        helperText.color = Color.white;
+        helperText.color = new Color(0.85f, 0.92f, 1f, 1f);
         helperText.raycastTarget = false;
-        helperText.text = "Competition is ready.\nThe timer starts when you press Start.";
+        helperText.text = "Competition is ready!\nPoint laser and click START, or pull Trigger / press A.";
 
         UpdateStartPromptText();
     }
@@ -855,7 +884,7 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         var modeLabel = TechWiseSimulationModeManager.IsDisassembly ? "Disassembly" : "Assembly";
         startPromptText.text = TechWiseSimulationModeManager.IsDisassembly && TechWiseDisassemblyRuntime.IsPreparing
             ? "Preparing..."
-            : $"Start {modeLabel} Competition";
+            : $"START {modeLabel.ToUpperInvariant()}\n<size=20>(Point & Click, or Pull Trigger / Press A)</size>";
 
         if (startPromptButton != null)
             startPromptButton.interactable = !(TechWiseSimulationModeManager.IsDisassembly && TechWiseDisassemblyRuntime.IsPreparing);
@@ -863,9 +892,6 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
 
     static void ResolveStartPromptPose(Camera camera, out Vector3 position, out Quaternion rotation, out float scale, out Vector2 size)
     {
-        size = new Vector2(1100f, 620f);
-        scale = 0.003f;
-
         var surface = ResolveVideoSimulationSurface() ?? ResolveBlackboard();
         if (surface != null)
         {
@@ -882,17 +908,21 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
 
             position = center + facing * 0.055f;
             rotation = Quaternion.LookRotation(-facing, Vector3.up);
+            size = new Vector2(1100f, 620f);
+            scale = 0.003f;
             return;
         }
 
-        position = camera != null
-            ? camera.transform.position + camera.transform.forward * 1.8f + Vector3.down * 0.12f
-            : new Vector3(0f, 1.55f, 1.8f);
-        rotation = camera != null
-            ? Quaternion.LookRotation(camera.transform.position - position, Vector3.up)
-            : Quaternion.identity;
-        size = new Vector2(620f, 280f);
-        scale = 0.0025f;
+        var camPos = camera != null ? camera.transform.position : new Vector3(0f, 1.45f, 0f);
+        var camFwd = camera != null ? camera.transform.forward : Vector3.forward;
+        camFwd = Vector3.ProjectOnPlane(camFwd, Vector3.up).normalized;
+        if (camFwd.sqrMagnitude < 0.01f)
+            camFwd = Vector3.forward;
+
+        position = camPos + camFwd * 1.3f + Vector3.down * 0.06f;
+        rotation = Quaternion.LookRotation(camFwd, Vector3.up);
+        size = new Vector2(900f, 500f);
+        scale = 0.0022f;
     }
 
     static Transform ResolveBlackboard()
@@ -1091,21 +1121,56 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         skippedSteps.Add(stepId);
     }
 
-    int CalculateScore(int durationSeconds)
+    TechWiseAssessmentScore Score(int seconds, TechWiseVrComponentResult[] rows)
     {
-        var mistakePenalty = wrongOrderCount * WrongStepPenalty + wrongPartCount * WrongStepPenalty;
-        var overtimeSeconds = Mathf.Max(0, durationSeconds - TechWiseSimulationModeManager.TargetSecondsForCurrentMode());
-        var timePenalty = Mathf.Min(MaxTimePenalty, (overtimeSeconds / 30) * 2);
-        return Mathf.Clamp(100 - mistakePenalty - timePenalty, 0, 100);
+        return TechWiseAssessmentScoring.Calculate(scoring, mistakeDetails, seconds,
+            TechWiseSimulationModeManager.IsDisassembly, rows?.Count(r=>r.complete) ?? 0, rows?.Length ?? 0);
     }
+    int CalculateScore(int seconds) => submittedScore?.final_score ?? Score(seconds, TechWiseSimulationRuntime.Instance?.CaptureAssessmentState()).final_score;
 
     static bool WasStartPressedThisFrame()
     {
         var keyboard = Keyboard.current;
-        return keyboard != null &&
+        if (keyboard != null &&
             (keyboard.enterKey.wasPressedThisFrame ||
              keyboard.numpadEnterKey.wasPressedThisFrame ||
-             keyboard.spaceKey.wasPressedThisFrame);
+             keyboard.spaceKey.wasPressedThisFrame))
+        {
+            return true;
+        }
+
+        // Check VR controllers (Right Hand & Left Hand)
+        if (CheckXrControllerStart(XRNode.RightHand) || CheckXrControllerStart(XRNode.LeftHand))
+            return true;
+
+        return false;
+    }
+
+    static bool CheckXrControllerStart(XRNode node)
+    {
+        var device = InputDevices.GetDeviceAtXRNode(node);
+        if (!device.isValid)
+            return false;
+
+        // Primary Button: 'A' button on right controller, 'X' button on left controller
+        if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primaryButton, out bool primary) && primary)
+            return true;
+
+        // Secondary Button: 'B' button on right controller, 'Y' button on left controller
+        if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.secondaryButton, out bool secondary) && secondary)
+            return true;
+
+        // Index Trigger button or analog trigger pull
+        if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool triggerBtn) && triggerBtn)
+            return true;
+        if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trigger, out float triggerVal) && triggerVal > 0.5f)
+            return true;
+
+        // Grip button
+        if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out bool gripBtn) && gripBtn)
+            return true;
+
+        return false;
     }
 
     static Camera ResolveCamera()

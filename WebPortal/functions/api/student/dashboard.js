@@ -19,8 +19,10 @@ import {
   publicProfile,
   publicProgress,
   publicQuarter,
+  publicVrAttempt,
   requireEnv,
   requireProfile
+  , selectRows
 } from "../_utils.js";
 
 export const onRequestOptions = () => optionsResponse();
@@ -33,21 +35,37 @@ export async function onRequestGet({ request, env }) {
       throw new ApiError("Approved student access is required.", 403);
     }
 
-    const [activeQuarter, modules, lessons, progress, attempts, badges, certificates] = await Promise.all([
+    const [activeQuarter, modules, lessons, progress, attempts, badges, certificates, vrAttempts] = await Promise.all([
       getActiveQuarter(env),
       getModules(env),
       getLessons(env),
       getStudentProgress(env, profile.id),
       getAllLessonAttempts(env),
       getStudentBadges(env),
-      getStudentCertificates(env)
+      getStudentCertificates(env),
+      selectRows(env, "vr_simulation_attempts", `student_id=eq.${profile.id}&order=completed_at.desc&limit=50`).catch(() => [])
     ]);
 
     const quarterId = activeQuarter?.id || null;
+    let enrollment = null;
+    if (quarterId) {
+      try {
+        const enrollments = await selectRows(
+          env,
+          "student_enrollments",
+          `student_id=eq.${profile.id}&quarter_id=eq.${quarterId}&select=*&order=created_at.desc&limit=5`
+        );
+        enrollment = enrollments.find((e) => !e.ended_at) || enrollments[0] || null;
+      } catch {
+        enrollment = null;
+      }
+    }
+
+    const effectiveGrade = enrollment?.grade_level || profile.grade_level || null;
     const visibleModules = modules.filter((module) =>
       module.status === "published"
-      && module.grade_level === profile.grade_level
-      && (!quarterId || module.quarter_id === quarterId)
+      && (!effectiveGrade || module.grade_level === effectiveGrade)
+      && (!quarterId || !module.quarter_id || module.quarter_id === quarterId)
     );
     const moduleIds = new Set(visibleModules.map((module) => module.id));
     const visibleLessons = lessons.filter((lesson) =>
@@ -68,6 +86,7 @@ export async function onRequestGet({ request, env }) {
       attempts: attempts
         .filter((attempt) => attempt.student_id === profile.id && visibleLessonIds.has(attempt.lesson_id))
         .map(publicLessonAttempt),
+      vr_attempts: (vrAttempts || []).map(publicVrAttempt),
       badges: badges
         .filter((badge) => badge.student_id === profile.id)
         .map(publicBadge),

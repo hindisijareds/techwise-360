@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="teacher-dashboard.css">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="vr-integration.css">
 </head>
 <body data-page="teacher">
   <main class="app-shell">
@@ -31,9 +32,6 @@
           <strong>TechWise 360</strong>
           <small>Teach. Track. Transform.</small>
         </div>
-        <button id="teacherSidebarToggle" class="sidebar-collapse-toggle" type="button" aria-controls="teacherSidebar" aria-expanded="true" aria-label="Collapse navigation">
-          <span class="sidebar-toggle-glyph" aria-hidden="true"></span>
-        </button>
       </div>
       <label class="sidebar-search">
         <i data-lucide="search"></i>
@@ -41,8 +39,9 @@
         <kbd>Ctrl K</kbd>
       </label>
       <span class="sidebar-section-label">Main navigation</span>
-      <button class="nav-item active" type="button" data-teacher-view="overview"><i data-lucide="home"></i><span>Home</span></button>
+      <button class="nav-item active" type="button" data-teacher-view="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
       <button class="nav-item" type="button" data-teacher-view="students"><i data-lucide="graduation-cap"></i><span>Students</span></button>
+      <button class="nav-item" type="button" data-teacher-view="sections"><i data-lucide="briefcase-business"></i><span>Sections</span></button>
       <button class="nav-item" type="button" data-teacher-view="content"><i data-lucide="book-open"></i><span>Lessons</span></button>
       <button class="nav-item" type="button" data-teacher-view="quarters"><i data-lucide="calendar-days"></i><span>Terms</span></button>
       <button class="nav-item" type="button" data-teacher-view="assessments"><i data-lucide="file-text"></i><span>Assessments</span></button>
@@ -67,6 +66,9 @@
     <section class="app-main">
       <header class="app-topbar">
         <div class="topbar-leading">
+          <button id="teacherSidebarToggle" class="sidebar-collapse-toggle" type="button" aria-controls="teacherSidebar" aria-expanded="true" aria-label="Collapse navigation">
+            <span class="sidebar-toggle-glyph" aria-hidden="true"></span>
+          </button>
           <div class="topbar-breadcrumb" aria-label="Breadcrumb">
             <i data-lucide="layout-grid"></i>
             <span id="teacherBreadcrumbParent">Overview</span>
@@ -77,7 +79,10 @@
         <div class="topbar-actions">
           <div class="notification-center" id="teacherNotificationCenter">
             <button id="teacherNotificationButton" class="notification-button" type="button" aria-label="Open notifications" aria-expanded="false">
-              <i data-lucide="bell"></i>
+              <svg class="notification-bell-icon" data-lucide="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
+                <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path>
+              </svg>
               <span id="teacherNotificationBadge" class="notification-badge" hidden>0</span>
             </button>
             <section id="teacherNotificationPanel" class="notification-panel" aria-label="Teacher notifications" hidden>
@@ -91,7 +96,12 @@
               <div id="teacherNotificationList" class="notification-list"></div>
             </section>
           </div>
-          <button class="icon-shell" type="button" data-jump-view="settings" aria-label="Open settings"><i data-lucide="settings"></i></button>
+          <button class="icon-shell" type="button" data-jump-view="settings" aria-label="Open settings">
+            <svg class="topbar-settings-icon" data-lucide="settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -126,11 +136,22 @@
                   </div>
                 </article>
                 <article class="stat-card">
-                  <div class="stat-card-heading"><p>On Track</p><span class="stat-icon green"><i data-lucide="check-circle-2"></i></span></div>
+                  <div class="stat-card-heading"><p>Completion Rate</p><span class="stat-icon green"><i data-lucide="check-circle-2"></i></span></div>
                   <div class="stat-card-body">
-                    <div class="stat-card-value"><strong id="metricOnTrack">0</strong><small><b>Current</b> active-term learners</small></div>
-                    <svg class="metric-sparkline" data-metric-sparkline="on-track" viewBox="0 0 100 46" role="img" aria-label="On-track students across classes">
-                      <title>Loading real on-track data</title>
+                    <div class="stat-card-value"><strong id="metricCompletion">0%</strong><small><b>Lessons</b> completed this term</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="completion" viewBox="0 0 100 46" role="img" aria-label="Lesson completion rate across classes">
+                      <title>Loading real lesson completion data</title>
+                      <path class="sparkline-area" d=""></path>
+                      <polyline pathLength="1" points=""></polyline>
+                    </svg>
+                  </div>
+                </article>
+                <article class="stat-card">
+                  <div class="stat-card-heading"><p>Average Score</p><span class="stat-icon gold"><i data-lucide="star"></i></span></div>
+                  <div class="stat-card-body">
+                    <div class="stat-card-value"><strong id="metricAverage">-</strong><small><b>Across</b> all assessments</small></div>
+                    <svg class="metric-sparkline" data-metric-sparkline="average" viewBox="0 0 100 46" role="img" aria-label="Average assessment scores across classes">
+                      <title>Loading real assessment score data</title>
                       <path class="sparkline-area" d=""></path>
                       <polyline pathLength="1" points=""></polyline>
                     </svg>
@@ -160,69 +181,34 @@
                 </article>
               </div>
 
-              <section class="capstone-evidence-panel" aria-labelledby="capstoneEvidenceTitle">
-              <div class="capstone-evidence-header">
-                <div>
-                  <h1 id="capstoneEvidenceTitle">Class Progress Overview</h1>
-                  <p>Track class progress, low-scoring topics, test improvement, and students who may need support.</p>
-                </div>
-                <div class="evidence-toolbar" role="group" aria-label="Class results controls">
-                  <label><span>Class</span><select id="evidenceClassFilter"><option value="">All Classes</option></select></label>
-                  <span id="evidenceActiveQuarterLabel" class="evidence-quarter-pill">Active term</span>
-                  <div class="evidence-export-actions">
-                    <button type="button" data-evidence-download="pdf"><i data-lucide="file-down"></i><span>PDF</span></button>
-                    <button type="button" data-evidence-download="csv"><i data-lucide="download"></i><span>CSV</span></button>
+              <div class="evidence-performance-grid">
+                <section class="capstone-evidence-panel evidence-performance-card" aria-labelledby="capstoneEvidenceTitle">
+                  <div class="capstone-evidence-header">
+                    <div>
+                      <h1 id="capstoneEvidenceTitle">Class Performance Overview</h1>
+                      <p>Daily class average from submitted assessments</p>
+                    </div>
+                    <div class="evidence-toolbar" role="group" aria-label="Class performance filters">
+                      <label><span class="evidence-filter-label">Class</span><select id="evidenceClassFilter" data-native-select aria-label="Class performance class"><option value="">All Classes</option></select></label>
+                      <label><span class="evidence-filter-label">Range</span><select id="evidenceRangeFilter" data-native-select aria-label="Class performance range"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90" selected>Last 90 days</option><option value="term">Active term</option></select></label>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div class="evidence-metric-grid">
-                <article><span class="blue"><i data-lucide="users"></i></span><p>Approved Students</p><div class="evidence-metric-value-row"><strong id="evidenceMetricStudents">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-students" viewBox="0 0 100 46" role="img"><title>Loading real student data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Filtered class</small></article>
-                <article><span class="green"><i data-lucide="check-circle-2"></i></span><p>Completion Rate</p><div class="evidence-metric-value-row"><strong id="evidenceMetricCompletion">0%</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-completion" viewBox="0 0 100 46" role="img"><title>Loading real completion data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Published active-term lessons</small></article>
-                <article><span class="purple"><i data-lucide="bar-chart-3"></i></span><p>Average Score</p><div class="evidence-metric-value-row"><strong id="evidenceMetricAverage">-</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-score" viewBox="0 0 100 46" role="img"><title>Loading real score data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Latest submitted checks</small></article>
-                <article><span class="orange"><i data-lucide="send"></i></span><p>Submission Rate</p><div class="evidence-metric-value-row"><strong id="evidenceMetricSubmissions">0%</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-submissions" viewBox="0 0 100 46" role="img"><title>Loading real submission data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Practice and assessment slots</small></article>
-                <article><span class="silver"><i data-lucide="award"></i></span><p>Certificates</p><div class="evidence-metric-value-row"><strong id="evidenceMetricCertificates">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-certificates" viewBox="0 0 100 46" role="img"><title>Loading real certificate data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Existing awards</small></article>
-                <article><span class="red"><i data-lucide="alert-triangle"></i></span><p>Needs Support</p><div class="evidence-metric-value-row"><strong id="evidenceMetricSupport">0</strong><svg class="metric-sparkline evidence-metric-sparkline" data-metric-sparkline="evidence-support" viewBox="0 0 100 46" role="img"><title>Loading real intervention data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div><small>Intervention queue</small></article>
-              </div>
-
-              <div class="evidence-dashboard-grid">
-                <section class="evidence-card evidence-mastery-card">
-                  <div class="panel-title-row">
-                    <h2>Class Mastery</h2>
-                    <span class="evidence-chip">Weakest first</span>
-                  </div>
-                  <div id="evidenceMasteryList" class="evidence-mastery-list"></div>
+                  <div id="evidencePerformanceChart" class="evidence-performance-chart"></div>
                 </section>
 
-                <section class="evidence-card">
+                <section class="evidence-card evidence-attention-card">
                   <div class="panel-title-row">
-                    <h2>Pre/Post Test Progress</h2>
-                    <span class="evidence-chip">Class assessments</span>
-                  </div>
-                  <div id="evidencePrePost" class="evidence-growth-card"></div>
-                </section>
-
-                <section class="evidence-card">
-                  <div class="panel-title-row">
-                    <h2>Intervention Queue</h2>
+                    <h2>Students Needing Attention</h2>
                     <button class="link-button" type="button" data-jump-view="students">Open Students</button>
                   </div>
                   <div id="evidenceInterventionList" class="evidence-intervention-list"></div>
                 </section>
-
-                <section class="evidence-card">
-                  <div class="panel-title-row">
-                    <h2>Setup Checklist</h2>
-                    <span class="evidence-chip">Required steps</span>
-                  </div>
-                  <div id="evidenceReadiness" class="evidence-readiness-list"></div>
-                </section>
               </div>
-              </section>
+
             </div>
 
-            <aside class="teacher-home-rail" aria-label="Teacher home quick panels">
-              <section class="panel-card home-side-card">
+            <aside class="teacher-home-rail overview-quick-grid" aria-label="Latest term updates and pending accounts">
+              <section class="panel-card home-side-card overview-term-card">
                 <div class="panel-title-row">
                   <h2>Latest Updates</h2>
                   <button class="small-button" type="button" data-jump-view="quarters"><i data-lucide="calendar"></i><span>Manage</span></button>
@@ -235,23 +221,48 @@
                 <div id="activeQuarterCard" class="quarter-spotlight"></div>
               </section>
 
-              <section class="panel-card home-side-card">
+              <section class="panel-card home-side-card overview-pending-card">
                 <div class="panel-title-row">
                   <h2>Pending Accounts</h2>
-                  <button id="refreshPending" class="icon-button" type="button" aria-label="Refresh pending accounts"><i data-lucide="refresh-cw"></i></button>
+                  <button id="refreshPending" class="icon-button" type="button" aria-label="Refresh pending student accounts"><i data-lucide="refresh-cw"></i></button>
                 </div>
                 <div id="pendingStudents" class="compact-list"></div>
               </section>
             </aside>
           </div>
+
+          <div class="overview-insight-grid">
+            <section class="evidence-card overview-module-card">
+              <div class="panel-title-row">
+                <div><h2>Module Mastery</h2><p>Progress by module</p></div>
+                <button class="link-button" type="button" data-jump-view="content">View all modules</button>
+              </div>
+              <div id="evidenceModuleMastery" class="overview-module-mastery"></div>
+            </section>
+
+            <section class="evidence-card overview-prepost-card">
+              <div class="panel-title-row">
+                <h2>Pre-test vs Post-test Progress</h2>
+                <div class="prepost-legend" aria-label="Chart legend"><span class="pre"></span>Pre-test Avg <span class="post"></span>Post-test Avg</div>
+              </div>
+              <div id="evidencePrePost" class="evidence-growth-card"></div>
+            </section>
+
+            <section class="evidence-card overview-activity-card">
+              <div class="panel-title-row">
+                <h2>Recent Activity</h2>
+                <button class="link-button" type="button" data-jump-view="assessments">View all</button>
+              </div>
+              <div id="evidenceRecentActivity" class="overview-recent-activity"></div>
+            </section>
+          </div>
         </div>
       </section>
 
       <section class="teacher-section" data-view="students">
-        <header class="teacher-page-header">
+        <header class="teacher-page-header students-page-header">
           <div>
-            <span class="teacher-page-eyebrow"><i data-lucide="users"></i> Student Management</span>
-            <h1>Students</h1>
+            <h1>Student Management</h1>
             <p>Review learner progress, performance, achievements, activity, and account status.</p>
           </div>
         </header>
@@ -298,8 +309,8 @@
           <label class="student-search"><i data-lucide="search"></i><input id="studentSearch" type="search" placeholder="Search students..."></label>
           <select id="studentGradeFilter" aria-label="Grade filter"><option value="">All Grades</option><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select>
           <select id="studentSectionFilter" aria-label="Section filter" disabled><option value="">All Sections</option></select>
-          <select id="studentStatusFilter"><option value="approved">Active</option><option value="support">Needs Support</option><option value="pending">Pending</option><option value="rejected">Rejected</option><option value="inactive">Inactive</option><option value="">All Statuses</option></select>
-          <select id="studentSupportFilter"><option value="">All Performance</option><option value="excellent">Excellent</option><option value="good">Good</option><option value="fair">Fair</option><option value="needs">Needs Improvement</option></select>
+          <select id="studentStatusFilter" aria-label="Student status filter"><option value="approved">Active</option><option value="support">Needs Support</option><option value="pending">Pending</option><option value="rejected">Rejected</option><option value="inactive">Inactive</option><option value="">All Statuses</option></select>
+          <select id="studentSupportFilter" aria-label="Performance filter"><option value="">All Performance</option><option value="excellent">Excellent</option><option value="good">Good</option><option value="fair">Fair</option><option value="needs">Needs Improvement</option></select>
           <button id="exportStudents" class="export-button" type="button"><i data-lucide="download"></i><span>Export</span></button>
         </div>
 
@@ -326,12 +337,17 @@
           </section>
 
           <aside class="student-right-rail" aria-label="Student progress insights">
-            <section class="student-side-card">
-              <h2>Progress Distribution</h2>
+            <section class="student-side-card student-progress-card">
+              <div class="student-insight-card-header">
+                <span class="student-insight-card-icon" aria-hidden="true"><i data-lucide="chart-line"></i></span>
+                <h2>Progress Distribution</h2>
+                <span class="student-insight-card-menu" aria-hidden="true"><i data-lucide="ellipsis"></i></span>
+              </div>
               <div class="distribution-layout">
                 <div class="distribution-donut" id="progressDistributionDonut"><strong id="distributionTotal">0</strong><span>Students</span></div>
                 <div id="distributionLegend" class="distribution-legend"></div>
               </div>
+              <button class="student-progress-details" type="button" data-jump-view="reports"><span>More details</span><i data-lucide="arrow-right"></i></button>
             </section>
             <section class="student-side-card student-achievement-coverage-card">
               <div class="panel-title-row">
@@ -351,6 +367,119 @@
         </div>
       </section>
 
+      <section class="teacher-section" data-view="sections">
+        <header class="teacher-page-header sections-page-header">
+          <div>
+            <h1>Sections</h1>
+            <p>Create, organize, and manage class sections, advisers, capacity, and student rosters.</p>
+          </div>
+          <div class="sections-header-controls">
+            <label class="sections-control sections-year-control"><span class="sr-only">School year</span><i data-lucide="calendar-days" aria-hidden="true"></i><select id="sectionSchoolYearFilter" aria-label="School year"></select></label>
+            <label class="sections-control"><span class="sr-only">Grade</span><select id="sectionGradeFilter" aria-label="Section grade filter"><option value="">All Grades</option><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select></label>
+            <label class="sections-control"><span class="sr-only">Status</span><select id="sectionStatusFilter" aria-label="Section status filter"><option value="">All Statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label>
+            <label class="sections-search"><i data-lucide="search"></i><input id="sectionSearch" type="search" placeholder="Search sections..." aria-label="Search sections"></label>
+            <button id="addSectionButton" class="primary-button compact-action" type="button"><i data-lucide="plus"></i><span>Add Section</span></button>
+          </div>
+        </header>
+
+        <div class="section-metric-grid teacher-home-metrics" aria-label="Section summary">
+          <article class="stat-card section-summary-card">
+            <div class="stat-card-heading"><p>Total Sections</p><span class="stat-icon blue"><i data-lucide="users-round"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="sectionMetricTotal">0</strong><small><b>Managed</b> across Grade 9–10</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="sections-total" viewBox="0 0 100 46" role="img" aria-label="Total sections by grade"><title>Loading section totals</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
+            </div>
+          </article>
+          <article class="stat-card section-summary-card">
+            <div class="stat-card-heading"><p>Active Sections</p><span class="stat-icon green"><i data-lucide="circle-check-big"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="sectionMetricActive">0</strong><small id="sectionMetricActiveNote"><b>Ready</b> for registration</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="sections-active" viewBox="0 0 100 46" role="img" aria-label="Active sections by grade"><title>Loading active sections</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
+            </div>
+          </article>
+          <article class="stat-card section-summary-card">
+            <div class="stat-card-heading"><p>Assigned Students</p><span class="stat-icon orange"><i data-lucide="user-round-check"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="sectionMetricAssigned">0</strong><small><b>Pending and approved</b> learners</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="sections-assigned" viewBox="0 0 100 46" role="img" aria-label="Assigned students by grade"><title>Loading assigned students</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
+            </div>
+          </article>
+          <article class="stat-card section-summary-card">
+            <div class="stat-card-heading"><p>Available Seats</p><span class="stat-icon purple"><i data-lucide="armchair"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value"><strong id="sectionMetricSeats">0</strong><small><b>Open</b> across active sections</small></div>
+              <svg class="metric-sparkline" data-metric-sparkline="sections-seats" viewBox="0 0 100 46" role="img" aria-label="Available seats by grade"><title>Loading available seats</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
+            </div>
+          </article>
+        </div>
+
+        <div class="sections-workspace">
+          <section class="sections-table-card">
+            <div class="sections-card-heading">
+              <div><h2>Section Management</h2><p id="sectionTableCaption">All managed sections</p></div>
+              <div id="sectionGradeTabs" class="section-grade-tabs" role="tablist" aria-label="Section grade tabs">
+                <button class="active" type="button" data-section-grade-tab="">All Sections</button>
+                <button type="button" data-section-grade-tab="Grade 9">Grade 9</button>
+                <button type="button" data-section-grade-tab="Grade 10">Grade 10</button>
+              </div>
+            </div>
+            <div class="sections-table-scroll">
+              <table class="sections-table">
+                <thead><tr><th>Section</th><th>Grade</th><th>Students</th><th>Capacity</th><th>Adviser</th><th>Room</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody id="sectionsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="sections-table-footer"><span id="sectionPageSummary">Showing 0 sections</span><div id="sectionPagination" class="student-pagination"></div></div>
+          </section>
+
+          <aside class="section-editor-card" aria-label="Section management panel">
+            <div class="section-panel-heading">
+              <div><p class="eyebrow" id="sectionEditorEyebrow">Section workspace</p><h2 id="sectionEditorTitle">Select a Section</h2></div>
+              <span id="sectionEditorStatus" class="status-pill draft">Draft</span>
+            </div>
+            <div class="section-panel-tabs" role="tablist" aria-label="Section panel tabs">
+              <button class="active" type="button" data-section-panel-tab="details"><i data-lucide="sliders-horizontal"></i>Details</button>
+              <button type="button" data-section-panel-tab="roster"><i data-lucide="users"></i>Roster <span id="sectionRosterCount">0</span></button>
+            </div>
+            <div id="sectionDetailsPanel" class="section-panel-body">
+              <form id="sectionEditorForm" class="section-editor-form">
+                <input name="id" type="hidden">
+                <div class="section-form-grid">
+                  <label><span class="section-field-label">School Year</span><select name="school_year" aria-label="Section school year" required></select></label>
+                  <label><span class="section-field-label">Grade Level</span><select name="grade_level" required><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select></label>
+                  <label><span class="section-field-label">Section Name</span><input name="name" type="text" placeholder="e.g., Rosal" maxlength="80" required></label>
+                  <label><span class="section-field-label">Section Code</span><input name="code" type="text" placeholder="e.g., G10-ROSAL" maxlength="40" required></label>
+                  <label><span class="section-field-label">Capacity</span><input name="capacity" type="number" min="1" max="500" value="35" required></label>
+                  <label><span class="section-field-label">Room <small>Optional</small></span><input name="room" type="text" placeholder="e.g., Room 301" maxlength="80"></label>
+                </div>
+                <label><span class="section-field-label">Adviser Name</span><input name="adviser_name" type="text" list="sectionAdviserSuggestions" placeholder="Type an adviser name" maxlength="120" required></label>
+                <datalist id="sectionAdviserSuggestions"></datalist>
+                <label id="sectionStatusField"><span class="section-field-label">Status</span><select name="status"><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></label>
+                <p id="sectionCapacityNotice" class="section-capacity-notice" hidden></p>
+                <div class="section-editor-actions">
+                  <button id="sectionSaveButton" class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Changes</span></button>
+                  <button id="sectionActivateButton" class="small-button" type="button"><i data-lucide="circle-check-big"></i><span>Activate</span></button>
+                  <button id="sectionArchiveButton" class="small-button danger-action" type="button"><i data-lucide="archive"></i><span>Archive</span></button>
+                </div>
+              </form>
+            </div>
+            <div id="sectionRosterPanel" class="section-panel-body" hidden>
+              <form id="sectionRosterForm" class="section-roster-form">
+                <label>Assign or transfer student<select name="student_id" required><option value="">Select a student</option></select></label>
+                <button class="primary-button compact" type="submit"><i data-lucide="user-plus"></i><span>Assign Student</span></button>
+              </form>
+              <p class="section-roster-help">Capacity warnings never block a teacher assignment.</p>
+              <div id="sectionRosterList" class="section-roster-list"></div>
+            </div>
+          </aside>
+        </div>
+
+        <section class="section-activity-card">
+          <div class="sections-card-heading"><div><h2>Recent Section Activity</h2><p>Latest edits, status changes, assignments, and transfers.</p></div></div>
+          <div id="sectionActivityList" class="section-activity-list"></div>
+        </section>
+      </section>
+
       <section class="teacher-section" data-view="student-profile">
         <div id="studentFullProfile" class="student-full-profile">
           <section class="panel-card student-profile-loading">
@@ -364,18 +493,18 @@
       <section class="teacher-section" data-view="quarters">
         <div class="section-heading teacher-page-header">
           <div>
-            <span class="teacher-page-eyebrow"><i data-lucide="calendar-range"></i> Curriculum Schedule</span>
-            <h1>Term Management</h1>
+            <h1>Academic Years, Terms and Enrollment</h1>
             <p>Create school-year terms and choose the active term used by dashboards.</p>
           </div>
         </div>
+        <section id="academicYearManagement" class="panel-card form-panel"></section>
         <div class="dashboard-grid two-col">
           <form id="quarterForm" class="panel-card form-panel">
             <input name="id" type="hidden">
             <h2 id="quarterFormTitle">Add Term</h2>
             <label>Term<select name="name" required><option value="T1">1st Term</option><option value="T2">2nd Term</option><option value="T3">3rd Term</option></select></label>
             <label>Title<input name="title" type="text" value="1st Term" required maxlength="80"></label>
-            <label>School Year<input name="school_year" type="text" value="2026-2027" required></label>
+            <label>Academic Year<select name="school_year" required><option value="">Create/select an academic year</option></select></label>
             <div class="field-grid simple-grid">
               <label>Start Date<input name="start_date" type="date"></label>
               <label>End Date<input name="end_date" type="date"></label>
@@ -391,12 +520,12 @@
             <div id="quartersList" class="quarter-grid"></div>
           </section>
         </div>
+        <section id="academicEnrollmentManagement" class="panel-card form-panel"></section>
       </section>
 
       <section class="teacher-section" data-view="content">
         <div class="section-heading lesson-page-heading teacher-page-header">
           <div>
-            <span class="teacher-page-eyebrow"><i data-lucide="book-open"></i> Curriculum Library</span>
             <h1>Lessons &amp; Modules</h1>
             <p>Organize curriculum content into published modules, lessons, practices, and resources.</p>
           </div>
@@ -410,18 +539,30 @@
               <article class="lesson-metric-card">
                 <span class="lesson-metric-icon blue"><i data-lucide="book-open"></i></span>
                 <div><p>Total Lessons</p><strong id="lessonMetricTotal">0</strong><small>Across <b id="lessonMetricCategories">0</b> categories</small></div>
+                <svg class="metric-sparkline lesson-metric-sparkline" data-metric-sparkline="lesson-page-total" viewBox="0 0 100 46" role="img" aria-label="Total lessons by module">
+                  <title>Loading real lesson data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+                </svg>
               </article>
               <article class="lesson-metric-card">
                 <span class="lesson-metric-icon green"><i data-lucide="upload-cloud"></i></span>
                 <div><p>Published Modules</p><strong id="lessonMetricPublished">0</strong><small><b id="lessonMetricPublishedPct">0%</b> of total lessons</small></div>
+                <svg class="metric-sparkline lesson-metric-sparkline" data-metric-sparkline="lesson-page-published" viewBox="0 0 100 46" role="img" aria-label="Published modules">
+                  <title>Loading real module data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+                </svg>
               </article>
               <article class="lesson-metric-card">
                 <span class="lesson-metric-icon orange"><i data-lucide="file-text"></i></span>
                 <div><p>Draft Lessons</p><strong id="lessonMetricDraft">0</strong><small>Unpublished content</small></div>
+                <svg class="metric-sparkline lesson-metric-sparkline" data-metric-sparkline="lesson-page-draft" viewBox="0 0 100 46" role="img" aria-label="Draft lessons by module">
+                  <title>Loading real draft lesson data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+                </svg>
               </article>
               <article class="lesson-metric-card">
                 <span class="lesson-metric-icon purple"><i data-lucide="puzzle"></i></span>
                 <div><p>Practice Activities</p><strong id="lessonMetricPractice">0</strong><small>Interactive exercises</small></div>
+                <svg class="metric-sparkline lesson-metric-sparkline" data-metric-sparkline="lesson-page-practice" viewBox="0 0 100 46" role="img" aria-label="Practice activities by module">
+                  <title>Loading real practice activity data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline>
+                </svg>
               </article>
             </div>
 
@@ -490,7 +631,6 @@
       <section class="teacher-section" data-view="assessments">
         <header class="teacher-page-header">
           <div>
-            <span class="teacher-page-eyebrow"><i data-lucide="clipboard-check"></i> Knowledge Checks</span>
             <h1>Assessments</h1>
             <p>Manage published checks, review submissions, and monitor topic-level performance.</p>
           </div>
@@ -572,30 +712,41 @@
           <article class="report-metric-card">
             <span class="report-metric-icon blue"><i data-lucide="clipboard-list"></i></span>
             <div><p>Average Overall Score</p><strong id="reportMetricAverage">0%</strong><small id="reportMetricRange">Selected range</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-average" viewBox="0 0 100 46" role="img" aria-label="Average scores by class"><title>Loading report score data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
           <article class="report-metric-card">
             <span class="report-metric-icon green"><i data-lucide="upload-cloud"></i></span>
             <div><p>Completion Rate</p><strong id="reportMetricCompletion">0%</strong><small>Active term lessons</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-completion" viewBox="0 0 100 46" role="img" aria-label="Completion rates by class"><title>Loading report completion data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
           <article class="report-metric-card">
             <span class="report-metric-icon orange"><i data-lucide="user-round-x"></i></span>
             <div><p>Students Needing Support</p><strong id="reportMetricSupport">0</strong><small>Priority follow-up list</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-support" viewBox="0 0 100 46" role="img" aria-label="Students needing support by class"><title>Loading report support data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
           <article class="report-metric-card">
             <span class="report-metric-icon red"><i data-lucide="circle-dashed"></i></span>
             <div><p>Not Started Students</p><strong id="reportMetricNotStarted">0</strong><small>Filtered class progress</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-not-started" viewBox="0 0 100 46" role="img" aria-label="Not-started students by class"><title>Loading not-started student data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
           <article class="report-metric-card">
             <span class="report-metric-icon silver"><i data-lucide="award"></i></span>
             <div><p>Certificates Issued</p><strong id="reportMetricCertificates">0</strong><small>Selected range</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-certificates" viewBox="0 0 100 46" role="img" aria-label="Certificates issued by class"><title>Loading certificate data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
           <article class="report-metric-card">
             <span class="report-metric-icon purple"><i data-lucide="send"></i></span>
             <div><p>Submission Rate</p><strong id="reportMetricSubmissions">0%</strong><small>Practice and assessment checks</small></div>
+            <svg class="metric-sparkline report-metric-sparkline" data-metric-sparkline="report-submissions" viewBox="0 0 100 46" role="img" aria-label="Submissions by class"><title>Loading submission data</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>
           </article>
         </div>
 
         <div id="teacherCompletionDashboard" class="completion-dashboard embedded-dashboard report-completion-dashboard"></div>
+        <section id="academicHistoryRecords" class="report-card"><h2>Class Record — Academic History</h2></section>
+        <section id="teacherVrClassRecord" class="report-card">
+          <h2>Class Record — VR Assessments</h2>
+          <p>Formal assembly and disassembly results, using the report grade, section and date filters above. Academic year and term reflect enrollment when the attempt started.</p>
+        </section>
 
         <section class="report-card report-support-panel">
           <div class="panel-title-row">
@@ -691,7 +842,6 @@
       <section class="teacher-section" data-view="evaluation">
         <div class="evaluation-header teacher-page-header">
           <div>
-            <span class="evidence-eyebrow"><i data-lucide="clipboard-check"></i> Class Evaluation</span>
             <h1>Evaluation Dashboard</h1>
             <p>Choose the pre-assessment and post-assessment, collect student feedback, and export class results.</p>
           </div>
@@ -712,7 +862,6 @@
       <section class="teacher-section" data-view="achievements">
         <div class="achievement-management-header teacher-page-header">
           <div>
-            <span class="evidence-eyebrow"><i data-lucide="award"></i> Certificates &amp; Badges</span>
             <h1>Achievements</h1>
             <p>Create certificate awards, review badge activity, and print student achievements from one place.</p>
           </div>
@@ -769,7 +918,7 @@
               <div><h2>Dashboard Defaults</h2><p>Set your preferred starting view and class focus.</p></div>
             </div>
             <label>Default Grade<select name="default_grade"><option value="Grade 9">Grade 9</option><option value="Grade 10">Grade 10</option></select></label>
-            <label>Landing Section<select name="default_landing_view"><option value="overview">Home</option><option value="students">Students</option><option value="content">Lessons</option><option value="assessments">Assessments</option><option value="reports">Reports</option><option value="evaluation">Evaluation</option></select></label>
+            <label>Landing Section<select name="default_landing_view"><option value="overview">Overview</option><option value="students">Students</option><option value="sections">Sections</option><option value="content">Lessons</option><option value="assessments">Assessments</option><option value="reports">Reports</option><option value="evaluation">Evaluation</option></select></label>
             <label class="settings-toggle"><input name="compact_lessons" type="checkbox"><span><strong>Compact lesson library</strong><small>Use denser lesson rows by default.</small></span></label>
             <button class="primary-button" type="submit"><i data-lucide="save"></i><span>Save Defaults</span></button>
           </form>
@@ -930,9 +1079,9 @@
         <label>Full Name<input name="full_name" type="text" required maxlength="120"></label>
         <div class="field-grid simple-grid">
           <label>Grade Level<select name="grade_level" required><option>Grade 9</option><option>Grade 10</option></select></label>
-          <label>Section<select name="section"></select></label>
+          <label>Section<select name="section_id"></select></label>
         </div>
-        <label>Adviser<input name="adviser" type="text" maxlength="120"></label>
+        <label>Adviser<input name="adviser" type="text" maxlength="120" readonly></label>
         <label>Home Town<input name="home_town" type="text" maxlength="120"></label>
         <label>Phone Number<input name="phone_number" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}"></label>
         <label>Status<select name="status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="inactive">Inactive</option></select></label>
@@ -950,5 +1099,7 @@
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="app.js"></script>
+  <script type="module" src="vr-integration.js"></script>
+  <script type="module" src="academic-management.js"></script>
 </body>
 </html>

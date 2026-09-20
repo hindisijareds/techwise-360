@@ -89,7 +89,7 @@ public static class MainMenuSceneSetup
     [MenuItem("TechWise 360/Build Windows Development")]
     public static void BuildWindowsDevelopment()
     {
-        BuildWindowsPlayer("Builds/TechWise360DesktopControls", BuildOptions.None, "student");
+        BuildWindowsPlayer("Builds/TechWise360DesktopControls", BuildOptions.Development, "development");
     }
 
     [MenuItem("TechWise 360/Build Windows Release")]

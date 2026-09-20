@@ -1,18 +1,8 @@
+import { academicRpc } from './_academic.js';
 const REQUIRED_ENV = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"];
 
 const VALID_GRADES = ["Grade 9", "Grade 10"];
-const GRADE_SECTION_ADVISERS = {
-  "Grade 9": {
-    "Ylang Ylang": "Carla Mar Locquiao",
-    "Dama De Noche": "Lara Santos",
-    Sampaguita: "Joel Jacob"
-  },
-  "Grade 10": {
-    Rosal: "Salvador Reasonda Jr.",
-    Lavender: "Noella Krista Valdez",
-    Tulip: "Richie Unlayao"
-  }
-};
+const VALID_CLASS_SECTION_STATUS = ["draft", "active", "archived"];
 const VALID_QUARTERS = ["T1", "T2", "T3"];
 const VALID_PROFILE_STATUS = ["pending", "approved", "rejected", "inactive"];
 const VALID_CONTENT_STATUS = ["draft", "published", "archived"];
@@ -48,7 +38,7 @@ const VALID_STUDENT_NOTIFICATION_EVENTS = [
   "badge_awarded",
   "certificate_awarded"
 ];
-const VALID_TEACHER_VIEWS = ["overview", "students", "content", "assessments", "reports", "evaluation"];
+const VALID_TEACHER_VIEWS = ["overview", "students", "sections", "content", "assessments", "reports", "evaluation"];
 const VALID_REPORT_RANGES = ["week", "month"];
 const VALID_REPORT_FORMATS = ["pdf", "csv"];
 export const EVALUATION_SURVEY_CATEGORIES = [
@@ -380,12 +370,37 @@ export async function changeTeacherPassword(env, teacher, body) {
   await updateAuthUserPassword(env, teacher.id, newPassword);
 }
 
-export async function updateStudentProfile(env, body) {
+export async function updateStudentProfile(env, body, teacherId = null) {
   const studentId = String(body.id || body.student_id || "").trim();
   if (!studentId) throw new ApiError("Student id is required.", 400);
+  const currentStudent = await getProfileById(env, studentId);
+  if (!currentStudent || currentStudent.role !== "student") throw new ApiError("Student account was not found.", 404);
 
   const patch = cleanStudentManagementPatch(body);
+  const requestedSectionId = Object.prototype.hasOwnProperty.call(body, "section_id")
+    ? String(body.section_id || "").trim()
+    : "";
+  let section = null;
+  if (requestedSectionId) {
+    section = await getClassSectionById(env, requestedSectionId);
+    if (!section || section.status !== "active") {
+      throw new ApiError("Please select an active managed section.", 400);
+    }
+    patch.section_id = section.id;
+    patch.grade_level = section.grade_level;
+    patch.section = section.name;
+    patch.adviser = section.adviser_name;
+  } else if (["grade_level", "section", "adviser"].some((field) => Object.prototype.hasOwnProperty.call(body, field))) {
+    const classChanged = (body.grade_level !== undefined && cleanText(body.grade_level) !== cleanText(currentStudent.grade_level))
+      || (body.section !== undefined && cleanText(body.section) !== cleanText(currentStudent.section))
+      || (body.adviser !== undefined && cleanText(body.adviser) !== cleanText(currentStudent.adviser));
+    if (classChanged) throw new ApiError("Select a managed section when changing a student's class.", 400);
+    delete patch.grade_level;
+    delete patch.section;
+    delete patch.adviser;
+  }
   validateStudentManagementPatch(patch);
+  if (section) await syncStudentSectionAssignment(env, currentStudent, section, teacherId);
 
   const rows = await patchRows(env, "profiles", `id=eq.${encodeURIComponent(studentId)}&role=eq.student`, patch, "Unable to update student.");
   if (!rows[0]) throw new ApiError("Student account was not found.", 404);
@@ -438,61 +453,313 @@ export async function getActiveQuarter(env) {
   return rows[0] || null;
 }
 
+export async function getClassSectionById(env, sectionId) {
+  const rows = await selectRows(env, "class_sections", `id=eq.${encodeURIComponent(sectionId)}&select=*&limit=1`);
+  return rows[0] || null;
+}
+
+export async function getRegistrationSections(env) {
+  const activeQuarter = await getActiveQuarter(env);
+  if (!activeQuarter) return { activeQuarter: null, sections: [] };
+  const sections = await selectRows(
+    env,
+    "class_sections",
+    `school_year=eq.${encodeURIComponent(activeQuarter.school_year)}&status=eq.active&select=*&order=grade_level.asc,name.asc`
+  );
+  return { activeQuarter, sections };
+}
+
+export function publicClassSection(section) {
+  return {
+    id: section.id,
+    school_year: section.school_year,
+    grade_level: section.grade_level,
+    name: section.name,
+    code: section.code,
+    adviser_name: section.adviser_name,
+    room: section.room || "",
+    capacity: Number(section.capacity || 0),
+    status: section.status,
+    assigned_count: Number(section.assigned_count || 0),
+    available_seats: Number(section.available_seats || 0),
+    roster: section.roster || [],
+    created_at: section.created_at,
+    updated_at: section.updated_at
+  };
+}
+
+export async function getTeacherSectionsDashboard(env, schoolYear = "") {
+  const [activeQuarter, allSections, assignments, students, activities, actors, years] = await Promise.all([
+    getActiveQuarter(env),
+    selectRows(env, "class_sections", "select=*&order=school_year.desc,grade_level.asc,name.asc"),
+    selectRows(env, "student_section_assignments", "ended_at=is.null&select=*&order=assigned_at.desc"),
+    selectRows(env, "profiles", "role=eq.student&select=id,full_name,username,email,status,grade_level,section,adviser,section_id,student_number,created_at&order=full_name.asc"),
+    selectRows(env, "section_activity", "select=*&order=created_at.desc&limit=50"),
+    selectRows(env, "profiles", "select=id,full_name,username,role"),
+    selectRows(env, "academic_years", "select=name&order=name.desc")
+  ]);
+  const selectedYear = schoolYear || activeQuarter?.school_year || allSections[0]?.school_year || "";
+  const assignmentByStudent = new Map(assignments.map((item) => [item.student_id, item]));
+  const studentById = new Map(students.map((student) => [student.id, student]));
+  const actorById = new Map(actors.map((actor) => [actor.id, actor]));
+  const seatStatuses = new Set(["pending", "approved"]);
+  const sections = allSections.map((section) => {
+    const sectionAssignments = assignments.filter((item) => item.section_id === section.id);
+    const roster = sectionAssignments.map((assignment) => {
+      const student = studentById.get(assignment.student_id);
+      return student ? { ...publicProfile(student), assignment_id: assignment.id, assigned_at: assignment.assigned_at } : null;
+    }).filter(Boolean);
+    const assignedCount = roster.filter((student) => seatStatuses.has(student.status)).length;
+    return publicClassSection({
+      ...section,
+      assigned_count: assignedCount,
+      available_seats: Math.max(0, Number(section.capacity || 0) - assignedCount),
+      roster
+    });
+  });
+  const yearSections = sections.filter((section) => !selectedYear || section.school_year === selectedYear);
+  const activeSections = yearSections.filter((section) => section.status === "active");
+  const assignedStudents = activeSections.reduce((sum, section) => sum + section.assigned_count, 0);
+  const availableSeats = activeSections.reduce((sum, section) => sum + section.available_seats, 0);
+  const recentActivity = activities.map((activity) => {
+    const section = allSections.find((item) => item.id === activity.section_id);
+    const actor = actorById.get(activity.actor_id);
+    const student = studentById.get(activity.student_id);
+    return {
+      ...activity,
+      section_name: section?.name || "Section",
+      grade_level: section?.grade_level || "",
+      actor_name: actor?.full_name || actor?.username || "System",
+      student_name: student?.full_name || student?.username || ""
+    };
+  });
+  return {
+    active_quarter: activeQuarter ? publicQuarter(activeQuarter) : null,
+    selected_school_year: selectedYear,
+    school_years: [...new Set([...years.map(y => y.name), ...allSections.map(section => section.school_year)].filter(Boolean))],
+    sections,
+    summary: {
+      total_sections: yearSections.length,
+      active_sections: activeSections.length,
+      assigned_students: assignedStudents,
+      available_seats: availableSeats
+    },
+    adviser_suggestions: [...new Set(allSections.map((section) => section.adviser_name).filter(Boolean))].sort(),
+    recent_activity: recentActivity,
+    unassigned_students: students
+      .filter((student) => seatStatuses.has(student.status) && !assignmentByStudent.has(student.id))
+      .map(publicProfile)
+  };
+}
+
+export async function createClassSection(env, body, teacherId) {
+  const payload = cleanClassSectionPayload(body, false);
+  validateClassSectionPayload(payload, false);
+  let section;
+  try {
+    section = await insertRow(env, "class_sections", {
+      ...payload,
+      status: "draft",
+      created_by: teacherId
+    }, "Unable to create section.");
+  } catch (error) {
+    if (error.status === 409) throw new ApiError("That section name or code is already used in this school year.", 409);
+    throw error;
+  }
+  await recordSectionActivity(env, section.id, teacherId, "created", { name: section.name, code: section.code });
+  return publicClassSection(section);
+}
+
+export async function updateClassSection(env, body, teacherId) {
+  const sectionId = String(body.id || body.section_id || "").trim();
+  if (!sectionId) throw new ApiError("Section id is required.", 400);
+  const existing = await getClassSectionById(env, sectionId);
+  if (!existing) throw new ApiError("Section was not found.", 404);
+  const patch = cleanClassSectionPayload(body, true);
+  validateClassSectionPayload({ ...existing, ...patch }, false);
+  const currentAssignments = await selectRows(env, "student_section_assignments", `section_id=eq.${encodeURIComponent(sectionId)}&ended_at=is.null&select=id,student_id`);
+  if (patch.grade_level && patch.grade_level !== existing.grade_level && currentAssignments.length) {
+    throw new ApiError("Transfer assigned students before changing this section's grade.", 409);
+  }
+  if (patch.status === "archived" && currentAssignments.length) {
+    throw new ApiError("Transfer all assigned students before archiving this section.", 409);
+  }
+  const nextStatus = patch.status || existing.status;
+  if (nextStatus === "active") validateClassSectionPayload({ ...existing, ...patch }, true);
+  let rows;
+  try {
+    rows = await patchRows(env, "class_sections", `id=eq.${encodeURIComponent(sectionId)}`, {
+      ...patch,
+      updated_at: new Date().toISOString()
+    }, "Unable to update section.");
+  } catch (error) {
+    if (error.status === 409) throw new ApiError("That section name or code is already used in this school year.", 409);
+    throw error;
+  }
+  const section = rows[0];
+  if (!section) throw new ApiError("Section was not found.", 404);
+  const profilePatch = {};
+  if (section.name !== existing.name) profilePatch.section = section.name;
+  if (section.adviser_name !== existing.adviser_name) profilePatch.adviser = section.adviser_name;
+  if (Object.keys(profilePatch).length) {
+    await patchRows(env, "profiles", `section_id=eq.${encodeURIComponent(section.id)}&role=eq.student`, {
+      ...profilePatch,
+      updated_at: new Date().toISOString()
+    }, "Unable to synchronize student section details.", false);
+  }
+  const action = section.status !== existing.status
+    ? section.status === "active" ? "activated" : section.status === "draft" ? "drafted" : "archived"
+    : "updated";
+  await recordSectionActivity(env, section.id, teacherId, action, sectionChangeDetails(existing, section));
+  return publicClassSection(section);
+}
+
+export async function assignStudentToSection(env, body, teacherId) {
+  const studentId = String(body.student_id || "").trim();
+  const sectionId = String(body.section_id || "").trim();
+  if (!studentId || !sectionId) throw new ApiError("Student and section are required.", 400);
+  const [student, section] = await Promise.all([getProfileById(env, studentId), getClassSectionById(env, sectionId)]);
+  if (!student || student.role !== "student") throw new ApiError("Student was not found.", 404);
+  if (!section || section.status !== "active") throw new ApiError("Students can only be assigned to active sections.", 400);
+  const assignment = await syncStudentSectionAssignment(env, student, section, teacherId);
+  const refreshed = await getProfileById(env, student.id);
+  const dashboard = await getTeacherSectionsDashboard(env, section.school_year);
+  const updatedSection = dashboard.sections.find((item) => item.id === section.id);
+  return {
+    student: publicProfile(refreshed),
+    assignment,
+    warning: updatedSection && updatedSection.assigned_count > updatedSection.capacity
+      ? `${updatedSection.name} is over capacity (${updatedSection.assigned_count}/${updatedSection.capacity}).`
+      : updatedSection && updatedSection.assigned_count === updatedSection.capacity
+        ? `${updatedSection.name} is now full.`
+        : ""
+  };
+}
+
+async function syncStudentSectionAssignment(env, student, section, teacherId) {
+  const term = await getActiveQuarter(env);
+  if (!term || term.school_year !== section.school_year) throw new ApiError('Select a section in the active academic year and term, or use Enrollment Management for another term.',409);
+  try {
+    await academicRpc(env, 'enroll_student', {
+      p_student: student.id,
+      p_year: term.academic_year_id || null,
+      p_term: term.id,
+      p_section: section.id,
+      p_grade: section.grade_level,
+      p_teacher: teacherId || null
+    });
+  } catch (err) {
+    console.error("academicRpc enroll_student notice:", err.message || err);
+    if (err.status === 409 && !err.message?.includes('already enrolled')) {
+      throw err;
+    }
+  }
+  const currentRows = await selectRows(env, "student_section_assignments", `student_id=eq.${encodeURIComponent(student.id)}&ended_at=is.null&select=*&limit=1`);
+  const current = currentRows[0] || null;
+  if (current?.section_id === section.id) {
+    await patchRows(env, "profiles", `id=eq.${encodeURIComponent(student.id)}`, {
+      section_id: section.id,
+      grade_level: section.grade_level,
+      section: section.name,
+      adviser: section.adviser_name,
+      updated_at: new Date().toISOString()
+    }, "Unable to synchronize student section.", false);
+    return current;
+  }
+  const changedAt = new Date().toISOString();
+  if (current) {
+    await patchRows(env, "student_section_assignments", `id=eq.${encodeURIComponent(current.id)}`, { ended_at: changedAt }, "Unable to close the previous assignment.", false);
+  }
+  let assignment;
+  try {
+    assignment = await insertRow(env, "student_section_assignments", {
+      student_id: student.id,
+      section_id: section.id,
+      assigned_by: teacherId || null,
+      assigned_at: changedAt
+    }, "Unable to assign the student.");
+  } catch (error) {
+    if (current) await patchRows(env, "student_section_assignments", `id=eq.${encodeURIComponent(current.id)}`, { ended_at: null }, "Unable to restore the previous assignment.", false).catch(() => {});
+    throw error;
+  }
+  try {
+    await patchRows(env, "profiles", `id=eq.${encodeURIComponent(student.id)}`, {
+      section_id: section.id,
+      grade_level: section.grade_level,
+      section: section.name,
+      adviser: section.adviser_name,
+      updated_at: changedAt
+    }, "Unable to update the student's current section.", false);
+  } catch (error) {
+    await deleteRows(env, "student_section_assignments", `id=eq.${encodeURIComponent(assignment.id)}`, "Unable to roll back the assignment.").catch(() => {});
+    if (current) await patchRows(env, "student_section_assignments", `id=eq.${encodeURIComponent(current.id)}`, { ended_at: null }, "Unable to restore the previous assignment.", false).catch(() => {});
+    throw error;
+  }
+  await recordSectionActivity(env, section.id, teacherId, current ? "student_transferred" : "student_assigned", {
+    from_section_id: current?.section_id || null,
+    student_name: student.full_name || student.username
+  }, student.id);
+  return assignment;
+}
+
+async function recordSectionActivity(env, sectionId, actorId, action, details = {}, studentId = null) {
+  return insertRow(env, "section_activity", {
+    section_id: sectionId,
+    student_id: studentId,
+    actor_id: actorId || null,
+    action,
+    details
+  }, "Unable to record section activity.", false);
+}
+
+function cleanClassSectionPayload(body, partial) {
+  const numberValue = body.capacity !== undefined && body.capacity !== "" ? Number(body.capacity) : undefined;
+  return cleanPatch({
+    school_year: body.school_year !== undefined ? cleanText(body.school_year) : partial ? undefined : "",
+    grade_level: body.grade_level !== undefined ? cleanText(body.grade_level) : partial ? undefined : "",
+    name: body.name !== undefined ? cleanText(body.name) : partial ? undefined : "",
+    code: body.code !== undefined ? cleanText(body.code).toUpperCase() : partial ? undefined : "",
+    adviser_name: body.adviser_name !== undefined ? cleanText(body.adviser_name) : partial ? undefined : "",
+    room: body.room !== undefined ? cleanText(body.room) || null : undefined,
+    capacity: numberValue,
+    status: body.status !== undefined ? cleanText(body.status).toLowerCase() : undefined
+  });
+}
+
+function validateClassSectionPayload(payload, activating) {
+  if (!/^\d{4}-\d{4}$/.test(payload.school_year || "")) throw new ApiError("School year must use the format 2026-2027.", 400);
+  if (!VALID_GRADES.includes(payload.grade_level)) throw new ApiError("Grade level must be Grade 9 or Grade 10.", 400);
+  if (!payload.name || payload.name.length > 80) throw new ApiError("Section name is required and must be 80 characters or fewer.", 400);
+  if (!payload.code || payload.code.length > 40) throw new ApiError("Section code is required and must be 40 characters or fewer.", 400);
+  if (!payload.adviser_name || payload.adviser_name.length > 120) throw new ApiError("Adviser name is required and must be 120 characters or fewer.", 400);
+  if (!Number.isInteger(Number(payload.capacity)) || Number(payload.capacity) <= 0 || Number(payload.capacity) > 500) {
+    throw new ApiError("Capacity must be a whole number between 1 and 500.", 400);
+  }
+  if (payload.status && !VALID_CLASS_SECTION_STATUS.includes(payload.status)) throw new ApiError("Section status is invalid.", 400);
+  if (activating && [payload.name, payload.code, payload.adviser_name, payload.grade_level].some((value) => !value)) {
+    throw new ApiError("Name, code, adviser, grade, and capacity are required before activation.", 400);
+  }
+}
+
+function sectionChangeDetails(previous, current) {
+  const fields = ["school_year", "grade_level", "name", "code", "adviser_name", "room", "capacity", "status"];
+  return Object.fromEntries(fields.filter((field) => previous[field] !== current[field]).map((field) => [field, {
+    from: previous[field] ?? null,
+    to: current[field] ?? null
+  }]));
+}
+
 export async function createQuarter(env, body, teacherId) {
   const payload = cleanQuarterPayload(body);
   validateQuarterPayload(payload);
-  if (payload.is_active) {
-    await patchRows(env, "quarters", "is_active=eq.true", { is_active: false }, "Unable to clear active term.", false);
-  }
-  return insertRow(env, "quarters", {
-    ...payload,
-    created_by: teacherId
-  }, "Unable to create term.");
+  return academicRpc(env, 'save_academic_term', {p_body:payload,p_teacher:teacherId});
 }
-
 export async function updateQuarter(env, body) {
-  const id = String(body.id || "").trim();
-  if (!id) throw new ApiError("Term id is required.", 400);
-
-  if (body.is_active === true) {
-    await patchRows(env, "quarters", "is_active=eq.true", { is_active: false }, "Unable to clear active term.", false);
-  }
-
-  const patch = cleanPatch({
-    name: body.name ? cleanText(body.name).toUpperCase() : undefined,
-    title: body.title ? cleanText(body.title) : undefined,
-    school_year: body.school_year ? cleanText(body.school_year) : undefined,
-    start_date: Object.prototype.hasOwnProperty.call(body, "start_date") ? body.start_date || null : undefined,
-    end_date: Object.prototype.hasOwnProperty.call(body, "end_date") ? body.end_date || null : undefined,
-    is_active: typeof body.is_active === "boolean" ? body.is_active : undefined,
-    status: body.status ? cleanText(body.status).toLowerCase() : undefined
-  });
-
-  if (patch.name && !VALID_QUARTERS.includes(patch.name)) {
-    throw new ApiError("Term must be 1st Term, 2nd Term, or 3rd Term.", 400);
-  }
-  if (patch.school_year && !/^\d{4}-\d{4}$/.test(patch.school_year)) {
-    throw new ApiError("School year must use the format 2026-2027.", 400);
-  }
-  if (patch.status && !["active", "archived"].includes(patch.status)) {
-    throw new ApiError("Term status is invalid.", 400);
-  }
-  if (patch.status === "archived") {
-    patch.is_active = false;
-  }
-  if (patch.is_active === true) {
-    patch.status = "active";
-  }
-
-  const rows = await patchRows(env, "quarters", `id=eq.${encodeURIComponent(id)}`, patch, "Unable to update term.");
-  if (!rows[0]) throw new ApiError("Term was not found.", 404);
-  return rows[0];
+  if (!body.id) throw new ApiError('Term id is required.',400);
+  return academicRpc(env, 'save_academic_term', {p_body:body,p_teacher:null});
 }
-
-export async function deleteQuarter(env, body) {
-  const id = String(body.id || "").trim();
-  if (!id) throw new ApiError("Term id is required.", 400);
-  await deleteRows(env, "quarters", `id=eq.${encodeURIComponent(id)}`, "Unable to delete term.");
+export async function deleteQuarter() {
+  throw new ApiError('Terms retain historical records. Archive the term instead of deleting it.',409);
 }
 
 export async function getModules(env) {
@@ -1168,14 +1435,13 @@ export function cleanStudentPayload(body) {
   return {
     username: normalizeUsername(body.username),
     password: String(body.password || ""),
-    full_name: cleanText(body.full_name),
+    full_name: [cleanText(body.first_name), cleanText(body.last_name)].filter(Boolean).join(" "),
     first_name: cleanText(body.first_name),
     last_name: cleanText(body.last_name),
     email: normalizeEmail(body.email),
     home_town: cleanText(body.home_town),
     grade_level: cleanText(body.grade_level),
-    section: cleanText(body.section),
-    adviser: cleanText(body.adviser),
+    section_id: String(body.section_id || "").trim(),
     phone_number: phoneNumber,
     cp_number: phoneNumber
   };
@@ -1191,8 +1457,7 @@ export function validateStudentPayload(payload) {
     "email",
     "home_town",
     "grade_level",
-    "section",
-    "adviser",
+    "section_id",
     "phone_number"
   ];
 
@@ -1221,14 +1486,6 @@ export function validateStudentPayload(payload) {
     throw new ApiError("Grade level must be Grade 9 or Grade 10.", 400);
   }
 
-  const expectedAdviser = GRADE_SECTION_ADVISERS[payload.grade_level]?.[payload.section];
-  if (!expectedAdviser) {
-    throw new ApiError("Please select a valid section for your grade level.", 400);
-  }
-
-  if (payload.adviser !== expectedAdviser) {
-    throw new ApiError("Adviser must match the selected grade level and section.", 400);
-  }
 }
 
 export function publicProfile(profile) {
@@ -1243,6 +1500,7 @@ export function publicProfile(profile) {
     last_name: profile.last_name,
     home_town: profile.home_town,
     grade_level: profile.grade_level,
+    section_id: profile.section_id || "",
     section: profile.section,
     adviser: profile.adviser,
     phone_number: profile.phone_number || profile.cp_number || "",
@@ -1260,6 +1518,7 @@ export function publicQuarter(quarter) {
     name: quarter.name,
     title: quarter.title,
     school_year: quarter.school_year,
+    academic_year_id: quarter.academic_year_id,
     start_date: quarter.start_date,
     end_date: quarter.end_date,
     is_active: quarter.is_active,
@@ -1428,6 +1687,16 @@ export function publicVrCompetition(competition) {
 
 export function publicVrAttempt(attempt) {
   return {
+    assessment_session_id: attempt.assessment_session_id || "",
+    academic_year_id: attempt.academic_year_id || "",
+    quarter_id: attempt.quarter_id || "",
+    enrollment_id: attempt.enrollment_id || "",
+    section_id: attempt.section_id || "",
+    grade_level: attempt.grade_level || "",
+    section_name: attempt.section_name || "",
+    student_name: attempt.student_name || "",
+    accuracy_percent: attempt.accuracy_percent == null ? null : Number(attempt.accuracy_percent),
+    received_at: attempt.received_at || "",
     id: attempt.id,
     student_id: attempt.student_id,
     competition_id: attempt.competition_id || "",

@@ -1,5 +1,6 @@
 const SESSION_KEY = "techwise360.session";
 const STUDENTS_PER_PAGE = 8;
+const SECTIONS_PER_PAGE = 8;
 const LESSONS_PER_PAGE = 5;
 const ASSESSMENTS_PER_PAGE = 6;
 const PROFILE_PAGE_SIZE = 5;
@@ -12,9 +13,11 @@ const EVIDENCE_SUPPORT_DAYS = 7;
 const MAX_LESSON_FILE_BYTES = 104857600;
 const MAX_STUDENT_AVATAR_BYTES = 2097152;
 const TEACHER_SIDEBAR_STORAGE_KEY = "techwise360.teacher.sidebar-collapsed";
+const STUDENT_SIDEBAR_STORAGE_KEY = "techwise360.student.sidebar-collapsed";
 const TEACHER_VIEW_META = {
   overview: { parent: "Overview", current: "Dashboard", title: "Teacher Dashboard" },
   students: { parent: "Management", current: "Students", title: "Students" },
+  sections: { parent: "Management", current: "Sections", title: "Sections" },
   "student-profile": { parent: "Students", current: "Student Profile", title: "Student Profile" },
   quarters: { parent: "Curriculum", current: "Terms", title: "Terms" },
   content: { parent: "Curriculum", current: "Lessons", title: "Lessons & Modules" },
@@ -24,6 +27,18 @@ const TEACHER_VIEW_META = {
   evaluation: { parent: "Analytics", current: "Evaluation", title: "Evaluation" },
   achievements: { parent: "Recognition", current: "Achievements", title: "Achievements" },
   settings: { parent: "Account", current: "Settings", title: "Settings" }
+};
+const STUDENT_VIEW_META = {
+  home: { parent: "Student portal", current: "Home", title: "Student Dashboard" },
+  lessons: { parent: "Learning", current: "Learn", title: "Learn" },
+  "lesson-player": { parent: "Learning", current: "Lesson Player", title: "Lesson Player" },
+  assessments: { parent: "Learning", current: "Assessments", title: "Assessments" },
+  progress: { parent: "Progress", current: "My Progress", title: "My Progress" },
+  leaderboard: { parent: "Progress", current: "VR Leaderboard", title: "VR Leaderboard" },
+  "vr-connect": { parent: "VR Lab", current: "Connect VR Simulation", title: "Connect VR Simulation" },
+  achievements: { parent: "Recognition", current: "Achievements", title: "Achievements" },
+  evaluation: { parent: "Feedback", current: "Evaluation", title: "Feedback Survey" },
+  profile: { parent: "Account", current: "Settings", title: "Settings" }
 };
 const PACKAGE_MODULE_TITLES = new Set(["PC Assembly and Disassembly"]);
 const LESSON_SECTION_TYPES = [
@@ -110,7 +125,15 @@ function gradeOptionsHtml(selected = "", includeAll = true) {
 }
 
 function sectionOptionsForGrade(grade = "") {
-  return GRADE_LEVELS.includes(grade) ? Object.keys(STUDENT_SECTION_ADVISERS[grade] || {}) : [];
+  if (!GRADE_LEVELS.includes(grade)) return [];
+  const managed = (teacherState?.sections || [])
+    .filter((section) => section.grade_level === grade && section.status !== "archived")
+    .map((section) => section.name);
+  const existing = (teacherState?.students || [])
+    .filter((student) => student.grade_level === grade && student.section)
+    .map((student) => student.section);
+  const source = managed.length ? [...managed, ...existing] : existing.length ? existing : Object.keys(STUDENT_SECTION_ADVISERS[grade] || {});
+  return [...new Set(source)].sort();
 }
 
 function sectionOptionsHtml(grade = "", selected = "", includeAll = true) {
@@ -149,8 +172,24 @@ const STUDENT_LEARN_ASSETS = [
 ];
 
 const page = document.body.dataset.page;
+const customSelectRegistry = new WeakMap();
+let activeCustomSelect = null;
+let customSelectObserver = null;
+let customSelectId = 0;
+let customSelectPositionFrame = 0;
 let teacherState = {
   students: [],
+  sections: [],
+  sectionSummary: { total_sections: 0, active_sections: 0, assigned_students: 0, available_seats: 0 },
+  sectionActivities: [],
+  sectionSchoolYears: [],
+  sectionAdviserSuggestions: [],
+  sectionUnassignedStudents: [],
+  selectedSectionId: "",
+  sectionPage: 1,
+  sectionFilters: { schoolYear: "", grade: "", status: "", search: "" },
+  sectionPanel: "details",
+  sectionCreateMode: false,
   quarters: [],
   activeQuarter: null,
   modules: [],
@@ -179,7 +218,8 @@ let teacherState = {
     search: ""
   },
   evidenceFilters: {
-    classKey: ""
+    classKey: "",
+    rangeDays: "90"
   },
   evaluation: defaultTeacherEvaluationData(),
   evaluationGrade: "",
@@ -236,6 +276,10 @@ let studentState = {
   learnPage: 1,
   assessmentPage: 1,
   achievementTab: "badges",
+  vrLeaderboardTab: "rankings",
+  vrHistoryFilter: { simulation: "all", date: "all" },
+  vrHistoryPage: 1,
+  vrHistoryPageSize: 5,
   leaderboard: { rows: [], competitions: [], summary: {} },
   completionSummary: { modules: [], lessons: [], progress: [] },
   evaluation: defaultStudentEvaluationData(),
@@ -364,7 +408,7 @@ function setButtonLoading(button, isLoading, label = "Loading...") {
 
 function getFocusableElements(container) {
   return Array.from(container.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"))
-    .filter((element) => !element.disabled && !element.hidden && element.offsetParent !== null);
+    .filter((element) => !element.disabled && !element.hidden && element.tabIndex >= 0 && element.offsetParent !== null);
 }
 
 function createFeedbackModal({
@@ -537,6 +581,378 @@ function showInputModal({ label, placeholder = "", initialValue = "", required =
   });
 }
 
+function getCustomSelectFieldLabel(select) {
+  const ariaLabel = select.getAttribute("aria-label")?.trim();
+  if (ariaLabel) return ariaLabel;
+  const labelledBy = select.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    const label = labelledBy
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent?.trim())
+      .filter(Boolean)
+      .join(" ");
+    if (label) return label;
+  }
+  const label = select.labels?.[0];
+  const visibleLabel = label?.querySelector(":scope > span, :scope > .field-label, :scope > .label-text")?.textContent?.trim();
+  if (visibleLabel) return visibleLabel;
+  return titleCase(select.name || select.id || "Select option");
+}
+
+function getCustomSelectOptions(select) {
+  const groups = [];
+  Array.from(select.children).forEach((child) => {
+    if (child instanceof HTMLOptionElement) {
+      groups.push({ label: "", options: [child] });
+      return;
+    }
+    if (child instanceof HTMLOptGroupElement) {
+      groups.push({ label: child.label || "Options", options: Array.from(child.children) });
+    }
+  });
+  return groups;
+}
+
+function renderCustomSelectOptions(select) {
+  const entry = customSelectRegistry.get(select);
+  if (!entry) return;
+  const { menu } = entry;
+  menu.replaceChildren();
+
+  getCustomSelectOptions(select).forEach((group) => {
+    if (group.label) {
+      const heading = document.createElement("div");
+      heading.className = "tw-select-group-label";
+      heading.textContent = group.label;
+      menu.appendChild(heading);
+    }
+
+    group.options.forEach((option) => {
+      const button = document.createElement("button");
+      const selected = option.index === select.selectedIndex;
+      button.type = "button";
+      button.className = "tw-select-option";
+      button.dataset.optionIndex = String(option.index);
+      button.id = `${menu.id}-option-${option.index}`;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", String(selected));
+      button.disabled = option.disabled || Boolean(option.parentElement?.disabled);
+      button.classList.toggle("is-selected", selected);
+
+      const check = document.createElement("span");
+      check.className = "tw-select-option-check";
+      check.setAttribute("aria-hidden", "true");
+      check.textContent = "✓";
+
+      const text = document.createElement("span");
+      text.className = "tw-select-option-text";
+      text.textContent = option.textContent?.trim() || "Option";
+      button.append(check, text);
+      menu.appendChild(button);
+    });
+  });
+
+  if (!menu.querySelector(".tw-select-option")) {
+    const empty = document.createElement("div");
+    empty.className = "tw-select-empty";
+    empty.textContent = "No options available";
+    menu.appendChild(empty);
+  }
+}
+
+function syncCustomSelect(select, rebuildOptions = false) {
+  const entry = customSelectRegistry.get(select);
+  if (!entry || !select.isConnected) return;
+  if (rebuildOptions) renderCustomSelectOptions(select);
+
+  const selectedOption = select.selectedOptions?.[0] || select.options?.[select.selectedIndex] || null;
+  const selectedText = selectedOption?.textContent?.trim() || "Select an option";
+  const fieldLabel = getCustomSelectFieldLabel(select);
+  entry.value.textContent = selectedText;
+  entry.trigger.disabled = select.disabled;
+  entry.trigger.setAttribute("aria-label", `${fieldLabel}: ${selectedText}`);
+  entry.wrapper.classList.toggle("is-disabled", select.disabled);
+  entry.wrapper.classList.toggle("is-placeholder", !select.value);
+  if (select.validity?.valid) {
+    entry.wrapper.classList.remove("is-invalid");
+    entry.trigger.removeAttribute("aria-invalid");
+  }
+
+  entry.menu.querySelectorAll(".tw-select-option").forEach((button) => {
+    const selected = Number(button.dataset.optionIndex) === select.selectedIndex;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-selected", String(selected));
+  });
+
+  if (select.disabled && activeCustomSelect === select) closeCustomSelect(select);
+  else if (activeCustomSelect === select) positionCustomSelectMenu(select);
+}
+
+function watchCustomSelectValue(select) {
+  ["value", "selectedIndex"].forEach((property) => {
+    if (Object.prototype.hasOwnProperty.call(select, property)) return;
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, property);
+    if (!descriptor?.get || !descriptor?.set) return;
+    try {
+      Object.defineProperty(select, property, {
+        configurable: true,
+        enumerable: descriptor.enumerable,
+        get() {
+          return descriptor.get.call(this);
+        },
+        set(nextValue) {
+          descriptor.set.call(this, nextValue);
+          queueMicrotask(() => syncCustomSelect(this));
+        }
+      });
+    } catch {
+      // The control still synchronizes on change, option mutations, and open.
+    }
+  });
+}
+
+function positionCustomSelectMenu(select) {
+  const entry = customSelectRegistry.get(select);
+  if (!entry || entry.menu.hidden || !entry.trigger.isConnected) return;
+  const rect = entry.trigger.getBoundingClientRect();
+  const viewportPadding = 8;
+  const menuGap = 7;
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  const menuWidth = Math.min(Math.max(rect.width, 190), viewportWidth - (viewportPadding * 2));
+  const left = Math.min(Math.max(rect.left, viewportPadding), viewportWidth - menuWidth - viewportPadding);
+  const spaceBelow = viewportHeight - rect.bottom - menuGap - viewportPadding;
+  const spaceAbove = rect.top - menuGap - viewportPadding;
+  const placeAbove = spaceBelow < 190 && spaceAbove > spaceBelow;
+  const availableHeight = Math.max(120, Math.min(300, placeAbove ? spaceAbove : spaceBelow));
+
+  entry.menu.style.width = `${menuWidth}px`;
+  entry.menu.style.maxHeight = `${availableHeight}px`;
+  entry.menu.style.left = `${left}px`;
+  entry.menu.dataset.placement = placeAbove ? "top" : "bottom";
+
+  if (placeAbove) {
+    const renderedHeight = Math.min(entry.menu.scrollHeight, availableHeight);
+    entry.menu.style.top = `${Math.max(viewportPadding, rect.top - renderedHeight - menuGap)}px`;
+  } else {
+    entry.menu.style.top = `${Math.min(viewportHeight - viewportPadding, rect.bottom + menuGap)}px`;
+  }
+}
+
+function focusCustomSelectOption(select, direction = "selected") {
+  const entry = customSelectRegistry.get(select);
+  if (!entry) return;
+  const options = Array.from(entry.menu.querySelectorAll(".tw-select-option:not(:disabled)"));
+  if (!options.length) return;
+  const selected = options.find((button) => button.classList.contains("is-selected"));
+  const target = direction === "last" ? options.at(-1) : direction === "first" ? options[0] : selected || options[0];
+  target?.focus({ preventScroll: true });
+  target?.scrollIntoView({ block: "nearest" });
+}
+
+function openCustomSelect(select, focusOption = false) {
+  const entry = customSelectRegistry.get(select);
+  if (!entry || select.disabled) return;
+  if (activeCustomSelect && activeCustomSelect !== select) closeCustomSelect(activeCustomSelect);
+  syncCustomSelect(select, true);
+  activeCustomSelect = select;
+  entry.menu.hidden = false;
+  entry.wrapper.classList.add("is-open");
+  entry.trigger.setAttribute("aria-expanded", "true");
+  positionCustomSelectMenu(select);
+  if (focusOption) requestAnimationFrame(() => focusCustomSelectOption(select));
+}
+
+function closeCustomSelect(select = activeCustomSelect, restoreFocus = false) {
+  const entry = select ? customSelectRegistry.get(select) : null;
+  if (!entry) {
+    activeCustomSelect = null;
+    return;
+  }
+  entry.menu.hidden = true;
+  entry.wrapper.classList.remove("is-open");
+  entry.trigger.setAttribute("aria-expanded", "false");
+  if (activeCustomSelect === select) activeCustomSelect = null;
+  if (restoreFocus) entry.trigger.focus({ preventScroll: true });
+}
+
+function selectCustomSelectOption(select, optionIndex) {
+  const option = select.options?.[optionIndex];
+  if (!option || option.disabled || option.parentElement?.disabled || select.disabled) return;
+  const changed = select.selectedIndex !== optionIndex;
+  select.selectedIndex = optionIndex;
+  syncCustomSelect(select);
+  closeCustomSelect(select, true);
+  if (!changed) return;
+  select.dispatchEvent(new Event("input", { bubbles: true }));
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function handleCustomSelectKeydown(event, select) {
+  const entry = customSelectRegistry.get(select);
+  if (!entry) return;
+  const isTrigger = event.currentTarget === entry.trigger;
+  if (isTrigger && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+    event.preventDefault();
+    if (!entry.wrapper.classList.contains("is-open")) openCustomSelect(select);
+    requestAnimationFrame(() => focusCustomSelectOption(select, event.key === "ArrowUp" ? "last" : "selected"));
+    return;
+  }
+  if (isTrigger && event.key === "Escape" && entry.wrapper.classList.contains("is-open")) {
+    event.preventDefault();
+    closeCustomSelect(select);
+    return;
+  }
+  if (!event.target.classList.contains("tw-select-option")) return;
+  const options = Array.from(entry.menu.querySelectorAll(".tw-select-option:not(:disabled)"));
+  const currentIndex = options.indexOf(event.target);
+  let nextIndex = currentIndex;
+  if (event.key === "ArrowDown") nextIndex = Math.min(options.length - 1, currentIndex + 1);
+  else if (event.key === "ArrowUp") nextIndex = Math.max(0, currentIndex - 1);
+  else if (event.key === "Home") nextIndex = 0;
+  else if (event.key === "End") nextIndex = options.length - 1;
+  else if (event.key === "Escape") {
+    event.preventDefault();
+    closeCustomSelect(select, true);
+    return;
+  } else if (event.key === "Tab") {
+    closeCustomSelect(select, true);
+    return;
+  } else {
+    return;
+  }
+  event.preventDefault();
+  options[nextIndex]?.focus({ preventScroll: true });
+  options[nextIndex]?.scrollIntoView({ block: "nearest" });
+}
+
+function enhanceCustomSelect(select) {
+  if (!(select instanceof HTMLSelectElement) || select.multiple || select.size > 1 || select.hasAttribute("data-native-select") || customSelectRegistry.has(select)) return;
+  const wrapper = document.createElement("span");
+  const trigger = document.createElement("button");
+  const value = document.createElement("span");
+  const chevron = document.createElement("span");
+  const menu = document.createElement("div");
+  const originalTabIndex = select.getAttribute("tabindex");
+  const menuId = `tw-select-menu-${++customSelectId}`;
+
+  wrapper.className = "tw-select";
+  wrapper.dataset.twSelect = "";
+  trigger.type = "button";
+  trigger.className = "tw-select-trigger";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-controls", menuId);
+  value.className = "tw-select-value";
+  chevron.className = "tw-select-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  menu.id = menuId;
+  menu.className = "tw-select-menu";
+  menu.setAttribute("role", "listbox");
+  menu.hidden = true;
+  trigger.append(value, chevron);
+
+  select.before(wrapper);
+  wrapper.append(select, trigger);
+  document.body.appendChild(menu);
+  select.classList.add("tw-select-native");
+  select.dataset.twSelectEnhanced = "true";
+  select.setAttribute("aria-hidden", "true");
+  select.tabIndex = -1;
+
+  customSelectRegistry.set(select, { wrapper, trigger, value, menu, originalTabIndex });
+  watchCustomSelectValue(select);
+  renderCustomSelectOptions(select);
+  syncCustomSelect(select);
+
+  trigger.addEventListener("click", () => {
+    if (wrapper.classList.contains("is-open")) closeCustomSelect(select);
+    else openCustomSelect(select);
+  });
+  trigger.addEventListener("keydown", (event) => handleCustomSelectKeydown(event, select));
+  menu.addEventListener("click", (event) => {
+    const optionButton = event.target.closest(".tw-select-option");
+    if (!optionButton || !menu.contains(optionButton)) return;
+    selectCustomSelectOption(select, Number(optionButton.dataset.optionIndex));
+  });
+  menu.addEventListener("keydown", (event) => handleCustomSelectKeydown(event, select));
+  select.addEventListener("change", () => {
+    wrapper.classList.remove("is-invalid");
+    trigger.removeAttribute("aria-invalid");
+    syncCustomSelect(select);
+  });
+  select.addEventListener("invalid", () => {
+    wrapper.classList.add("is-invalid");
+    trigger.setAttribute("aria-invalid", "true");
+    requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
+  });
+}
+
+function removeDetachedCustomSelects(node) {
+  if (!(node instanceof Element)) return;
+  const wrappers = node.matches("[data-tw-select]") ? [node] : Array.from(node.querySelectorAll("[data-tw-select]"));
+  wrappers.forEach((wrapper) => {
+    const select = wrapper.querySelector("select.tw-select-native");
+    const entry = select ? customSelectRegistry.get(select) : null;
+    if (!entry || select.isConnected) return;
+    if (activeCustomSelect === select) activeCustomSelect = null;
+    entry.menu.remove();
+    customSelectRegistry.delete(select);
+  });
+}
+
+function setupCustomSelects() {
+  document.querySelectorAll("select").forEach(enhanceCustomSelect);
+
+  document.addEventListener("click", (event) => {
+    if (!activeCustomSelect) return;
+    const entry = customSelectRegistry.get(activeCustomSelect);
+    if (!entry || entry.trigger.contains(event.target) || entry.menu.contains(event.target)) return;
+    closeCustomSelect(activeCustomSelect);
+  });
+  document.addEventListener("reset", (event) => {
+    requestAnimationFrame(() => event.target.querySelectorAll?.("select.tw-select-native").forEach((select) => syncCustomSelect(select)));
+  });
+  document.addEventListener("scroll", () => {
+    if (!activeCustomSelect || customSelectPositionFrame) return;
+    customSelectPositionFrame = requestAnimationFrame(() => {
+      customSelectPositionFrame = 0;
+      if (activeCustomSelect) positionCustomSelectMenu(activeCustomSelect);
+    });
+  }, true);
+  window.addEventListener("resize", () => {
+    if (activeCustomSelect) positionCustomSelectMenu(activeCustomSelect);
+  });
+
+  customSelectObserver = new MutationObserver((records) => {
+    const selectsToRefresh = new Set();
+    records.forEach((record) => {
+      if (record.type === "childList") {
+        record.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches("select")) enhanceCustomSelect(node);
+          node.querySelectorAll?.("select").forEach(enhanceCustomSelect);
+        });
+        record.removedNodes.forEach(removeDetachedCustomSelects);
+        const parentSelect = record.target instanceof Element ? record.target.closest("select") : null;
+        if (parentSelect) selectsToRefresh.add(parentSelect);
+      } else if (record.target instanceof HTMLSelectElement) {
+        selectsToRefresh.add(record.target);
+      } else if (record.target instanceof HTMLOptionElement || record.target instanceof HTMLOptGroupElement) {
+        const parentSelect = record.target.closest("select");
+        if (parentSelect) selectsToRefresh.add(parentSelect);
+      }
+    });
+    selectsToRefresh.forEach((select) => syncCustomSelect(select, true));
+  });
+  customSelectObserver.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["disabled", "label", "selected", "value"]
+  });
+}
+
 if (window.lucide) {
   window.lucide.createIcons();
 }
@@ -553,6 +969,7 @@ document.querySelectorAll("[data-toggle-password]").forEach((button) => {
 
 document.getElementById("logoutButton")?.addEventListener("click", confirmLogout);
 
+setupCustomSelects();
 if (page === "login") setupLogin();
 if (page === "register") setupRegistration();
 if (page === "forgot-password") setupForgotPassword();
@@ -578,6 +995,67 @@ async function confirmLogout() {
 function setupLogin() {
   const form = document.getElementById("loginForm");
   const message = document.getElementById("loginMessage");
+  if (!form) return;
+
+  // Demo & Local testing quick access
+  document.getElementById("quickStudentBtn")?.addEventListener("click", () => {
+    if (form.elements.identifier) form.elements.identifier.value = "student";
+    if (form.elements.password) form.elements.password.value = "TechWise#360";
+    setMessage(message, "Filled student demo credentials. Click 'Login now' to sign in.", "success");
+    form.elements.identifier?.focus();
+  });
+
+  document.getElementById("quickTeacherBtn")?.addEventListener("click", () => {
+    if (form.elements.identifier) form.elements.identifier.value = "teacher";
+    if (form.elements.password) form.elements.password.value = "TechWise#360";
+    setMessage(message, "Filled teacher demo credentials. Click 'Login now' to sign in.", "success");
+    form.elements.identifier?.focus();
+  });
+
+  document.getElementById("quickDirectStudentBtn")?.addEventListener("click", () => {
+    const mockSession = {
+      access_token: "mock-student-preview-token",
+      token_type: "bearer",
+      is_local_preview: true,
+      user: { id: "d128e2c1-57e2-4037-804a-7f47ba711247", email: "student@techwise360.edu" }
+    };
+    const mockProfile = {
+      id: "d128e2c1-57e2-4037-804a-7f47ba711247",
+      role: "student",
+      status: "approved",
+      full_name: "Jared Estabillo",
+      first_name: "Jared",
+      last_name: "Estabillo",
+      username: "student",
+      email: "student@techwise360.edu",
+      grade_level: "Grade 10",
+      section: "Rosal",
+      school_year: "2026-2027"
+    };
+    setSession(mockSession, mockProfile);
+    window.location.href = "student-dashboard.html";
+  });
+
+  document.getElementById("quickDirectTeacherBtn")?.addEventListener("click", () => {
+    const mockSession = {
+      access_token: "mock-teacher-preview-token",
+      token_type: "bearer",
+      is_local_preview: true,
+      user: { id: "d128e2c1-57e2-4037-804a-7f47ba711247", email: "jaredestabillo04@gmail.com" }
+    };
+    const mockProfile = {
+      id: "d128e2c1-57e2-4037-804a-7f47ba711247",
+      role: "teacher",
+      status: "approved",
+      full_name: "Teacher Account",
+      first_name: "Teacher",
+      last_name: "Account",
+      username: "teacher",
+      email: "jaredestabillo04@gmail.com"
+    };
+    setSession(mockSession, mockProfile);
+    window.location.href = "teacher-dashboard.html";
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -651,38 +1129,41 @@ function getResetAccessToken() {
   return hashParams.get("access_token") || queryParams.get("access_token") || "";
 }
 
-function setupRegistration() {
+async function setupRegistration() {
   const form = document.getElementById("registerForm");
   const message = document.getElementById("registerMessage");
   const firstName = form.elements.first_name;
   const lastName = form.elements.last_name;
-  const fullName = form.elements.full_name;
   const phoneNumber = form.elements.phone_number;
   const gradeSelect = form.elements.grade_level;
-  const sectionSelect = form.elements.section;
+  const sectionSelect = form.elements.section_id;
   const adviserInput = form.elements.adviser;
-  let fullNameEdited = false;
+  let registrationSections = [];
+  let registrationLoadError = "";
 
   const updateAdviser = () => {
-    const adviser = STUDENT_SECTION_ADVISERS[gradeSelect.value]?.[sectionSelect.value] || "";
+    const selected = registrationSections.find((section) => section.id === sectionSelect.value);
+    const adviser = selected?.adviser_name || "";
     adviserInput.value = adviser;
     adviserInput.placeholder = adviser ? "Adviser assigned automatically" : "Select grade level and section first";
   };
 
   const updateSectionOptions = () => {
     const grade = gradeSelect.value;
-    const sections = Object.keys(STUDENT_SECTION_ADVISERS[grade] || {});
+    const sections = registrationSections.filter((section) => section.grade_level === grade && section.status === "active");
     sectionSelect.innerHTML = "";
 
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = grade ? "Select section" : "Select grade level first";
+    placeholder.textContent = registrationLoadError
+      ? "Sections unavailable — refresh to retry"
+      : grade ? "Select section" : "Select grade level first";
     sectionSelect.appendChild(placeholder);
 
     sections.forEach((section) => {
       const option = document.createElement("option");
-      option.value = section;
-      option.textContent = section;
+      option.value = section.id;
+      option.textContent = `${section.name} (${section.code})`;
       sectionSelect.appendChild(option);
     });
 
@@ -691,6 +1172,10 @@ function setupRegistration() {
   };
 
   const showAdviserMessage = () => {
+    if (registrationLoadError) {
+      setMessage(message, registrationLoadError, "error");
+      return;
+    }
     if (!gradeSelect.value || !sectionSelect.value) {
       setMessage(message, "Select grade level and section first to fill the adviser name.", "error");
       return;
@@ -706,25 +1191,37 @@ function setupRegistration() {
   sectionSelect.addEventListener("change", updateAdviser);
   adviserInput.addEventListener("focus", showAdviserMessage);
   adviserInput.addEventListener("mousedown", showAdviserMessage);
+  try {
+    const options = await apiGet("/api/registration-options");
+    registrationSections = options.sections || [];
+    document.getElementById("registrationAcademicContext").textContent = options.active_term ? `Enrolling for ${options.school_year} • ${options.active_term.title}` : "Registration is unavailable until an academic year and term are active.";
+    registrationLoadError = registrationSections.length
+      ? ""
+      : "No active sections are available for registration in the current school year.";
+  } catch (error) {
+    // Offline / local preview fallback with official curriculum sections
+    registrationSections = [
+      { id: "g9-ylang", school_year: "2026-2027", grade_level: "Grade 9", name: "Ylang Ylang", code: "G9-YLANG", adviser_name: "Carla Mar Locquiao", status: "active" },
+      { id: "g9-dama", school_year: "2026-2027", grade_level: "Grade 9", name: "Dama De Noche", code: "G9-DAMA", adviser_name: "Lara Santos", status: "active" },
+      { id: "g9-sampaguita", school_year: "2026-2027", grade_level: "Grade 9", name: "Sampaguita", code: "G9-SAMPAGUITA", adviser_name: "Joel Jacob", status: "active" },
+      { id: "g10-rosal", school_year: "2026-2027", grade_level: "Grade 10", name: "Rosal", code: "G10-ROSAL", adviser_name: "Salvador Reasonda Jr.", status: "active" },
+      { id: "g10-lavender", school_year: "2026-2027", grade_level: "Grade 10", name: "Lavender", code: "G10-LAVENDER", adviser_name: "Noella Krista Valdez", status: "active" },
+      { id: "g10-tulip", school_year: "2026-2027", grade_level: "Grade 10", name: "Tulip", code: "G10-TULIP", adviser_name: "Richie Unlayao", status: "active" }
+    ];
+    const contextEl = document.getElementById("registrationAcademicContext");
+    if (contextEl) contextEl.textContent = "Enrolling for S.Y. 2026-2027 • 1st Term";
+    registrationLoadError = "";
+  }
   updateSectionOptions();
-
-  fullName.addEventListener("input", () => {
-    fullNameEdited = true;
-  });
-
-  [firstName, lastName].forEach((input) => {
-    input.addEventListener("input", () => {
-      if (fullNameEdited) return;
-      fullName.value = `${firstName.value} ${lastName.value}`.trim();
-    });
-  });
+  if (registrationLoadError) setMessage(message, registrationLoadError, "error");
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     setMessage(message, "Creating your account...");
 
     const payload = Object.fromEntries(new FormData(form).entries());
-    payload.adviser = STUDENT_SECTION_ADVISERS[payload.grade_level]?.[payload.section] || payload.adviser || "";
+    const selectedSection = registrationSections.find((section) => section.id === payload.section_id);
+    payload.adviser = selectedSection?.adviser_name || "";
     adviserInput.value = payload.adviser;
 
     const validationError = validateRegistrationPayload(payload);
@@ -767,6 +1264,16 @@ async function setupTeacherDashboard() {
     setupTeacherNotifications();
     await loadTeacherData();
     startTeacherNotificationPolling();
+
+    let lastTeacherRefresh = Date.now();
+    const refreshTeacherOnActive = () => {
+      if (Date.now() - lastTeacherRefresh > 5000 && !document.hidden) {
+        lastTeacherRefresh = Date.now();
+        loadTeacherData({ silent: true });
+      }
+    };
+    window.addEventListener("focus", refreshTeacherOnActive);
+    document.addEventListener("visibilitychange", refreshTeacherOnActive);
   } catch (error) {
     setMessage(message, error.message, "error");
     redirectToLoginSoon();
@@ -788,6 +1295,7 @@ async function setupStudentDashboard() {
       return;
     }
     setupMobileNavigation();
+    setupStudentSidebarCollapse();
     setupStudentNavigation();
     setupStudentNotifications();
     document.querySelector('.student-section[data-view="home"]')?.addEventListener("click", handleStudentHomeAction);
@@ -795,6 +1303,8 @@ async function setupStudentDashboard() {
     document.getElementById("studentAssessmentsDashboard")?.addEventListener("click", handleStudentAssessmentAction);
     document.getElementById("studentProgressDashboard")?.addEventListener("click", handleStudentLessonAction);
     document.getElementById("studentAchievementsDashboard")?.addEventListener("click", handleStudentAchievementAction);
+    document.getElementById("studentLeaderboardDashboard")?.addEventListener("click", handleStudentLeaderboardAction);
+    document.getElementById("studentLeaderboardDashboard")?.addEventListener("change", handleStudentLeaderboardChange);
     document.getElementById("studentEvaluationSurvey")?.addEventListener("click", handleStudentAssessmentAction);
     document.getElementById("studentEvaluationSurvey")?.addEventListener("submit", submitStudentEvaluationSurvey);
     document.getElementById("studentLessonPlayer")?.addEventListener("click", handleLessonPlayerAction);
@@ -802,13 +1312,152 @@ async function setupStudentDashboard() {
     document.getElementById("studentAvatarInput")?.addEventListener("change", handleStudentAvatarSelection);
     document.getElementById("uploadStudentAvatar")?.addEventListener("click", uploadStudentAvatar);
     document.getElementById("removeStudentAvatar")?.addEventListener("click", removeStudentAvatar);
+    setupStudentVrConnect();
     await loadStudentDashboard();
     await loadStudentNotifications({ silent: true });
     startStudentNotificationPolling();
+
+    let lastStudentRefresh = Date.now();
+    const refreshStudentOnActive = () => {
+      if (Date.now() - lastStudentRefresh > 4000 && !document.hidden) {
+        lastStudentRefresh = Date.now();
+        loadStudentDashboard({ silent: true });
+      }
+    };
+    window.addEventListener("focus", refreshStudentOnActive);
+    document.addEventListener("visibilitychange", refreshStudentOnActive);
+    setInterval(() => {
+      if (!document.hidden && Date.now() - lastStudentRefresh > 20000) {
+        lastStudentRefresh = Date.now();
+        loadStudentDashboard({ silent: true });
+      }
+    }, 20000);
   } catch (error) {
     setMessage(message, error.message || "Please log in first.", "error");
     redirectToLoginSoon(900);
   }
+}
+
+let vrCodeExpiresAt = 0;
+function setupStudentVrConnect() {
+  const stationButtonsGrid = document.getElementById("stationButtonsGrid");
+  const hiddenStationInput = document.getElementById("vrStationSelectValue");
+  const pairStationBtn = document.getElementById("pairStationBtn");
+  const unpairStationBtn = document.getElementById("unpairStationBtn");
+  const stationFeedback = document.getElementById("stationPairFeedback");
+  const selectedStationName = document.getElementById("selectedStationName");
+  const selectedStationSub = document.getElementById("selectedStationSub");
+  const stationChip = document.getElementById("stationChip");
+  const labSectionText = document.getElementById("vrLabSection");
+
+  let currentStation = hiddenStationInput?.value || "station-01";
+
+  if (labSectionText && studentState.profile?.section) {
+    labSectionText.textContent = `${studentState.profile.section} · ${studentState.profile.grade_level || "TVL-ICT"}`;
+  }
+
+  async function syncStationUiState(station) {
+    try {
+      const data = await apiGet(`/api/vr/station-status?station_id=${encodeURIComponent(station)}&claim=false`);
+      if (data && data.status === "paired") {
+        const studentName = data.student_name || studentState.profile?.full_name || "Student";
+        if (selectedStationSub) {
+          selectedStationSub.innerHTML = `<span style="color: #059669; font-weight: 600;">Paired with ${escapeHtml(studentName)}</span>`;
+        }
+        if (stationChip) {
+          stationChip.textContent = "Paired";
+          stationChip.classList.add("paired");
+        }
+        if (pairStationBtn) pairStationBtn.style.display = "none";
+        if (unpairStationBtn) unpairStationBtn.style.display = "inline-flex";
+        setMessage(
+          stationFeedback,
+          `Station ${station.toUpperCase()} is active and paired! Put on your Meta Quest 2 headset.`,
+          "success"
+        );
+      } else {
+        if (selectedStationSub) selectedStationSub.textContent = "Standby · Ready for student pairing";
+        if (stationChip) {
+          stationChip.textContent = "Ready to Pair";
+          stationChip.classList.remove("paired");
+        }
+        if (pairStationBtn) pairStationBtn.style.display = "inline-flex";
+        if (unpairStationBtn) unpairStationBtn.style.display = "none";
+      }
+    } catch (_) {
+      // Ignore network errors
+    }
+  }
+
+  window._syncStudentStationUi = () => syncStationUiState(currentStation);
+
+  // Handle station card selection
+  stationButtonsGrid?.querySelectorAll(".station-select-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      stationButtonsGrid.querySelectorAll(".station-select-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentStation = btn.dataset.station || "station-01";
+      if (hiddenStationInput) hiddenStationInput.value = currentStation;
+
+      const title = btn.querySelector("strong")?.textContent || "Station";
+      if (selectedStationName) selectedStationName.textContent = `${title} — Meta Quest 2`;
+      syncStationUiState(currentStation);
+    });
+  });
+
+  // Initial check on load
+  syncStationUiState(currentStation);
+
+  pairStationBtn?.addEventListener("click", async () => {
+    pairStationBtn.disabled = true;
+    setMessage(stationFeedback, `Pairing with ${currentStation.toUpperCase()}...`);
+
+    try {
+      const data = await apiPost("/api/vr/station-pair", { station_id: currentStation });
+      const studentName = data.student_name || studentState.profile?.full_name || "Student";
+      
+      if (selectedStationSub) {
+        selectedStationSub.innerHTML = `<span style="color: #059669; font-weight: 600;">Paired with ${escapeHtml(studentName)}</span>`;
+      }
+      if (stationChip) {
+        stationChip.textContent = "Paired";
+        stationChip.classList.add("paired");
+      }
+      if (pairStationBtn) pairStationBtn.style.display = "none";
+      if (unpairStationBtn) unpairStationBtn.style.display = "inline-flex";
+
+      setMessage(
+        stationFeedback,
+        `Station ${currentStation.toUpperCase()} paired successfully! Put on your Meta Quest 2 headset to begin.`,
+        "success"
+      );
+    } catch (err) {
+      setMessage(stationFeedback, err.message || "Failed to pair station.", "error");
+    } finally {
+      pairStationBtn.disabled = false;
+    }
+  });
+
+  unpairStationBtn?.addEventListener("click", async () => {
+    unpairStationBtn.disabled = true;
+    setMessage(stationFeedback, "Releasing station pairing...");
+
+    try {
+      await apiPost("/api/vr/station-unpair", { station_id: currentStation });
+      if (selectedStationSub) selectedStationSub.textContent = "Standby · Ready for student pairing";
+      if (stationChip) {
+        stationChip.textContent = "Ready to Pair";
+        stationChip.classList.remove("paired");
+      }
+      if (pairStationBtn) pairStationBtn.style.display = "inline-flex";
+      if (unpairStationBtn) unpairStationBtn.style.display = "none";
+      setMessage(stationFeedback, `Station ${currentStation.toUpperCase()} unpaired. Ready for a new session.`, "success");
+    } catch (err) {
+      setMessage(stationFeedback, err.message || "Failed to unpair station.", "error");
+    } finally {
+      unpairStationBtn.disabled = false;
+    }
+  });
 }
 
 function setupTeacherNavigation() {
@@ -1018,6 +1667,94 @@ function setupStudentNavigation() {
   document.querySelectorAll("[data-jump-student]").forEach((button) => {
     button.addEventListener("click", () => showStudentView(button.dataset.jumpStudent));
   });
+  document.querySelector("[data-student-view].active")?.setAttribute("aria-current", "page");
+  updateStudentBreadcrumb(document.querySelector(".student-section.active")?.dataset.view || "home");
+  setupStudentNavSearch();
+}
+
+function setupStudentSidebarCollapse() {
+  const toggle = document.getElementById("studentSidebarToggle");
+  const sidebar = document.getElementById("studentSidebar");
+  const search = document.querySelector("#studentSidebar .sidebar-search");
+  const searchInput = document.getElementById("studentNavSearch");
+  if (!toggle || !sidebar || toggle.dataset.ready === "true") return;
+  toggle.dataset.ready = "true";
+
+  sidebar.querySelectorAll("[data-student-view]").forEach((item) => {
+    const label = item.querySelector("span")?.textContent.trim() || "Student page";
+    item.setAttribute("aria-label", label);
+    item.setAttribute("title", label);
+  });
+
+  let collapsed = false;
+  try {
+    collapsed = window.localStorage.getItem(STUDENT_SIDEBAR_STORAGE_KEY) === "true";
+  } catch (error) {
+    collapsed = false;
+  }
+  setStudentSidebarCollapsed(collapsed, { persist: false });
+
+  toggle.addEventListener("click", () => {
+    setStudentSidebarCollapsed(!document.body.classList.contains("student-sidebar-collapsed"));
+  });
+
+  search?.addEventListener("click", () => {
+    if (!document.body.classList.contains("student-sidebar-collapsed")) return;
+    setStudentSidebarCollapsed(false);
+    window.requestAnimationFrame(() => searchInput?.focus());
+  });
+}
+
+function setStudentSidebarCollapsed(collapsed, { persist = true } = {}) {
+  const toggle = document.getElementById("studentSidebarToggle");
+  const sidebar = document.getElementById("studentSidebar");
+  const sidebarScrollTop = sidebar?.scrollTop || 0;
+  document.body.classList.toggle("student-sidebar-collapsed", Boolean(collapsed));
+  if (sidebar) {
+    sidebar.scrollTop = sidebarScrollTop;
+    window.requestAnimationFrame(() => {
+      sidebar.scrollTop = sidebarScrollTop;
+    });
+  }
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    toggle.setAttribute("aria-label", collapsed ? "Expand navigation" : "Collapse navigation");
+    toggle.setAttribute("title", collapsed ? "Expand navigation" : "Collapse navigation");
+  }
+  if (persist) {
+    try {
+      window.localStorage.setItem(STUDENT_SIDEBAR_STORAGE_KEY, collapsed ? "true" : "false");
+    } catch (error) {
+      // The sidebar remains usable when browser storage is unavailable.
+    }
+  }
+}
+
+function setupStudentNavSearch() {
+  const input = document.getElementById("studentNavSearch");
+  if (!input || input.dataset.ready === "true") return;
+  input.dataset.ready = "true";
+  const items = [...document.querySelectorAll("#studentSidebar [data-student-view]")];
+  const filterNavigation = () => {
+    const query = input.value.trim().toLowerCase();
+    items.forEach((item) => {
+      item.hidden = Boolean(query) && !item.textContent.toLowerCase().includes(query);
+    });
+  };
+  input.addEventListener("input", filterNavigation);
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    input.value = "";
+    filterNavigation();
+    input.blur();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
+    event.preventDefault();
+    setStudentSidebarCollapsed(false);
+    input.focus();
+    input.select();
+  });
 }
 
 function setupStudentNotifications() {
@@ -1058,14 +1795,28 @@ function showStudentView(view, activeButton = null) {
   });
   let firstMatchActivated = false;
   document.querySelectorAll("[data-student-view]").forEach((button) => {
+    const navView = view === "lesson-player" ? "lessons" : view;
     const shouldActivate = activeButton
       ? button === activeButton
-      : button.dataset.studentView === view && !firstMatchActivated;
+      : button.dataset.studentView === navView && !firstMatchActivated;
     if (!activeButton && shouldActivate) firstMatchActivated = true;
     button.classList.toggle("active", shouldActivate);
+    if (shouldActivate) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
   });
+  updateStudentBreadcrumb(view);
   setMobileNavigationOpen(false);
   resetDashboardScroll(".student-section.active");
+  if (view === "vr-connect") {
+    window._syncStudentStationUi?.();
+  }
+}
+
+function updateStudentBreadcrumb(view) {
+  const meta = STUDENT_VIEW_META[view] || STUDENT_VIEW_META.home;
+  setText("studentBreadcrumbParent", meta.parent);
+  setText("studentBreadcrumbCurrent", meta.current);
+  document.title = `TechWise 360 | ${meta.title}`;
 }
 
 function resetDashboardScroll(activeSectionSelector) {
@@ -1191,6 +1942,17 @@ function setupTeacherForms() {
     teacherState.evidenceFilters.classKey = event.target.value;
     renderCapstoneEvidenceDashboard();
   });
+  document.getElementById("evidenceRangeFilter")?.addEventListener("change", (event) => {
+    teacherState.evidenceFilters.rangeDays = event.target.value;
+    renderCapstoneEvidenceDashboard();
+  });
+  const evidencePerformanceChart = document.getElementById("evidencePerformanceChart");
+  evidencePerformanceChart?.addEventListener("pointermove", handleEvidencePerformancePointerMove);
+  evidencePerformanceChart?.addEventListener("pointerleave", handleEvidencePerformancePointerLeave);
+  evidencePerformanceChart?.addEventListener("focusin", handleEvidencePerformanceFocusIn);
+  evidencePerformanceChart?.addEventListener("focusout", handleEvidencePerformanceFocusOut);
+  evidencePerformanceChart?.addEventListener("click", handleEvidencePerformanceSelect);
+  evidencePerformanceChart?.addEventListener("keydown", handleEvidencePerformanceKeydown);
   document.querySelector(".capstone-evidence-panel")?.addEventListener("click", handleEvidenceDownload);
   document.getElementById("evaluationGradeTabs")?.addEventListener("click", handleEvaluationGradeTab);
   document.getElementById("evaluationDashboard")?.addEventListener("click", handleEvaluationDashboardClick);
@@ -1229,6 +1991,19 @@ function setupTeacherForms() {
   document.querySelector(".student-achievement-coverage-card")?.addEventListener("click", handleStudentAchievementCoverageAction);
   document.getElementById("studentFullProfile")?.addEventListener("click", handleStudentFullProfileAction);
   document.getElementById("studentFullProfile")?.addEventListener("change", handleStudentFullProfileChange);
+  document.getElementById("sectionSchoolYearFilter")?.addEventListener("change", handleSectionFilterChange);
+  document.getElementById("sectionGradeFilter")?.addEventListener("change", handleSectionFilterChange);
+  document.getElementById("sectionStatusFilter")?.addEventListener("change", handleSectionFilterChange);
+  document.getElementById("sectionSearch")?.addEventListener("input", handleSectionFilterChange);
+  document.getElementById("sectionGradeTabs")?.addEventListener("click", handleSectionGradeTab);
+  document.getElementById("sectionsTableBody")?.addEventListener("click", handleSectionTableAction);
+  document.getElementById("sectionPagination")?.addEventListener("click", handleSectionPagination);
+  document.getElementById("addSectionButton")?.addEventListener("click", openNewSectionEditor);
+  document.getElementById("sectionEditorForm")?.addEventListener("submit", submitSectionEditor);
+  document.getElementById("sectionActivateButton")?.addEventListener("click", activateSelectedSection);
+  document.getElementById("sectionArchiveButton")?.addEventListener("click", archiveSelectedSection);
+  document.querySelector(".section-panel-tabs")?.addEventListener("click", handleSectionPanelTab);
+  document.getElementById("sectionRosterForm")?.addEventListener("submit", submitSectionRoster);
   document.getElementById("quartersList")?.addEventListener("click", handleQuarterAction);
   document.getElementById("lessonsTable")?.addEventListener("click", handleContentAction);
 
@@ -1269,14 +2044,15 @@ function setupTeacherForms() {
   });
 }
 
-async function loadTeacherData() {
+async function loadTeacherData({ silent = false } = {}) {
   const message = document.getElementById("teacherMessage");
-  setMessage(message, "Loading dashboard data...");
+  if (!silent) setMessage(message, "Loading dashboard data...");
 
   try {
-    const [dashboard, quarters, files, assessments, notifications, settingsResult, evaluation, leaderboard, competitions, badgeManagement, completion] = await Promise.all([
+    const [dashboard, quarters, sectionsResult, files, assessments, notifications, settingsResult, evaluation, leaderboard, competitions, badgeManagement, completion] = await Promise.all([
       apiGet("/api/teacher/students"),
       apiGet("/api/teacher/quarters"),
+      apiGet("/api/teacher/sections").catch((error) => ({ sections: [], summary: {}, recent_activity: [], school_years: [], adviser_suggestions: [], unassigned_students: [], error: error.message })),
       apiGet("/api/teacher/lesson-files").catch(() => ({ files: [] })),
       apiGet("/api/teacher/assessments").catch(() => ({ assessments: [], recent_submissions: [], topic_scores: [] })),
       apiGet("/api/teacher/notifications").catch(() => ({ notifications: [], unread_count: 0 })),
@@ -1292,6 +2068,21 @@ async function loadTeacherData() {
 
     teacherState = {
       students: dashboard.students || [],
+      sections: sectionsResult.sections || [],
+      sectionSummary: sectionsResult.summary || { total_sections: 0, active_sections: 0, assigned_students: 0, available_seats: 0 },
+      sectionActivities: sectionsResult.recent_activity || [],
+      sectionSchoolYears: sectionsResult.school_years || [],
+      sectionAdviserSuggestions: sectionsResult.adviser_suggestions || [],
+      sectionUnassignedStudents: sectionsResult.unassigned_students || [],
+      sectionError: sectionsResult.error || "",
+      selectedSectionId: teacherState.selectedSectionId || sectionsResult.sections?.[0]?.id || "",
+      sectionPage: teacherState.sectionPage || 1,
+      sectionFilters: {
+        ...(teacherState.sectionFilters || { schoolYear: "", grade: "", status: "", search: "" }),
+        schoolYear: teacherState.sectionFilters?.schoolYear || sectionsResult.selected_school_year || dashboard.active_quarter?.school_year || ""
+      },
+      sectionPanel: teacherState.sectionPanel || "details",
+      sectionCreateMode: Boolean(teacherState.sectionCreateMode),
       activeQuarter: dashboard.active_quarter || null,
       modules: dashboard.modules || [],
       lessons: dashboard.lessons || [],
@@ -1314,7 +2105,7 @@ async function loadTeacherData() {
       assessmentPage: teacherState.assessmentPage || 1,
       selectedAssessmentId: teacherState.selectedAssessmentId || "",
       assessmentFilters: teacherState.assessmentFilters || { class: "", type: "", status: "", search: "" },
-      evidenceFilters: teacherState.evidenceFilters || { classKey: "" },
+      evidenceFilters: teacherState.evidenceFilters || { classKey: "", rangeDays: "90" },
       evaluation: normalizeTeacherEvaluationData(evaluation),
       evaluationGrade: teacherState.evaluationGrade || "",
       achievementTab: normalizeTeacherAchievementTab(teacherState.achievementTab || "overview"),
@@ -1357,7 +2148,7 @@ async function loadTeacherData() {
       teacherDefaultsApplied = true;
       showTeacherView(settings.default_landing_view || "overview");
     }
-    setMessage(message, "", "success");
+    if (!silent) setMessage(message, "", "success");
   } catch (error) {
     setMessage(message, error.message, "error");
   }
@@ -1386,6 +2177,7 @@ function renderTeacherDashboard() {
   renderPendingStudents();
   renderCapstoneEvidenceDashboard();
   renderTeacherStudents();
+  renderSectionsDashboard();
   renderQuarters();
   renderContentSelects();
   renderLessonMetrics();
@@ -1403,6 +2195,389 @@ function renderTeacherDashboard() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function renderSectionsDashboard() {
+  const tableBody = document.getElementById("sectionsTableBody");
+  if (!tableBody) return;
+  const filters = teacherState.sectionFilters || { schoolYear: "", grade: "", status: "", search: "" };
+  const years = teacherState.sectionSchoolYears?.length
+    ? teacherState.sectionSchoolYears
+    : [teacherState.activeQuarter?.school_year].filter(Boolean);
+  const yearSelect = document.getElementById("sectionSchoolYearFilter");
+  if (yearSelect) {
+    yearSelect.innerHTML = years.map((year) => `<option value="${escapeAttribute(year)}">${escapeHtml(sectionYearOnlyLabel(year))}</option>`).join("") || `<option value="">No school years</option>`;
+    yearSelect.value = years.includes(filters.schoolYear) ? filters.schoolYear : years[0] || "";
+    filters.schoolYear = yearSelect.value;
+  }
+  const gradeSelect = document.getElementById("sectionGradeFilter");
+  const statusSelect = document.getElementById("sectionStatusFilter");
+  const searchInput = document.getElementById("sectionSearch");
+  if (gradeSelect) gradeSelect.value = filters.grade || "";
+  if (statusSelect) statusSelect.value = filters.status || "";
+  if (searchInput && searchInput.value !== filters.search) searchInput.value = filters.search || "";
+
+  const yearSections = (teacherState.sections || []).filter((section) => !filters.schoolYear || section.school_year === filters.schoolYear);
+  const activeSections = yearSections.filter((section) => section.status === "active");
+  setText("sectionMetricTotal", yearSections.length);
+  setText("sectionMetricActive", activeSections.length);
+  setText("sectionMetricAssigned", activeSections.reduce((sum, section) => sum + Number(section.assigned_count || 0), 0));
+  setText("sectionMetricSeats", activeSections.reduce((sum, section) => sum + Number(section.available_seats || 0), 0));
+  const activeNote = document.getElementById("sectionMetricActiveNote");
+  if (activeNote) activeNote.innerHTML = `<b>${activeSections.length}</b> ready for registration`;
+
+  const gradeLabels = ["Grade 9", "Grade 10"];
+  const sectionsForGrade = (grade) => yearSections.filter((section) => section.grade_level === grade);
+  const activeForGrade = (grade) => activeSections.filter((section) => section.grade_level === grade);
+  renderMetricSparkline("sections-total", gradeLabels.map((grade) => sectionsForGrade(grade).length), gradeLabels, "Total sections by grade");
+  renderMetricSparkline("sections-active", gradeLabels.map((grade) => activeForGrade(grade).length), gradeLabels, "Active sections by grade");
+  renderMetricSparkline("sections-assigned", gradeLabels.map((grade) => activeForGrade(grade).reduce((sum, section) => sum + Number(section.assigned_count || 0), 0)), gradeLabels, "Assigned students by grade");
+  renderMetricSparkline("sections-seats", gradeLabels.map((grade) => activeForGrade(grade).reduce((sum, section) => sum + Number(section.available_seats || 0), 0)), gradeLabels, "Available seats by grade");
+
+  document.querySelectorAll("[data-section-grade-tab]").forEach((button) => {
+    const active = button.dataset.sectionGradeTab === (filters.grade || "");
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+    const count = yearSections.filter((section) => !button.dataset.sectionGradeTab || section.grade_level === button.dataset.sectionGradeTab).length;
+    const label = button.dataset.sectionGradeTab || "All Sections";
+    button.innerHTML = `${escapeHtml(label)} <span>${count}</span>`;
+  });
+
+  const search = String(filters.search || "").trim().toLowerCase();
+  const filtered = yearSections.filter((section) =>
+    (!filters.grade || section.grade_level === filters.grade)
+    && (!filters.status || section.status === filters.status)
+    && (!search || [section.name, section.code, section.adviser_name, section.room, section.grade_level]
+      .some((value) => String(value || "").toLowerCase().includes(search)))
+  );
+  const pageCount = Math.max(1, Math.ceil(filtered.length / SECTIONS_PER_PAGE));
+  teacherState.sectionPage = Math.min(Math.max(1, teacherState.sectionPage || 1), pageCount);
+  const start = (teacherState.sectionPage - 1) * SECTIONS_PER_PAGE;
+  const visible = filtered.slice(start, start + SECTIONS_PER_PAGE);
+  tableBody.innerHTML = teacherState.sectionError
+    ? `<tr><td colspan="8"><div class="section-empty-state error"><i data-lucide="database-zap"></i><strong>Section migration required</strong><span>${escapeHtml(teacherState.sectionError)}</span></div></td></tr>`
+    : visible.length ? visible.map(renderSectionTableRow).join("")
+      : `<tr><td colspan="8"><div class="section-empty-state"><i data-lucide="briefcase-business"></i><strong>No sections found</strong><span>Adjust the filters or create a new draft section.</span></div></td></tr>`;
+  setText("sectionPageSummary", filtered.length
+    ? `Showing ${start + 1}–${Math.min(start + SECTIONS_PER_PAGE, filtered.length)} of ${filtered.length} sections`
+    : "Showing 0 sections");
+  const pagination = document.getElementById("sectionPagination");
+  if (pagination) pagination.innerHTML = renderDashboardPagination({
+    currentPage: teacherState.sectionPage,
+    pageCount,
+    pageNumberAttribute: "data-section-page",
+    label: "Section pagination"
+  });
+  setText("sectionTableCaption", filters.schoolYear ? `${filters.schoolYear} managed sections` : "All managed sections");
+
+  const adviserList = document.getElementById("sectionAdviserSuggestions");
+  if (adviserList) adviserList.innerHTML = (teacherState.sectionAdviserSuggestions || []).map((name) => `<option value="${escapeAttribute(name)}"></option>`).join("");
+  renderSectionEditor();
+  renderSectionActivity();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function sectionYearOnlyLabel(schoolYear) {
+  const value = String(schoolYear || "").trim();
+  const match = value.match(/^(\d{4})(?:\s*-\s*\d{4})?$/);
+  return match ? match[1] : value;
+}
+
+function renderSectionTableRow(section) {
+  const assigned = Number(section.assigned_count || 0);
+  const capacity = Number(section.capacity || 0);
+  const capacityState = assigned > capacity ? "over" : assigned === capacity ? "full" : "available";
+  const selected = !teacherState.sectionCreateMode && teacherState.selectedSectionId === section.id;
+  return `
+    <tr class="${selected ? "selected" : ""}" data-section-row="${escapeAttribute(section.id)}">
+      <td><button class="section-name-button" type="button" data-section-select="${escapeAttribute(section.id)}"><strong>${escapeHtml(section.name)}</strong><small>${escapeHtml(section.code)}</small></button></td>
+      <td>${escapeHtml(section.grade_level)}</td>
+      <td><strong>${assigned}</strong> assigned</td>
+      <td><span class="section-capacity-pill ${capacityState}">${assigned}/${capacity}${capacityState === "over" ? " Over" : capacityState === "full" ? " Full" : ""}</span></td>
+      <td>${escapeHtml(section.adviser_name)}</td>
+      <td>${escapeHtml(section.room || "—")}</td>
+      <td><span class="status-pill ${escapeAttribute(section.status)}">${escapeHtml(titleCase(section.status))}</span></td>
+      <td><button class="icon-button" type="button" data-section-select="${escapeAttribute(section.id)}" aria-label="Edit ${escapeAttribute(section.name)}"><i data-lucide="pencil"></i></button></td>
+    </tr>`;
+}
+
+function renderSectionEditor() {
+  const form = document.getElementById("sectionEditorForm");
+  if (!form) return;
+  const section = (teacherState.sections || []).find((item) => item.id === teacherState.selectedSectionId) || null;
+  const creation = teacherState.sectionCreateMode;
+  const panel = teacherState.sectionPanel || "details";
+  const schoolYearField = form.elements.school_year;
+  const previousSchoolYear = schoolYearField?.value || "";
+  const availableSchoolYears = [...new Set([
+    ...(teacherState.sectionSchoolYears || []),
+    teacherState.activeQuarter?.school_year,
+    section?.school_year
+  ].filter(Boolean))].sort().reverse();
+  if (schoolYearField) {
+    schoolYearField.innerHTML = availableSchoolYears.length
+      ? availableSchoolYears.map((year) => `<option value="${escapeAttribute(year)}">${escapeHtml(sectionYearOnlyLabel(year))}</option>`).join("")
+      : `<option value="">No school years</option>`;
+    const preferredSchoolYear = creation && form.dataset.mode === "create"
+      ? previousSchoolYear
+      : section?.school_year || teacherState.sectionFilters.schoolYear || teacherState.activeQuarter?.school_year || "";
+    schoolYearField.value = availableSchoolYears.includes(preferredSchoolYear) ? preferredSchoolYear : availableSchoolYears[0] || "";
+  }
+  document.querySelectorAll("[data-section-panel-tab]").forEach((button) => {
+    const active = button.dataset.sectionPanelTab === panel;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.disabled = creation && button.dataset.sectionPanelTab === "roster";
+  });
+  document.getElementById("sectionDetailsPanel").hidden = panel !== "details";
+  document.getElementById("sectionRosterPanel").hidden = panel !== "roster";
+  document.getElementById("sectionStatusField").hidden = creation;
+  document.getElementById("sectionActivateButton").hidden = creation || !section || section.status === "active" || section.status === "archived";
+  document.getElementById("sectionArchiveButton").hidden = creation || !section || section.status === "archived";
+  document.getElementById("sectionSaveButton").querySelector("span").textContent = creation ? "Create Draft" : "Save Changes";
+  setText("sectionEditorEyebrow", creation ? "New draft section" : "Section workspace");
+  setText("sectionEditorTitle", creation ? "Create New Section" : section?.name || "Select a Section");
+  const statusBadge = document.getElementById("sectionEditorStatus");
+  if (statusBadge) {
+    const status = creation ? "draft" : section?.status || "draft";
+    statusBadge.className = `status-pill ${status}`;
+    statusBadge.textContent = titleCase(status);
+  }
+  if (creation) {
+    Array.from(form.elements).forEach((element) => { element.disabled = false; });
+    if (form.elements.id.value || form.dataset.mode !== "create") {
+      form.reset();
+      form.dataset.mode = "create";
+      form.elements.id.value = "";
+      form.elements.school_year.value = teacherState.sectionFilters.schoolYear || teacherState.activeQuarter?.school_year || "";
+      form.elements.grade_level.value = teacherState.sectionFilters.grade || "Grade 9";
+      form.elements.capacity.value = "35";
+      form.elements.status.value = "draft";
+    }
+    setText("sectionRosterCount", 0);
+    return;
+  }
+  if (!section) {
+    form.reset();
+    form.dataset.mode = "empty";
+    Array.from(form.elements).forEach((element) => { if (element.type !== "hidden") element.disabled = true; });
+    setText("sectionRosterCount", 0);
+    renderSectionRoster(null);
+    return;
+  }
+  Array.from(form.elements).forEach((element) => { element.disabled = false; });
+  if (form.dataset.sectionId !== section.id) {
+    form.dataset.mode = "edit";
+    form.dataset.sectionId = section.id;
+    ["id", "school_year", "grade_level", "name", "code", "capacity", "room", "adviser_name", "status"].forEach((field) => {
+      if (form.elements[field]) form.elements[field].value = section[field] ?? "";
+    });
+  }
+  const assigned = Number(section.assigned_count || 0);
+  const capacity = Number(section.capacity || 0);
+  const notice = document.getElementById("sectionCapacityNotice");
+  if (notice) {
+    notice.hidden = assigned < capacity;
+    notice.className = `section-capacity-notice ${assigned > capacity ? "over" : "full"}`;
+    notice.textContent = assigned > capacity
+      ? `Over capacity: ${assigned} assigned for ${capacity} seats. Transfers remain available.`
+      : `This section is full at ${assigned}/${capacity}. Assignments remain available with a warning.`;
+  }
+  setText("sectionRosterCount", section.roster?.length || 0);
+  renderSectionRoster(section);
+}
+
+function renderSectionRoster(section) {
+  const list = document.getElementById("sectionRosterList");
+  const form = document.getElementById("sectionRosterForm");
+  if (!list || !form) return;
+  const roster = section?.roster || [];
+  list.innerHTML = roster.length ? roster.map((student) => `
+    <article class="section-roster-row">
+      <span class="section-roster-avatar">${escapeHtml(getInitials(student.full_name || student.username))}</span>
+      <div><strong>${escapeHtml(student.full_name || student.username)}</strong><small>${escapeHtml(student.student_number || student.email || titleCase(student.status))}</small></div>
+      <span class="status-pill ${student.status === "approved" ? "active" : "draft"}">${escapeHtml(titleCase(student.status))}</span>
+    </article>`).join("") : `<div class="section-empty-state compact"><i data-lucide="users"></i><strong>No students assigned</strong><span>Use the selector above to assign or transfer a learner.</span></div>`;
+  const rosterIds = new Set(roster.map((student) => student.id));
+  const candidates = (teacherState.students || []).filter((student) =>
+    ["pending", "approved"].includes(student.status) && !rosterIds.has(student.id)
+  );
+  form.elements.student_id.innerHTML = `<option value="">Select a student</option>${candidates.map((student) => `
+    <option value="${escapeAttribute(student.id)}">${escapeHtml(student.full_name || student.username)} — ${escapeHtml(student.section || "Unassigned")}</option>`).join("")}`;
+  form.querySelector("button").disabled = !section || section.status !== "active" || candidates.length === 0;
+}
+
+function renderSectionActivity() {
+  const container = document.getElementById("sectionActivityList");
+  if (!container) return;
+  const activities = (teacherState.sectionActivities || []).filter((activity) => {
+    const section = teacherState.sections.find((item) => item.id === activity.section_id);
+    return !teacherState.sectionFilters.schoolYear || section?.school_year === teacherState.sectionFilters.schoolYear;
+  }).slice(0, 12);
+  container.innerHTML = activities.length ? activities.map((activity) => {
+    const labels = {
+      created: "created",
+      updated: "updated",
+      activated: "activated",
+      drafted: "moved to draft",
+      archived: "archived",
+      student_assigned: `assigned ${activity.student_name || "a student"} to`,
+      student_transferred: `transferred ${activity.student_name || "a student"} to`
+    };
+    const icons = { created: "plus", updated: "pencil", activated: "circle-check-big", drafted: "file-pen-line", archived: "archive", student_assigned: "user-plus", student_transferred: "arrow-right-left" };
+    return `<article class="section-activity-row"><span><i data-lucide="${icons[activity.action] || "activity"}"></i></span><div><strong>${escapeHtml(activity.actor_name || "System")} ${escapeHtml(labels[activity.action] || activity.action)} ${escapeHtml(activity.section_name)}</strong><small>${escapeHtml(activity.grade_level || "")} · ${escapeHtml(formatDateTime(activity.created_at))}</small></div></article>`;
+  }).join("") : `<div class="section-empty-state compact"><i data-lucide="history"></i><strong>No recent activity</strong><span>Section changes will appear here.</span></div>`;
+}
+
+function handleSectionFilterChange(event) {
+  const map = {
+    sectionSchoolYearFilter: "schoolYear",
+    sectionGradeFilter: "grade",
+    sectionStatusFilter: "status",
+    sectionSearch: "search"
+  };
+  const key = map[event.target.id];
+  if (!key) return;
+  teacherState.sectionFilters[key] = event.target.value;
+  teacherState.sectionPage = 1;
+  renderSectionsDashboard();
+}
+
+function handleSectionGradeTab(event) {
+  const button = event.target.closest("[data-section-grade-tab]");
+  if (!button) return;
+  teacherState.sectionFilters.grade = button.dataset.sectionGradeTab;
+  teacherState.sectionPage = 1;
+  renderSectionsDashboard();
+}
+
+function handleSectionTableAction(event) {
+  const button = event.target.closest("[data-section-select]");
+  if (!button) return;
+  teacherState.selectedSectionId = button.dataset.sectionSelect;
+  teacherState.sectionCreateMode = false;
+  teacherState.sectionPanel = "details";
+  const form = document.getElementById("sectionEditorForm");
+  if (form) form.dataset.sectionId = "";
+  renderSectionsDashboard();
+}
+
+function handleSectionPagination(event) {
+  const button = event.target.closest("[data-section-page]");
+  if (!button) return;
+  teacherState.sectionPage = Number(button.dataset.sectionPage) || 1;
+  renderSectionsDashboard();
+}
+
+function openNewSectionEditor() {
+  teacherState.sectionCreateMode = true;
+  teacherState.sectionPanel = "details";
+  const form = document.getElementById("sectionEditorForm");
+  if (form) { form.dataset.mode = ""; form.dataset.sectionId = ""; }
+  renderSectionsDashboard();
+  form?.elements.name?.focus();
+}
+
+async function submitSectionEditor(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const payload = formToObject(form);
+  payload.capacity = Number(payload.capacity);
+  const creation = teacherState.sectionCreateMode || !payload.id;
+  const button = document.getElementById("sectionSaveButton");
+  try {
+    setButtonLoading(button, true, creation ? "Creating..." : "Saving...");
+    const result = creation
+      ? await apiPost("/api/teacher/sections", payload)
+      : await apiPatch("/api/teacher/sections", payload);
+    teacherState.selectedSectionId = result.section.id;
+    teacherState.sectionCreateMode = false;
+    await reloadSectionsData();
+    showToast({ title: creation ? "Section created" : "Section updated", message: creation ? "The new section is saved as a draft." : "Section details and linked student records are synchronized.", type: "success" });
+  } catch (error) {
+    showToast({ title: "Unable to save section", message: error.message, type: "error" });
+  } finally {
+    setButtonLoading(button, false);
+  }
+}
+
+async function activateSelectedSection() {
+  const section = teacherState.sections.find((item) => item.id === teacherState.selectedSectionId);
+  if (!section) return;
+  const confirmed = await showConfirmModal({ title: `Activate ${section.name}?`, message: "It will become available for student registration in this school year.", confirmText: "Activate", icon: "circle-check-big" });
+  if (!confirmed) return;
+  await updateSectionStatus(section, "active");
+}
+
+async function archiveSelectedSection() {
+  const section = teacherState.sections.find((item) => item.id === teacherState.selectedSectionId);
+  if (!section) return;
+  const confirmed = await showConfirmModal({ title: `Archive ${section.name}?`, message: section.roster?.length ? "This section still has assigned students. Transfer them before archiving." : "The section will be hidden from registration while its history is preserved.", confirmText: "Archive", tone: "danger", icon: "archive" });
+  if (!confirmed) return;
+  await updateSectionStatus(section, "archived");
+}
+
+async function updateSectionStatus(section, status) {
+  try {
+    await apiPatch("/api/teacher/sections", { id: section.id, status });
+    await reloadSectionsData();
+    showToast({ title: `Section ${status}`, message: `${section.name} is now ${status}.`, type: "success" });
+  } catch (error) {
+    showToast({ title: "Status change blocked", message: error.message, type: "error" });
+  }
+}
+
+function handleSectionPanelTab(event) {
+  const button = event.target.closest("[data-section-panel-tab]");
+  if (!button || button.disabled) return;
+  teacherState.sectionPanel = button.dataset.sectionPanelTab;
+  renderSectionEditor();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function submitSectionRoster(event) {
+  event.preventDefault();
+  const studentId = event.currentTarget.elements.student_id.value;
+  const section = teacherState.sections.find((item) => item.id === teacherState.selectedSectionId);
+  if (!studentId || !section) return;
+  const button = event.currentTarget.querySelector("button");
+  try {
+    setButtonLoading(button, true, "Assigning...");
+    const result = await apiPost("/api/teacher/section-roster", { student_id: studentId, section_id: section.id });
+    await reloadSectionsData(true);
+    showToast({ title: "Roster updated", message: result.warning || `Student assigned to ${section.name}.`, type: result.warning ? "warning" : "success" });
+  } catch (error) {
+    showToast({ title: "Unable to update roster", message: error.message, type: "error" });
+  } finally {
+    setButtonLoading(button, false);
+  }
+}
+
+async function reloadSectionsData(refreshStudents = false) {
+  const query = teacherState.sectionFilters.schoolYear ? `?school_year=${encodeURIComponent(teacherState.sectionFilters.schoolYear)}` : "";
+  const [data, studentData] = await Promise.all([
+    apiGet(`/api/teacher/sections${query}`),
+    refreshStudents ? apiGet("/api/teacher/students") : Promise.resolve(null)
+  ]);
+  teacherState.sections = data.sections || [];
+  teacherState.sectionSummary = data.summary || {};
+  teacherState.sectionActivities = data.recent_activity || [];
+  teacherState.sectionSchoolYears = data.school_years || [];
+  teacherState.sectionAdviserSuggestions = data.adviser_suggestions || [];
+  teacherState.sectionUnassignedStudents = data.unassigned_students || [];
+  teacherState.sectionError = "";
+  if (studentData?.students) teacherState.students = studentData.students;
+  const form = document.getElementById("sectionEditorForm");
+  if (form) form.dataset.sectionId = "";
+  renderSectionsDashboard();
+  if (refreshStudents) renderTeacherStudents();
+}
+
+function formatDateTime(value) {
+  if (!value) return "Unknown time";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return new Intl.DateTimeFormat("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+}
+
 function renderTeacherLeaderboardDashboard() {
   const container = document.getElementById("teacherLeaderboardDashboard");
   if (!container) return;
@@ -1414,7 +2589,6 @@ function renderTeacherLeaderboardDashboard() {
   container.innerHTML = `
     <div class="dashboard-page-header teacher-leaderboard-header">
       <div>
-        <span class="home-eyebrow"><i data-lucide="bar-chart-3"></i> VR Performance</span>
         <h1>VR Leaderboard</h1>
         <p>Review assembly and disassembly results by score, completion time, and recorded mistakes.</p>
       </div>
@@ -1501,7 +2675,6 @@ function renderTeacherCompetitionsDashboard() {
     <section class="panel-card competition-management-panel">
       <div class="panel-title-row">
         <div>
-          <span class="home-eyebrow"><i data-lucide="clipboard-check"></i> VR Activity Setup</span>
           <h2>VR Activities</h2>
           <p>Manage VR activity windows for assembly and disassembly attempts.</p>
         </div>
@@ -1596,7 +2769,6 @@ function renderTeacherCompletionDashboard() {
   container.innerHTML = `
     <div class="dashboard-page-header">
       <div>
-        <span class="home-eyebrow"><i data-lucide="list-checks"></i> Completion Monitoring</span>
         <h1>Class Completion Monitor</h1>
         <p>Monitor lesson completion, in-progress students, and learners who have not started.</p>
       </div>
@@ -3127,16 +4299,36 @@ function renderTeacherMetrics() {
   const approvedStudents = teacherState.students.filter((student) => student.status === "approved");
   const summaries = approvedStudents.map(getTeacherStudentSummary);
   const publishedLessons = teacherState.lessons.filter((lesson) => lesson.status === "published" && isLessonInActiveQuarter(lesson));
+  const totalAssignedLessons = summaries.reduce((sum, summary) => sum + summary.total, 0);
+  const totalCompletedLessons = summaries.reduce((sum, summary) => sum + summary.completed, 0);
+  const completionRate = percentOf(totalCompletedLessons, totalAssignedLessons);
+  const approvedStudentIds = new Set(approvedStudents.map((student) => student.id));
+  const publishedLessonIds = new Set(publishedLessons.map((lesson) => lesson.id));
+  const latestAssessmentAttempts = getLatestAttemptsByStudentLesson(teacherState.assessments.flatMap((assessment) => {
+    const lessonId = assessment.lesson_id || assessment.id;
+    if (!publishedLessonIds.has(lessonId)) return [];
+    const attempts = Array.isArray(assessment.all_attempts) ? assessment.all_attempts : assessment.attempts || [];
+    return attempts
+      .filter((attempt) => approvedStudentIds.has(attempt.student_id))
+      .map((attempt) => ({ ...attempt, lesson_id: attempt.lesson_id || lessonId }));
+  }));
+  const assessmentScores = latestAssessmentAttempts
+    .map((attempt) => Number(attempt.score_percent))
+    .filter(Number.isFinite);
+  const averageScore = assessmentScores.length
+    ? Math.round(assessmentScores.reduce((sum, score) => sum + score, 0) / assessmentScores.length)
+    : null;
   const topPerformer = summaries
     .filter((summary) => summary.student.status === "approved")
     .sort((a, b) => b.average - a.average)[0];
 
   document.getElementById("metricStudents").textContent = String(teacherState.students.length);
-  document.getElementById("metricOnTrack").textContent = String(summaries.filter((summary) => summary.progressStatus === "On Track").length);
+  document.getElementById("metricCompletion").textContent = `${completionRate}%`;
+  document.getElementById("metricAverage").textContent = averageScore === null ? "-" : `${averageScore}%`;
   document.getElementById("metricSupport").textContent = String(summaries.filter((summary) => summary.progressStatus === "Needs Support").length);
   document.getElementById("metricLessons").textContent = String(publishedLessons.length);
   document.getElementById("metricQuarter").textContent = teacherState.activeQuarter ? teacherState.activeQuarter.title : "No active term";
-  renderTeacherMetricSparklines({ approvedStudents, summaries, publishedLessons });
+  renderTeacherMetricSparklines({ approvedStudents, summaries, publishedLessons, latestAssessmentAttempts });
 
   setText("studentMetricTotal", teacherState.students.length);
   setText("studentMetricClasses", new Set(teacherState.students.map((student) => `${student.grade_level || "-"}-${student.section || "-"}`)).size);
@@ -3148,6 +4340,7 @@ function renderTeacherMetrics() {
   setText("studentMetricTopScore", `${topPerformer?.average || 0}%`);
 
   const activeQuarterCard = document.getElementById("activeQuarterCard");
+  if (!activeQuarterCard) return;
   if (!teacherState.activeQuarter) {
     activeQuarterCard.innerHTML = `<p class="empty-text">No active term selected. Set one in Term Management.</p>`;
     return;
@@ -3161,7 +4354,7 @@ function renderTeacherMetrics() {
   `;
 }
 
-function renderTeacherMetricSparklines({ approvedStudents, summaries, publishedLessons }) {
+function renderTeacherMetricSparklines({ approvedStudents, summaries, publishedLessons, latestAssessmentAttempts = [] }) {
   const allCohorts = sortedCohortLabels(teacherState.students);
   const summaryByStudentId = new Map(summaries.map((summary) => [summary.student.id, summary]));
   const studentSeries = countRecordsByCohort(teacherState.students, allCohorts, (student) => student);
@@ -3182,18 +4375,27 @@ function renderTeacherMetricSparklines({ approvedStudents, summaries, publishedL
     .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.title || "").localeCompare(String(b.title || "")));
   const lessonLabels = lessonModules.map((module) => module.title || "Module");
   const lessonSeries = lessonModules.map((module) => publishedLessons.filter((lesson) => lesson.module_id === module.id).length);
+  const studentById = new Map(approvedStudents.map((student) => [student.id, student]));
   const averageSeries = allCohorts.map((cohort) => {
-    const cohortScores = summaries
-      .filter((summary) => summary.student.status === "approved" && teacherCohortLabel(summary.student) === cohort)
-      .map((summary) => Number(summary.average))
+    const cohortScores = latestAssessmentAttempts
+      .filter((attempt) => teacherCohortLabel(studentById.get(attempt.student_id)) === cohort)
+      .map((attempt) => Number(attempt.score_percent))
       .filter(Number.isFinite);
     return cohortScores.length
       ? Math.round(cohortScores.reduce((total, score) => total + score, 0) / cohortScores.length)
       : 0;
   });
+  const completionSeries = allCohorts.map((cohort) => {
+    const cohortSummaries = summaries.filter((summary) => teacherCohortLabel(summary.student) === cohort);
+    return percentOf(
+      cohortSummaries.reduce((sum, summary) => sum + summary.completed, 0),
+      cohortSummaries.reduce((sum, summary) => sum + summary.total, 0)
+    );
+  });
 
   renderMetricSparkline("students", studentSeries, allCohorts, "Total students by class");
-  renderMetricSparkline("on-track", onTrackSeries, allCohorts, "On-track students by class");
+  renderMetricSparkline("completion", completionSeries, allCohorts, "Lesson completion rate by class", "%");
+  renderMetricSparkline("average", averageSeries, allCohorts, "Average assessment score by class", "%");
   renderMetricSparkline("support", supportSeries, allCohorts, "Students needing support by class");
   renderMetricSparkline("lessons", lessonSeries, lessonLabels, "Published lessons by module");
   renderMetricSparkline("student-page-total", studentSeries, allCohorts, "Total students by class");
@@ -3256,6 +4458,7 @@ function renderMetricSparkline(key, values, labels, description, unit = "") {
 
 function renderPendingStudents() {
   const container = document.getElementById("pendingStudents");
+  if (!container) return;
   const pending = teacherState.students.filter((student) => student.status === "pending");
 
   if (!pending.length) {
@@ -3281,21 +4484,16 @@ function renderPendingStudents() {
 
 function renderCapstoneEvidenceDashboard() {
   syncEvidenceClassFilter();
+  syncEvidenceRangeFilter();
   const evidence = buildCapstoneEvidenceDataset();
 
-  setText("evidenceMetricStudents", evidence.students.length);
-  setText("evidenceMetricCompletion", `${evidence.metrics.completionRate}%`);
-  setText("evidenceMetricAverage", evidence.metrics.averageScore === null ? "-" : `${evidence.metrics.averageScore}%`);
-  setText("evidenceMetricSubmissions", `${evidence.metrics.submissionRate}%`);
-  setText("evidenceMetricCertificates", evidence.metrics.certificates);
-  setText("evidenceMetricSupport", evidence.interventions.length);
   setText("evidenceActiveQuarterLabel", evidence.activeQuarterLabel);
-  renderEvidenceMetricSparklines(evidence);
 
-  renderEvidenceMasteryList(evidence);
+  renderEvidencePerformanceChart(evidence);
+  renderEvidenceModuleMastery(evidence);
   renderEvidencePrePost(evidence);
   renderEvidenceInterventions(evidence);
-  renderEvidenceReadiness(evidence);
+  renderEvidenceRecentActivity(evidence);
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -3348,7 +4546,17 @@ function syncEvidenceClassFilter() {
     `<option value="${escapeAttribute(option.value)}">${escapeHtml(option.label)}</option>`
   ).join("");
   select.value = options.some((option) => option.value === current) ? current : "";
-  teacherState.evidenceFilters = { classKey: select.value };
+  teacherState.evidenceFilters = { ...(teacherState.evidenceFilters || {}), classKey: select.value };
+  syncCustomSelect(select, true);
+}
+
+function syncEvidenceRangeFilter() {
+  const select = document.getElementById("evidenceRangeFilter");
+  if (!select) return;
+  const current = String(teacherState.evidenceFilters?.rangeDays || "90");
+  select.value = ["7", "30", "90", "term"].includes(current) ? current : "90";
+  teacherState.evidenceFilters = { ...(teacherState.evidenceFilters || {}), rangeDays: select.value };
+  syncCustomSelect(select, true);
 }
 
 function evidenceClassOptions() {
@@ -3368,7 +4576,7 @@ function evidenceClassOptions() {
 }
 
 function buildCapstoneEvidenceDataset() {
-  const filters = teacherState.evidenceFilters || { classKey: "" };
+  const filters = teacherState.evidenceFilters || { classKey: "", rangeDays: "90" };
   const studentPool = teacherState.students.filter((student) =>
     student.status === "approved" && matchesEvidenceClass(student, filters.classKey)
   );
@@ -3442,6 +4650,8 @@ function buildCapstoneEvidenceDataset() {
     moduleById
   });
   const prePost = buildEvidencePrePost(assessments, latestAttempts, selectedGrades);
+  const performanceTrend = buildEvidencePerformanceTrend(assessments, allAttempts, filters.rangeDays);
+  const recentActivity = buildEvidenceRecentActivity(studentPool, activeModules, lessons, certificates);
   const readiness = buildEvidenceReadiness({ progress, latestAttempts });
 
   return {
@@ -3459,6 +4669,8 @@ function buildCapstoneEvidenceDataset() {
     topicMastery,
     interventions,
     prePost,
+    performanceTrend,
+    recentActivity,
     readiness,
     metrics: {
       completionRate: percentOf(completedSlots, assignedLessonSlots),
@@ -3467,6 +4679,137 @@ function buildCapstoneEvidenceDataset() {
       certificates: certificates.length
     }
   };
+}
+
+function buildEvidencePerformanceTrend(assessments, attempts, rangeDays = "90") {
+  const assessmentByLesson = new Map(assessments.map((assessment) => [assessment.lesson_id, assessment]));
+  const numericRange = /^\d+$/.test(String(rangeDays)) ? Number(rangeDays) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const validAttempts = (attempts || []).map((attempt) => {
+    const score = Number(attempt.score_percent);
+    const submittedAt = attempt.submitted_at ? new Date(attempt.submitted_at) : null;
+    if (!Number.isFinite(score) || !submittedAt || Number.isNaN(submittedAt.getTime()) || submittedAt >= tomorrow) return null;
+    const assessment = assessmentByLesson.get(attempt.lesson_id);
+    return {
+      ...attempt,
+      score,
+      submittedAt,
+      date: toDateInputValue(submittedAt),
+      title: assessment?.title || attempt.assessment_title || "Assessment",
+      resultKey: `${attempt.student_id || attempt.id || "student"}::${attempt.lesson_id || attempt.assessment_id || attempt.id || submittedAt.getTime()}`
+    };
+  }).filter(Boolean).sort((a, b) => a.submittedAt - b.submittedAt);
+  const emptyDataset = {
+    points: [],
+    inRangePoints: [],
+    currentAverage: null,
+    change: null,
+    submissionCount: 0,
+    latestAvailable: null,
+    state: "empty"
+  };
+  if (!validAttempts.length) return emptyDataset;
+
+  // A retake by the same student on the same assessment and local calendar day
+  // replaces that day's earlier attempt instead of weighting the daily average twice.
+  const latestDailyResults = new Map();
+  validAttempts.forEach((attempt) => {
+    const key = `${attempt.date}::${attempt.resultKey}`;
+    const existing = latestDailyResults.get(key);
+    if (!existing || attempt.submittedAt > existing.submittedAt) latestDailyResults.set(key, attempt);
+  });
+
+  const resultsByDate = new Map();
+  [...latestDailyResults.values()].forEach((attempt) => {
+    if (!resultsByDate.has(attempt.date)) resultsByDate.set(attempt.date, []);
+    resultsByDate.get(attempt.date).push(attempt);
+  });
+  const dailyPoints = [...resultsByDate.entries()].map(([date, dailyResults]) => {
+    const titles = [...new Set(dailyResults.map((attempt) => attempt.title))];
+    return {
+      date,
+      title: titles.length === 1 ? titles[0] : `${titles.length} assessments`,
+      assessmentTitles: titles,
+      assessmentCount: titles.length,
+      average: Math.round(dailyResults.reduce((sum, attempt) => sum + attempt.score, 0) / dailyResults.length),
+      submissionCount: dailyResults.length,
+      isContext: false
+    };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+
+  const cutoff = new Date(today);
+  if (numericRange !== null) cutoff.setDate(cutoff.getDate() - Math.max(0, numericRange - 1));
+  const cutoffDate = numericRange === null ? null : toDateInputValue(cutoff);
+  const inRangePoints = cutoffDate
+    ? dailyPoints.filter((point) => point.date >= cutoffDate)
+    : dailyPoints;
+  const previousPoint = cutoffDate
+    ? [...dailyPoints].reverse().find((point) => point.date < cutoffDate) || null
+    : null;
+  const currentPoint = inRangePoints.at(-1) || null;
+  const plottedPoints = inRangePoints.length === 1 && previousPoint
+    ? [{ ...previousPoint, isContext: true }, ...inRangePoints]
+    : inRangePoints;
+  const comparisonPoint = plottedPoints.length > 1 ? plottedPoints.at(-2) : null;
+
+  return {
+    points: plottedPoints,
+    inRangePoints,
+    currentAverage: currentPoint?.average ?? null,
+    change: currentPoint && comparisonPoint ? currentPoint.average - comparisonPoint.average : null,
+    submissionCount: inRangePoints.reduce((sum, point) => sum + point.submissionCount, 0),
+    latestAvailable: inRangePoints.length ? currentPoint : dailyPoints.at(-1) || null,
+    state: !inRangePoints.length
+      ? "empty-range"
+      : inRangePoints.length === 1
+        ? (previousPoint ? "comparison" : "single")
+        : "trend"
+  };
+}
+
+function buildEvidenceRecentActivity(students, modules, lessons, certificates) {
+  const studentIds = new Set(students.map((student) => student.id));
+  const studentById = new Map(students.map((student) => [student.id, student]));
+  const moduleIds = new Set(modules.map((module) => module.id));
+  const events = [];
+
+  (teacherState.recentSubmissions || []).forEach((submission) => {
+    if (!studentIds.has(submission.student_id)) return;
+    events.push({
+      title: `Assessment submitted by ${submission.student_name || "Student"}`,
+      detail: submission.assessment_title || "Assessment",
+      date: submission.submitted_at,
+      icon: "clipboard-check",
+      tone: "blue"
+    });
+  });
+  lessons.filter((lesson) => moduleIds.has(lesson.module_id) && lesson.created_at).forEach((lesson) => {
+    events.push({
+      title: `New lesson published`,
+      detail: lesson.title || "Lesson",
+      date: lesson.created_at,
+      icon: "plus",
+      tone: "green"
+    });
+  });
+  certificates.filter((certificate) => studentIds.has(certificate.student_id)).forEach((certificate) => {
+    const student = studentById.get(certificate.student_id);
+    events.push({
+      title: `Certificate awarded${student ? ` to ${student.full_name || student.username || "student"}` : ""}`,
+      detail: certificate.title || "Certificate",
+      date: certificate.awarded_at || certificate.created_at,
+      icon: "award",
+      tone: "gold"
+    });
+  });
+
+  return events
+    .filter((item) => item.date && !Number.isNaN(new Date(item.date).getTime()))
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 4);
 }
 
 function matchesEvidenceClass(student, classKey = "") {
@@ -3712,6 +5055,368 @@ function renderEvidenceMasteryList(evidence) {
   `;
 }
 
+function renderEvidenceModuleMastery(evidence) {
+  const container = document.getElementById("evidenceModuleMastery");
+  if (!container) return;
+  const modules = [...(evidence.topicMastery || [])]
+    .sort((a, b) => b.mastery - a.mastery || a.title.localeCompare(b.title))
+    .slice(0, 3);
+  if (!modules.length) {
+    container.innerHTML = `<p class="empty-text">No active-term module progress is available for this class.</p>`;
+    return;
+  }
+  container.innerHTML = modules.map((module, index) => `
+    <article class="overview-module-row">
+      <span class="module-rank">${index + 1}</span>
+      <div>
+        <div class="module-mastery-label"><strong>${escapeHtml(module.title)}</strong><b>${module.mastery}%</b></div>
+        <div class="module-mastery-track"><span style="width:${Math.max(0, Math.min(100, module.mastery))}%"></span></div>
+      </div>
+    </article>
+  `).join("");
+}
+
+function buildSmoothPerformancePath(points) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M${points[0].x} ${points[0].y}`;
+  let path = `M${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const current = points[index];
+    const next = points[index + 1];
+    const horizontalControl = Math.max(0, next.x - current.x) * 0.42;
+    const controlOneX = current.x + horizontalControl;
+    const controlOneY = current.y;
+    const controlTwoX = next.x - horizontalControl;
+    const controlTwoY = next.y;
+    path += ` C${controlOneX.toFixed(2)} ${controlOneY.toFixed(2)} ${controlTwoX.toFixed(2)} ${controlTwoY.toFixed(2)} ${next.x} ${next.y}`;
+  }
+  return path;
+}
+
+function getPerformanceAxisTickIndexes(points, minimumGap = 58) {
+  if (!points.length) return new Set();
+  if (points.length === 1) return new Set([0]);
+
+  const lastIndex = points.length - 1;
+  const tickCount = Math.min(6, points.length);
+  const firstX = points[0].x;
+  const lastX = points[lastIndex].x;
+  const candidates = Array.from({ length: tickCount }, (_, slot) => {
+    const targetX = firstX + ((lastX - firstX) * slot / (tickCount - 1));
+    return points.reduce((bestIndex, point, index) =>
+      Math.abs(point.x - targetX) < Math.abs(points[bestIndex].x - targetX) ? index : bestIndex
+    , 0);
+  });
+  const uniqueCandidates = [...new Set([0, ...candidates, lastIndex])].sort((a, b) => a - b);
+  const indexes = [0];
+  uniqueCandidates.slice(1, -1).forEach((index) => {
+    const roomBefore = points[index].x - points[indexes.at(-1)].x;
+    const roomAfter = lastX - points[index].x;
+    if (roomBefore >= minimumGap && roomAfter >= minimumGap) indexes.push(index);
+  });
+  if (lastX - points[indexes.at(-1)].x < minimumGap && indexes.length > 1) indexes.pop();
+  indexes.push(lastIndex);
+  return new Set(indexes);
+}
+
+function buildPerformanceScale(points) {
+  const values = points.map((point) => Number(point.average)).filter(Number.isFinite);
+  if (!values.length) return { minimum: 0, maximum: 100, ticks: [100, 75, 50, 25, 0] };
+
+  const lowest = Math.max(0, Math.min(...values));
+  const highest = Math.min(100, Math.max(...values));
+  let minimum = Math.max(0, Math.floor((lowest - 10) / 10) * 10);
+  let maximum = Math.min(100, Math.ceil((highest + 10) / 10) * 10);
+
+  while (maximum - minimum < 40) {
+    if (minimum > 0) minimum = Math.max(0, minimum - 10);
+    if (maximum - minimum >= 40) break;
+    if (maximum < 100) maximum = Math.min(100, maximum + 10);
+    if (minimum === 0 && maximum === 100) break;
+  }
+
+  const step = (maximum - minimum) / 4;
+  const ticks = Array.from({ length: 5 }, (_, index) => maximum - (step * index));
+  return { minimum, maximum, ticks };
+}
+
+function getEvidencePerformancePoint(target, container) {
+  const point = target instanceof Element ? target.closest("[data-performance-point]") : null;
+  return point && container?.contains(point) ? point : null;
+}
+
+function getEvidencePerformancePointFromPointer(event, container) {
+  const directPoint = getEvidencePerformancePoint(event.target, container);
+  if (directPoint) return directPoint;
+  if (!container || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return null;
+
+  const svg = container.querySelector("svg[data-performance-plot]");
+  const bounds = svg?.getBoundingClientRect();
+  const viewBox = svg?.viewBox?.baseVal;
+  if (!svg || !bounds || !viewBox || bounds.width <= 0 || bounds.height <= 0) return null;
+
+  let chartX;
+  let chartY;
+  try {
+    const screenMatrix = svg.getScreenCTM();
+    const pointer = svg.createSVGPoint();
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    const chartPoint = screenMatrix ? pointer.matrixTransform(screenMatrix.inverse()) : null;
+    chartX = chartPoint?.x;
+    chartY = chartPoint?.y;
+  } catch {
+    chartX = undefined;
+    chartY = undefined;
+  }
+  if (!Number.isFinite(chartX) || !Number.isFinite(chartY)) {
+    chartX = viewBox.x + ((event.clientX - bounds.left) / bounds.width) * viewBox.width;
+    chartY = viewBox.y + ((event.clientY - bounds.top) / bounds.height) * viewBox.height;
+  }
+  const plotLeft = Number(svg.dataset.plotLeft);
+  const plotRight = Number(svg.dataset.plotRight);
+  const plotTop = Number(svg.dataset.plotTop);
+  const plotBottom = Number(svg.dataset.plotBottom);
+  if (chartX < plotLeft || chartX > plotRight || chartY < plotTop || chartY > plotBottom + 28) return null;
+
+  return [...container.querySelectorAll("[data-performance-point]")].reduce((nearest, point) => {
+    const distance = Math.abs(Number(point.dataset.performanceX) - chartX);
+    return !nearest || distance < nearest.distance ? { point, distance } : nearest;
+  }, null)?.point || null;
+}
+
+function showEvidencePerformancePoint(container, index) {
+  if (!container) return;
+  const hasIndex = index !== "" && index !== null && index !== undefined;
+  const normalizedIndex = Number(index);
+  const activeIndex = hasIndex && Number.isInteger(normalizedIndex) ? normalizedIndex : null;
+  container.querySelectorAll("[data-performance-point]").forEach((point) => {
+    point.classList.toggle("is-active", activeIndex !== null && Number(point.dataset.performancePoint) === activeIndex);
+  });
+  container.querySelectorAll("[data-performance-callout]").forEach((callout) => {
+    callout.classList.toggle("is-visible", activeIndex !== null && Number(callout.dataset.performanceCallout) === activeIndex);
+  });
+}
+
+function selectEvidencePerformancePoint(container, index) {
+  const normalizedIndex = Number(index);
+  if (!container || !Number.isInteger(normalizedIndex)) return;
+  container.dataset.selectedPerformancePoint = String(normalizedIndex);
+  container.querySelectorAll("[data-performance-point]").forEach((point) => {
+    point.setAttribute("aria-pressed", String(Number(point.dataset.performancePoint) === normalizedIndex));
+  });
+  showEvidencePerformancePoint(container, normalizedIndex);
+}
+
+function restoreSelectedEvidencePerformancePoint(container) {
+  showEvidencePerformancePoint(container, container?.dataset.selectedPerformancePoint);
+}
+
+function handleEvidencePerformancePointerMove(event) {
+  const point = getEvidencePerformancePointFromPointer(event, event.currentTarget);
+  if (!point) return;
+  showEvidencePerformancePoint(event.currentTarget, point.dataset.performancePoint);
+}
+
+function handleEvidencePerformancePointerLeave(event) {
+  restoreSelectedEvidencePerformancePoint(event.currentTarget);
+}
+
+function handleEvidencePerformanceFocusIn(event) {
+  const point = getEvidencePerformancePoint(event.target, event.currentTarget);
+  if (!point) return;
+  showEvidencePerformancePoint(event.currentTarget, point.dataset.performancePoint);
+}
+
+function handleEvidencePerformanceFocusOut(event) {
+  const nextPoint = getEvidencePerformancePoint(event.relatedTarget, event.currentTarget);
+  if (nextPoint) {
+    showEvidencePerformancePoint(event.currentTarget, nextPoint.dataset.performancePoint);
+    return;
+  }
+  restoreSelectedEvidencePerformancePoint(event.currentTarget);
+}
+
+function handleEvidencePerformanceSelect(event) {
+  const point = getEvidencePerformancePointFromPointer(event, event.currentTarget);
+  if (!point) return;
+  selectEvidencePerformancePoint(event.currentTarget, point.dataset.performancePoint);
+}
+
+function handleEvidencePerformanceKeydown(event) {
+  const container = event.currentTarget;
+  if (event.key === "Escape" && container.dataset.selectedPerformancePoint !== undefined) {
+    event.preventDefault();
+    delete container.dataset.selectedPerformancePoint;
+    container.querySelectorAll("[data-performance-point]").forEach((candidate) => candidate.setAttribute("aria-pressed", "false"));
+    showEvidencePerformancePoint(container, null);
+    return;
+  }
+
+  const point = getEvidencePerformancePoint(event.target, event.currentTarget);
+  if (!point) return;
+  if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+    event.preventDefault();
+    const points = [...container.querySelectorAll("[data-performance-point]")];
+    const currentIndex = points.indexOf(point);
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const nextIndex = Math.max(0, Math.min(points.length - 1, currentIndex + direction));
+    points[nextIndex]?.focus();
+    showEvidencePerformancePoint(container, points[nextIndex]?.dataset.performancePoint);
+    return;
+  }
+  if (["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    selectEvidencePerformancePoint(container, point.dataset.performancePoint);
+  }
+}
+
+function renderEvidencePerformanceChart(evidence) {
+  const container = document.getElementById("evidencePerformanceChart");
+  if (!container) return;
+  const trend = evidence.performanceTrend || {
+    points: [], inRangePoints: [], currentAverage: null, change: null, submissionCount: 0, latestAvailable: null, state: "empty"
+  };
+  const dateFormatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+  const formatPointDate = (date) => {
+    const parsedDate = date ? new Date(`${date}T12:00:00`) : null;
+    return parsedDate && !Number.isNaN(parsedDate.getTime()) ? dateFormatter.format(parsedDate) : "Unknown date";
+  };
+  const rangeLabel = String(evidence.filters?.rangeDays || "90") === "term"
+    ? "the active term"
+    : `the last ${Number(evidence.filters?.rangeDays || 90)} days`;
+  const changeClass = trend.change > 0 ? "is-positive" : trend.change < 0 ? "is-negative" : "is-neutral";
+  const changeLabel = trend.change === null
+    ? "No comparison"
+    : `${trend.change > 0 ? "+" : ""}${trend.change} pts`;
+  const summaryMarkup = `
+    <div class="performance-chart-summary" aria-label="Selected range performance summary">
+      <div><span>Current average</span><strong>${trend.currentAverage === null ? "&mdash;" : `${trend.currentAverage}%`}</strong></div>
+      <div class="${changeClass}"><span>Previous change</span><strong>${escapeHtml(changeLabel)}</strong></div>
+      <div><span>Submissions</span><strong>${trend.submissionCount || 0}</strong><small>Selected range</small></div>
+    </div>
+  `;
+
+  delete container.dataset.selectedPerformancePoint;
+  if (trend.state === "empty" || trend.state === "empty-range") {
+    const latest = trend.latestAvailable;
+    container.innerHTML = `
+      ${summaryMarkup}
+      <div class="evidence-empty evidence-performance-empty" role="status">
+        <i data-lucide="line-chart"></i>
+        <strong>${latest ? `No submissions in ${escapeHtml(rangeLabel)}` : "No assessment scores yet"}</strong>
+        <span>${latest
+          ? `Latest available result: ${escapeHtml(formatPointDate(latest.date))} at ${latest.average}%. It is shown for context only and is not counted above.`
+          : "The class performance trend will appear after students submit an assessment."}</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (trend.state === "single") {
+    const point = trend.inRangePoints[0];
+    container.innerHTML = `
+      ${summaryMarkup}
+      <div class="evidence-performance-single" role="status">
+        <span class="evidence-performance-single-icon"><i data-lucide="chart-no-axes-column-increasing"></i></span>
+        <div><small>${escapeHtml(formatPointDate(point.date))}</small><strong>${point.average}% daily average</strong><span>${point.submissionCount} submission${point.submissionCount === 1 ? "" : "s"} across ${escapeHtml(point.title)}. Another submission date is needed to form a trend.</span></div>
+      </div>
+    `;
+    return;
+  }
+
+  const width = 760;
+  const height = 194;
+  const left = 50;
+  const right = 742;
+  const top = 18;
+  const bottom = 148;
+  const scale = buildPerformanceScale(trend.points);
+  const scaleRange = Math.max(1, scale.maximum - scale.minimum);
+  const points = trend.points.map((item, index) => {
+    const x = trend.points.length === 1
+      ? (left + right) / 2
+      : left + ((right - left) * index / (trend.points.length - 1));
+    const normalizedAverage = (Math.max(scale.minimum, Math.min(scale.maximum, item.average)) - scale.minimum) / scaleRange;
+    const y = bottom - normalizedAverage * (bottom - top);
+    return { ...item, x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) };
+  });
+  const actualPoints = points.filter((point) => !point.isContext);
+  const linePath = buildSmoothPerformancePath(actualPoints);
+  const areaPath = actualPoints.length > 1
+    ? `${linePath} L${actualPoints.at(-1).x} ${bottom} L${actualPoints[0].x} ${bottom} Z`
+    : "";
+  const contextPath = points[0]?.isContext && points[1]
+    ? `M${points[0].x} ${points[0].y} L${points[1].x} ${points[1].y}`
+    : "";
+  const grid = scale.ticks.map((value) => {
+    const y = bottom - ((value - scale.minimum) / scaleRange) * (bottom - top);
+    const tickLabel = Number.isInteger(value) ? value : Number(value.toFixed(1));
+    return `
+      <line class="performance-grid-line" x1="${left}" y1="${y}" x2="${right}" y2="${y}"></line>
+      <text class="performance-axis-label" x="${left - 10}" y="${y + 4}" text-anchor="end">${tickLabel}%</text>
+    `;
+  }).join("");
+  const axisTickIndexes = getPerformanceAxisTickIndexes(points);
+  const pointMarkup = points.map((point, index) => {
+    const axisLabel = formatPointDate(point.date);
+    const previousX = points[index - 1]?.x ?? left;
+    const nextX = points[index + 1]?.x ?? right;
+    const hitLeft = index === 0 ? left : (previousX + point.x) / 2;
+    const hitRight = index === points.length - 1 ? right : (point.x + nextX) / 2;
+    const isLatest = !point.isContext && point === actualPoints.at(-1);
+    const contextDescription = point.isContext ? "Previous result outside the selected range. " : "";
+    const pointDescription = `${contextDescription}${axisLabel}, daily average ${point.average} percent from ${point.submissionCount} submission${point.submissionCount === 1 ? "" : "s"} across ${point.title}. Click to pin these details.`;
+    return `
+      <g class="performance-point-group${point.isContext ? " is-context" : ""}${isLatest ? " is-latest" : ""}" data-performance-point="${index}" data-performance-x="${point.x}" tabindex="0" role="button" aria-pressed="false" aria-label="${escapeAttribute(pointDescription)}">
+        <rect class="performance-point-hit-area" x="${hitLeft}" y="${top}" width="${Math.max(1, hitRight - hitLeft)}" height="${bottom - top}"></rect>
+        <circle class="performance-point-halo" cx="${point.x}" cy="${point.y}" r="7"></circle>
+        <circle class="performance-point" cx="${point.x}" cy="${point.y}" r="4"></circle>
+      </g>
+      ${axisTickIndexes.has(index) ? `<g aria-hidden="true">
+        <text class="performance-axis-label performance-date-label${point.isContext ? " is-context" : ""}" x="${point.x}" y="${bottom + 23}" text-anchor="middle">${point.isContext ? "Previous · " : ""}${escapeHtml(axisLabel)}</text>
+      </g>` : ""}
+    `;
+  }).join("");
+  const calloutWidth = 190;
+  const calloutHeight = 72;
+  const callouts = points.map((point, index) => {
+    const calloutX = Math.max(left, Math.min(right - calloutWidth, point.x - calloutWidth / 2));
+    const preferredY = point.y - calloutHeight - 9;
+    const calloutY = Math.max(4, Math.min(height - calloutHeight - 2, preferredY < 4 ? point.y + 10 : preferredY));
+    const statusLabel = `${point.submissionCount} submission${point.submissionCount === 1 ? "" : "s"} · ${point.assessmentCount} assessment${point.assessmentCount === 1 ? "" : "s"}`;
+    const assessmentLabel = point.assessmentTitles?.length === 1
+      ? point.assessmentTitles[0]
+      : point.title;
+    const shortAssessmentLabel = assessmentLabel.length > 31 ? `${assessmentLabel.slice(0, 30)}…` : assessmentLabel;
+    return `
+      <g class="performance-callout" data-performance-callout="${index}" aria-hidden="true">
+        <rect x="${calloutX}" y="${calloutY}" width="${calloutWidth}" height="${calloutHeight}" rx="8"></rect>
+        <text x="${calloutX + 11}" y="${calloutY + 16}">${point.isContext ? "Previous · " : ""}${escapeHtml(formatPointDate(point.date))}</text>
+        <circle class="${point.isContext ? "is-context" : ""}" cx="${calloutX + 13}" cy="${calloutY + 32}" r="3"></circle>
+        <text class="performance-callout-score" x="${calloutX + 23}" y="${calloutY + 36}">Daily average: ${point.average}%</text>
+        <text class="performance-callout-status" x="${calloutX + 11}" y="${calloutY + 52}">${escapeHtml(statusLabel)}</text>
+        <text class="performance-callout-assessment" x="${calloutX + 11}" y="${calloutY + 66}">${escapeHtml(shortAssessmentLabel)}</text>
+      </g>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    ${summaryMarkup}
+    <div class="performance-chart-canvas">
+      <svg viewBox="0 0 ${width} ${height}" data-performance-plot data-plot-left="${left}" data-plot-right="${right}" data-plot-top="${top}" data-plot-bottom="${bottom}" role="group" aria-label="Interactive class performance chart with ${trend.inRangePoints.length} submission date${trend.inRangePoints.length === 1 ? "" : "s"} in ${escapeAttribute(rangeLabel)}. Use Left and Right Arrow keys to move between points, Enter or Space to pin details, and Escape to clear them.">
+        ${grid}
+        ${areaPath ? `<path class="performance-chart-area" d="${areaPath}"></path>` : ""}
+        ${linePath ? `<path class="performance-chart-line" pathLength="1" d="${linePath}"></path>` : ""}
+        ${contextPath ? `<path class="performance-context-line" d="${contextPath}"></path>` : ""}
+        ${pointMarkup}
+        ${callouts}
+      </svg>
+    </div>
+  `;
+  showEvidencePerformancePoint(container, null);
+}
+
 function renderEvidencePrePost(evidence) {
   const container = document.getElementById("evidencePrePost");
   if (!container) return;
@@ -3729,29 +5434,33 @@ function renderEvidencePrePost(evidence) {
     return;
   }
   const deltaClass = growth.growth >= 0 ? "good-text" : "warn-text";
-  const preY = Math.max(12, Math.min(108, 120 - growth.preAverage));
-  const postY = Math.max(12, Math.min(108, 120 - growth.postAverage));
+  const chartTop = 15;
+  const chartBottom = 110;
+  const chartRange = chartBottom - chartTop;
+  const preHeight = chartRange * Math.max(0, Math.min(100, growth.preAverage)) / 100;
+  const postHeight = chartRange * Math.max(0, Math.min(100, growth.postAverage)) / 100;
   container.innerHTML = `
-    <div class="evidence-line-chart">
-      <svg viewBox="0 0 220 120" role="img" aria-label="Pre-test average ${growth.preAverage} percent and post-test average ${growth.postAverage} percent">
-        <title>Pre-test ${growth.preAverage}% to post-test ${growth.postAverage}%</title>
-        <path class="chart-grid-line" d="M12 96H208M12 60H208M12 24H208"></path>
-        <path class="chart-area" d="M28 ${preY} L192 ${postY} L192 108 L28 108 Z"></path>
-        <path class="chart-line" pathLength="1" d="M28 ${preY} L192 ${postY}"></path>
-        <circle class="chart-point pre" cx="28" cy="${preY}" r="4"></circle>
-        <circle class="chart-point post" cx="192" cy="${postY}" r="4"></circle>
-      </svg>
+    <div class="overview-prepost-layout">
+      <div class="prepost-average-box pre"><span>Pre-test Avg</span><strong>${growth.preAverage}%</strong></div>
+      <div class="prepost-bar-chart">
+        <svg viewBox="0 0 240 138" role="img" aria-label="Pre-test average ${growth.preAverage} percent and post-test average ${growth.postAverage} percent">
+          <title>Pre-test ${growth.preAverage}% compared with post-test ${growth.postAverage}%</title>
+          <path class="prepost-grid" d="M30 15H228M30 62.5H228M30 110H228"></path>
+          <text x="23" y="19" text-anchor="end">100%</text><text x="23" y="66" text-anchor="end">50%</text><text x="23" y="114" text-anchor="end">0%</text>
+          <rect class="prepost-bar pre" x="62" y="${chartBottom - preHeight}" width="54" height="${preHeight}" rx="7"></rect>
+          <rect class="prepost-bar post" x="148" y="${chartBottom - postHeight}" width="54" height="${postHeight}" rx="7"></rect>
+          <text class="prepost-value" x="89" y="${Math.max(12, chartBottom - preHeight - 6)}" text-anchor="middle">${growth.preAverage}%</text>
+          <text class="prepost-value" x="175" y="${Math.max(12, chartBottom - postHeight - 6)}" text-anchor="middle">${growth.postAverage}%</text>
+          <text class="prepost-label" x="89" y="130" text-anchor="middle">Pre-test</text>
+          <text class="prepost-label" x="175" y="130" text-anchor="middle">Post-test</text>
+        </svg>
+      </div>
+      <div class="prepost-summary-stack">
+        <div class="prepost-average-box post"><span>Post-test Avg</span><strong>${growth.postAverage}%</strong></div>
+        <div class="prepost-average-box improvement"><span>Improvement</span><strong class="${deltaClass}">${growth.growth >= 0 ? "+" : ""}${growth.growth}%</strong></div>
+      </div>
     </div>
-    <div class="evidence-growth-score">
-      <div><span>Pre-test</span><strong>${growth.preAverage}%</strong></div>
-      <i data-lucide="arrow-right"></i>
-      <div><span>Post/final</span><strong>${growth.postAverage}%</strong></div>
-    </div>
-    <div class="evidence-growth-bar">
-      <span style="width:${Math.max(0, Math.min(100, growth.preAverage))}%"></span>
-      <span class="post" style="width:${Math.max(0, Math.min(100, growth.postAverage))}%"></span>
-    </div>
-    <p class="${deltaClass}">${growth.growth >= 0 ? "+" : ""}${growth.growth}% growth from ${growth.preCount + growth.postCount} submissions</p>
+    <p class="prepost-footnote">Based on ${growth.preCount + growth.postCount} submitted assessments in the selected class</p>
   `;
 }
 
@@ -3782,6 +5491,22 @@ function renderEvidenceReadiness(evidence) {
     <article class="${item.status}">
       <span><i data-lucide="${item.status === "ready" ? "check-circle-2" : "clock-3"}"></i></span>
       <div><strong>${escapeHtml(item.label)} ${item.status === "ready" ? "Ready" : "Pending"}</strong><small>${escapeHtml(item.detail)}</small></div>
+    </article>
+  `).join("");
+}
+
+function renderEvidenceRecentActivity(evidence) {
+  const container = document.getElementById("evidenceRecentActivity");
+  if (!container) return;
+  if (!evidence.recentActivity.length) {
+    container.innerHTML = `<p class="empty-text">No recent class activity is available yet.</p>`;
+    return;
+  }
+  container.innerHTML = evidence.recentActivity.map((item) => `
+    <article class="overview-activity-row">
+      <span class="activity-icon ${escapeAttribute(item.tone)}"><i data-lucide="${escapeAttribute(item.icon)}"></i></span>
+      <div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)} &middot; ${escapeHtml(formatDate(item.date))}</small></div>
+      <i class="activity-chevron" data-lucide="chevron-right"></i>
     </article>
   `).join("");
 }
@@ -4026,10 +5751,9 @@ function renderStudentAchievementCoverage(rows) {
 }
 
 function renderRewardIcons(rewards) {
-  if (!rewards.length) return `<span class="reward-empty">-</span>`;
-  return `<span class="reward-icons">${rewards.slice(0, 3).map((reward) =>
-    `<i class="reward-icon ${escapeHtml(reward.color || "blue")}" data-lucide="shield-check" title="${escapeHtml(formatAwardDisplayTitle(reward.title, "Badge"))}"></i>`
-  ).join("")}${rewards.length > 3 ? `<small>+${rewards.length - 3}</small>` : ""}</span>`;
+  const count = rewards.length;
+  const badgeTitles = rewards.map((reward) => formatAwardDisplayTitle(reward.title, "Badge")).join(", ");
+  return `<span class="reward-count ${count ? "has-rewards" : "is-empty"}" title="${escapeAttribute(badgeTitles || "No badges earned")}" aria-label="${count} ${count === 1 ? "badge" : "badges"}"><strong>${count}</strong><i data-lucide="shield-check" aria-hidden="true"></i></span>`;
 }
 
 function renderCertificateCount(certificates) {
@@ -4120,9 +5844,7 @@ function renderQuarters() {
           <button class="small-button" type="button" data-quarter-archive="${escapeAttribute(quarter.id)}" data-status="${isArchived ? "active" : "archived"}">
             <i data-lucide="${isArchived ? "archive-restore" : "archive"}"></i><span>${isArchived ? "Restore" : "Archive"}</span>
           </button>
-          <button class="small-button danger" type="button" data-quarter-delete="${escapeAttribute(quarter.id)}">
-            <i data-lucide="trash-2"></i><span>Delete</span>
-          </button>
+
         </div>
       </article>
     `;
@@ -4163,6 +5885,22 @@ function renderLessonMetrics() {
   setText("lessonMetricPublishedPct", `${percentOf(publishedLessons, total)}%`);
   setText("lessonMetricDraft", draftLessons);
   setText("lessonMetricPractice", practice);
+
+  const moduleIds = new Set(teacherState.modules.map((module) => module.id));
+  const metricModules = [...teacherState.modules]
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.title || "").localeCompare(String(b.title || "")))
+    .map((module) => ({ id: module.id, label: module.title || "Module", module }));
+  if (teacherState.lessons.some((lesson) => !lesson.module_id || !moduleIds.has(lesson.module_id))) {
+    metricModules.push({ id: null, label: "Unassigned", module: null });
+  }
+  const buckets = metricModules.length ? metricModules : [{ id: null, label: "No modules", module: null }];
+  const labels = buckets.map((bucket) => bucket.label);
+  const lessonsForBucket = (bucket) => teacherState.lessons.filter((lesson) => bucket.id ? lesson.module_id === bucket.id : (!lesson.module_id || !moduleIds.has(lesson.module_id)));
+
+  renderMetricSparkline("lesson-page-total", buckets.map((bucket) => lessonsForBucket(bucket).length), labels, "Total lessons by module");
+  renderMetricSparkline("lesson-page-published", buckets.map((bucket) => bucket.module?.status === "published" ? 1 : 0), labels, "Published modules by curriculum order");
+  renderMetricSparkline("lesson-page-draft", buckets.map((bucket) => lessonsForBucket(bucket).filter((lesson) => lesson.status === "draft").length), labels, "Draft lessons by module");
+  renderMetricSparkline("lesson-page-practice", buckets.map((bucket) => lessonsForBucket(bucket).filter((lesson) => lesson.lesson_type === "practice").length), labels, "Practice activities by module");
 }
 
 function renderLessonLibrary() {
@@ -4477,6 +6215,7 @@ function syncReportFilterControls() {
     section.value = filters.section || "";
     section.disabled = !filters.grade;
   }
+  document.dispatchEvent(new Event("techwise:report-filters"));
 }
 
 function renderReportMetrics(report) {
@@ -4487,6 +6226,54 @@ function renderReportMetrics(report) {
   setText("reportMetricCertificates", report.metrics.certificatesIssued);
   setText("reportMetricSubmissions", `${report.metrics.submissionRate}%`);
   setText("reportMetricRange", report.rangeLabel);
+  renderReportMetricSparklines(report);
+}
+
+function renderReportMetricSparklines(report) {
+  const cohortLabels = sortedCohortLabels(report.students);
+  const studentsById = new Map(report.students.map((student) => [student.id, student]));
+  const summariesByCohort = new Map(cohortLabels.map((label) => [label, []]));
+  report.studentSummaries.forEach((summary) => {
+    const label = teacherCohortLabel(summary.student);
+    if (!summariesByCohort.has(label)) summariesByCohort.set(label, []);
+    summariesByCohort.get(label).push(summary);
+  });
+
+  const attemptsByCohort = new Map(cohortLabels.map((label) => [label, []]));
+  report.attempts.forEach((attempt) => {
+    const student = studentsById.get(attempt.student_id);
+    if (!student) return;
+    const label = teacherCohortLabel(student);
+    if (!attemptsByCohort.has(label)) attemptsByCohort.set(label, []);
+    attemptsByCohort.get(label).push(attempt);
+  });
+
+  const averageSeries = cohortLabels.map((label) => {
+    const scores = (attemptsByCohort.get(label) || []).map((attempt) => Number(attempt.score_percent)).filter(Number.isFinite);
+    return scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : 0;
+  });
+  const completionSeries = cohortLabels.map((label) => {
+    const summaries = summariesByCohort.get(label) || [];
+    return percentOf(
+      summaries.reduce((sum, summary) => sum + summary.completedLessons, 0),
+      summaries.reduce((sum, summary) => sum + summary.totalLessons, 0)
+    );
+  });
+  const supportSeries = countRecordsByCohort(report.supportInsights, cohortLabels, (item) => item.student);
+  const notStartedSeries = countRecordsByCohort(
+    report.studentSummaries.filter((summary) => summary.status === "notStarted"),
+    cohortLabels,
+    (summary) => summary.student
+  );
+  const certificateSeries = countRecordsByCohort(report.certificates, cohortLabels, (certificate) => studentsById.get(certificate.student_id));
+  const submissionSeries = cohortLabels.map((label) => new Set((attemptsByCohort.get(label) || []).map((attempt) => `${attempt.lesson_id}-${attempt.student_id}`)).size);
+
+  renderMetricSparkline("report-average", averageSeries, cohortLabels, "Average report score by class", "%");
+  renderMetricSparkline("report-completion", completionSeries, cohortLabels, "Report completion rate by class", "%");
+  renderMetricSparkline("report-support", supportSeries, cohortLabels, "Students needing support by class");
+  renderMetricSparkline("report-not-started", notStartedSeries, cohortLabels, "Not-started students by class");
+  renderMetricSparkline("report-certificates", certificateSeries, cohortLabels, "Certificates issued by class");
+  renderMetricSparkline("report-submissions", submissionSeries, cohortLabels, "Unique submissions by class");
 }
 
 function renderReportSupportInsights(report) {
@@ -4687,6 +6474,7 @@ function buildReportDataset(filtersOverride = null) {
     students,
     assessments,
     attempts: rangeAttempts,
+    certificates,
     dailyScores,
     topicScores,
     studentSummaries,
@@ -6570,7 +8358,7 @@ function resetQuarterForm() {
   form.elements.id.value = "";
   form.elements.name.value = "T1";
   form.elements.title.value = "1st Term";
-  form.elements.school_year.value = "2026-2027";
+  form.elements.school_year.value = teacherState.activeQuarter?.school_year || form.elements.school_year.options?.[0]?.value || "";
   setText("quarterFormTitle", "Add Term");
   setText("quarterSubmitButton", "Create Term");
   document.getElementById("cancelQuarterEdit")?.setAttribute("hidden", "");
@@ -6807,7 +8595,7 @@ function openStudentDrawer(studentId) {
   form.elements.id.value = student.id;
   form.elements.full_name.value = student.full_name || "";
   form.elements.grade_level.value = student.grade_level || "Grade 9";
-  syncStudentDrawerSections(form, student.section || "");
+  syncStudentDrawerSections(form, student.section_id || "");
   form.elements.adviser.value = student.adviser || form.elements.adviser.value || "";
   form.elements.home_town.value = student.home_town || "";
   form.elements.phone_number.value = student.phone_number || "";
@@ -6841,7 +8629,7 @@ async function submitStudentDrawerForm(event) {
   const form = event.currentTarget;
   const payload = formToObject(form);
   delete payload.student_number;
-  payload.adviser = STUDENT_SECTION_ADVISERS[payload.grade_level]?.[payload.section] || payload.adviser || "";
+  delete payload.adviser;
 
   try {
     setMessage(message, "Saving student details...");
@@ -6860,21 +8648,24 @@ function handleStudentDrawerChange(event) {
     syncStudentDrawerSections(form, "");
     return;
   }
-  if (event.target?.name === "section") {
-    const grade = form.elements.grade_level.value;
-    form.elements.adviser.value = STUDENT_SECTION_ADVISERS[grade]?.[form.elements.section.value] || "";
+  if (event.target?.name === "section_id") {
+    const section = teacherState.sections.find((item) => item.id === form.elements.section_id.value);
+    form.elements.adviser.value = section?.adviser_name || "";
   }
 }
 
 function syncStudentDrawerSections(form, selected = "") {
-  if (!form?.elements?.grade_level || !form?.elements?.section) return;
+  if (!form?.elements?.grade_level || !form?.elements?.section_id) return;
   const grade = form.elements.grade_level.value || GRADE_LEVELS[0];
-  const sections = sectionOptionsForGrade(grade);
-  const section = sections.includes(selected) ? selected : sections[0] || "";
-  form.elements.section.innerHTML = sectionOptionsHtml(grade, section, false);
-  form.elements.section.value = section;
+  const sections = (teacherState.sections || []).filter((section) => section.grade_level === grade && section.status === "active");
+  const sectionId = sections.some((section) => section.id === selected) ? selected : sections[0]?.id || "";
+  form.elements.section_id.innerHTML = sections.length
+    ? sections.map((section) => `<option value="${escapeAttribute(section.id)}">${escapeHtml(section.name)} (${escapeHtml(section.code)})</option>`).join("")
+    : `<option value="">No active sections</option>`;
+  form.elements.section_id.value = sectionId;
+  form.elements.section_id.disabled = sections.length === 0;
   if (form.elements.adviser) {
-    form.elements.adviser.value = STUDENT_SECTION_ADVISERS[grade]?.[section] || "";
+    form.elements.adviser.value = sections.find((section) => section.id === sectionId)?.adviser_name || "";
   }
 }
 
@@ -7607,6 +9398,32 @@ function formatSeconds(value) {
   return minutes ? `${minutes}m ${remainder}s` : `${remainder}s`;
 }
 
+function compareVrAttempts(a, b) {
+  // 1. Highest score always takes top priority
+  const scoreDiff = Number(b?.score_percent || 0) - Number(a?.score_percent || 0);
+  if (scoreDiff) return scoreDiff;
+
+  // 2. Tie-breaker: realistic complete run (>= 20s) beats early aborted test clicks (< 20s)
+  const aRealistic = Number(a?.duration_seconds || 0) >= 20;
+  const bRealistic = Number(b?.duration_seconds || 0) >= 20;
+  if (aRealistic && !bRealistic) return -1;
+  if (!aRealistic && bRealistic) return 1;
+
+  // 3. Tie-breaker: faster duration wins among positive times
+  const aDur = Number(a?.duration_seconds || 0);
+  const bDur = Number(b?.duration_seconds || 0);
+  if (aDur > 0 && bDur > 0 && aDur !== bDur) return aDur - bDur;
+  if (aDur > 0 && bDur <= 0) return -1;
+  if (bDur > 0 && aDur <= 0) return 1;
+
+  // 4. Tie-breaker: fewer mistakes
+  const mistakeDiff = Number(a?.mistakes || 0) - Number(b?.mistakes || 0);
+  if (mistakeDiff) return mistakeDiff;
+
+  // 5. Tie-breaker: most recent completion
+  return new Date(b?.completed_at || 0) - new Date(a?.completed_at || 0);
+}
+
 function exportStudentsCsv() {
   const summaries = teacherState.students.map((student) => getTeacherStudentSummary(student));
   const rows = [
@@ -8236,9 +10053,9 @@ function closeLessonPreview() {
   syncDrawerScrollLock();
 }
 
-async function loadStudentDashboard() {
+async function loadStudentDashboard({ silent = false } = {}) {
   const message = document.getElementById("studentMessage");
-  setMessage(message, "Loading your dashboard...");
+  if (!silent) setMessage(message, "Loading your dashboard...");
 
   try {
     const [data, evaluation, leaderboard, completionSummary] = await Promise.all([
@@ -8254,6 +10071,7 @@ async function loadStudentDashboard() {
       lessons: data.lessons || [],
       progress: data.progress || [],
       attempts: data.attempts || [],
+      vrAttempts: data.vr_attempts || [],
       badges: data.badges || [],
       certificates: data.certificates || [],
       avatarUrl: data.avatar_url || studentState.avatarUrl || "",
@@ -8266,6 +10084,10 @@ async function loadStudentDashboard() {
       learnPage: studentState.learnPage || 1,
       assessmentPage: studentState.assessmentPage || 1,
       achievementTab: studentState.achievementTab || "badges",
+      vrLeaderboardTab: studentState.vrLeaderboardTab || "rankings",
+      vrHistoryFilter: studentState.vrHistoryFilter || { simulation: "all", date: "all" },
+      vrHistoryPage: studentState.vrHistoryPage || 1,
+      vrHistoryPageSize: studentState.vrHistoryPageSize || 5,
       leaderboard: {
         rows: leaderboard.rows || [],
         competitions: leaderboard.competitions || [],
@@ -8282,9 +10104,9 @@ async function loadStudentDashboard() {
       selectedAvatarFile: null
     };
     renderStudentDashboard();
-    setMessage(message, "", "success");
+    if (!silent) setMessage(message, "", "success");
   } catch (error) {
-    setMessage(message, error.message, "error");
+    if (!silent) setMessage(message, error.message, "error");
   }
 }
 
@@ -8315,7 +10137,7 @@ function renderStudentDashboard() {
 
   renderStudentNotifications();
   document.getElementById("studentTopName").textContent = profile.full_name || profile.username;
-  document.getElementById("studentTopGrade").textContent = profile.grade_level || "Student";
+  document.getElementById("studentTopGrade").textContent = [profile.grade_level, profile.section].filter(Boolean).join(" · ") || "Student";
   renderAvatarInto(document.getElementById("studentTopAvatar"), profile, studentState.avatarUrl, "topbar-avatar");
   document.getElementById("studentGreeting").textContent = `Welcome back, ${firstName}!`;
   document.getElementById("studentQuarter").textContent = studentState.activeQuarter
@@ -8323,9 +10145,27 @@ function renderStudentDashboard() {
     : "Ready to build your ICT skills today?";
   document.getElementById("studentBadges").textContent = String(summary.badgesEarned);
   document.getElementById("studentCertificates").textContent = String(summary.certificatesEarned);
-  document.getElementById("studentRank").textContent = studentState.leaderboard?.summary?.student_rank
-    ? `#${studentState.leaderboard.summary.student_rank}`
+  setText("studentHomeProgress", `${summary.overall}%`);
+  setText("studentHomeLessons", String(summary.completed));
+  setText("studentHomeAverage", `${summary.averageScore}%`);
+  setText("studentHomeRewards", String(summary.badgesEarned + summary.certificatesEarned));
+  const validVrAttempts = [...(studentState.vrAttempts || [])].sort(compareVrAttempts);
+  const bestVr = validVrAttempts[0];
+  const selfRow = (studentState.leaderboard?.rows || []).find((r) => r.is_current_student);
+  const displayRank = studentState.leaderboard?.summary?.student_rank
+    || selfRow?.rank
+    || (bestVr ? 1 : null);
+  document.getElementById("studentRank").textContent = displayRank
+    ? `#${displayRank}`
     : "-";
+  const subEl = document.getElementById("studentRankSub");
+  if (subEl) {
+    if (bestVr) {
+      subEl.textContent = `Score: ${formatProgressNumber(bestVr.score_percent || 0)}% · ${formatSeconds(bestVr.duration_seconds || 0)}`;
+    } else {
+      subEl.textContent = "Class position";
+    }
+  }
   document.getElementById("overallProgress").textContent = `${summary.overall}%`;
   document.getElementById("topicsCompleted").textContent = String(summary.completed);
   document.getElementById("hoursLearned").textContent = summary.hours;
@@ -8347,8 +10187,59 @@ function renderStudentDashboard() {
   renderStudentLeaderboardDashboard();
   renderStudentAchievementsDashboard();
   renderStudentEvaluationSurvey();
+  renderStudentHomeSparklines(summary);
 
   if (window.lucide) window.lucide.createIcons();
+}
+
+function renderStudentHomeSparklines(summary = getStudentDashboardSummary()) {
+  const completedEvents = studentState.progress
+    .filter((item) => item.status === "completed" || Number(item.progress_percent || 0) >= 100)
+    .map((item) => ({ date: item.completed_at || item.updated_at || item.created_at, value: 1 }))
+    .filter((item) => item.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const lessonTrend = cumulativeStudentTrend(completedEvents, summary.completed);
+  const totalLessons = Math.max(1, Number(summary.total || studentState.lessons.length || 1));
+  const progressTrend = {
+    labels: lessonTrend.labels,
+    values: lessonTrend.values.map((value) => Math.round((value / totalLessons) * 100))
+  };
+
+  const scoreEvents = studentState.attempts
+    .map((attempt) => ({
+      date: attempt.submitted_at || attempt.created_at,
+      value: Number(attempt.score_percent)
+    }))
+    .filter((item) => item.date && Number.isFinite(item.value))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(-8);
+  const scoreTrend = scoreEvents.length
+    ? { values: scoreEvents.map((item) => item.value), labels: scoreEvents.map((item) => formatDateOnly(item.date)) }
+    : { values: [summary.averageScore || 0], labels: ["Current average"] };
+
+  const rewardEvents = [
+    ...studentState.badges.map((item) => ({ date: item.awarded_at || item.created_at, value: 1 })),
+    ...studentState.certificates.map((item) => ({ date: item.issue_date || item.awarded_at || item.created_at, value: 1 }))
+  ].filter((item) => item.date).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const rewardTrend = cumulativeStudentTrend(rewardEvents, summary.badgesEarned + summary.certificatesEarned);
+
+  renderMetricSparkline("student-home-progress", progressTrend.values, progressTrend.labels, "Overall completion over completed learning parts", "%");
+  renderMetricSparkline("student-home-lessons", lessonTrend.values, lessonTrend.labels, "Cumulative completed lessons");
+  renderMetricSparkline("student-home-scores", scoreTrend.values, scoreTrend.labels, "Scores from submitted checks", "%");
+  renderMetricSparkline("student-home-rewards", rewardTrend.values, rewardTrend.labels, "Cumulative earned badges and certificates");
+}
+
+function cumulativeStudentTrend(events, fallbackTotal = 0) {
+  if (!events.length) {
+    return { values: [Number(fallbackTotal || 0)], labels: ["Current total"] };
+  }
+  const offset = Math.max(0, Number(fallbackTotal || events.length) - events.length);
+  const sampled = events.slice(-8);
+  const skipped = events.length - sampled.length;
+  return {
+    values: sampled.map((item, index) => offset + skipped + index + 1),
+    labels: sampled.map((item) => formatDateOnly(item.date))
+  };
 }
 
 function renderStudentEvaluationPrompt() {
@@ -9468,6 +11359,11 @@ function renderStudentAssessmentsDashboard() {
   const items = getStudentAssessmentItems(modulesById);
   const metrics = getStudentAssessmentMetrics(items);
   const guidance = getStudentAssessmentGuidance(items);
+  const scoreHistory = items
+    .filter((item) => item.latestAttempt && Number.isFinite(item.score))
+    .sort((a, b) => new Date(a.latestAttempt.submitted_at || 0) - new Date(b.latestAttempt.submitted_at || 0))
+    .slice(-8);
+  const bestHistory = scoreHistory.map((item, index, rows) => Math.max(...rows.slice(0, index + 1).map((row) => row.score)));
 
   if (!items.length) {
     container.innerHTML = `
@@ -9490,8 +11386,8 @@ function renderStudentAssessmentsDashboard() {
     <div class="student-assessment-metrics">
       ${renderStudentAssessmentMetric("clock-3", "Pending Checks", metrics.pending, "Need attention", "blue")}
       ${renderStudentAssessmentMetric("check-circle-2", "Completed Checks", metrics.completed, `${metrics.total} total`, "green")}
-      ${renderStudentAssessmentMetric("bar-chart-3", "Average Score", metrics.averageLabel, "Latest submissions", "purple")}
-      ${renderStudentAssessmentMetric("trophy", "Best Score", metrics.bestLabel, "Personal best", "gold")}
+      ${renderStudentAssessmentMetric("bar-chart-3", "Average Score", metrics.averageLabel, "Latest submissions", "purple", "student-assessment-scores")}
+      ${renderStudentAssessmentMetric("trophy", "Best Score", metrics.bestLabel, "Personal best", "gold", "student-assessment-best")}
     </div>
     ${renderStudentAssessmentFlowCard(guidance)}
     <div class="student-assessment-layout">
@@ -9511,18 +11407,22 @@ function renderStudentAssessmentsDashboard() {
       </aside>
     </div>
   `;
+  const scoreLabels = scoreHistory.map((item) => formatDateOnly(item.latestAttempt.submitted_at));
+  renderMetricSparkline("student-assessment-scores", scoreHistory.map((item) => item.score), scoreLabels, "Recent assessment score history", "%");
+  renderMetricSparkline("student-assessment-best", bestHistory, scoreLabels, "Personal best score over time", "%");
   if (window.lucide) window.lucide.createIcons();
 }
 
-function renderStudentAssessmentMetric(icon, label, value, detail, color) {
+function renderStudentAssessmentMetric(icon, label, value, detail, color, sparklineKey = "") {
   return `
-    <article class="student-assessment-metric-card">
+    <article class="student-assessment-metric-card ${escapeAttribute(color)}">
       <span class="assessment-metric-icon ${escapeAttribute(color)}"><i data-lucide="${escapeAttribute(icon)}"></i></span>
       <div>
         <p>${escapeHtml(label)}</p>
         <strong>${escapeHtml(value)}</strong>
         <small>${escapeHtml(detail)}</small>
       </div>
+      ${sparklineKey ? `<svg class="metric-sparkline student-card-sparkline" data-metric-sparkline="${escapeAttribute(sparklineKey)}" viewBox="0 0 100 46" role="img" aria-label="${escapeAttribute(label)} trend"><title>${escapeHtml(label)} trend</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg>` : ""}
     </article>
   `;
 }
@@ -10607,12 +12507,309 @@ function normalizeAttemptFeedback(feedback) {
   return [];
 }
 
+function handleStudentLeaderboardAction(event) {
+  const tabButton = event.target.closest("[data-vr-leaderboard-tab]");
+  if (tabButton) {
+    studentState.vrLeaderboardTab = tabButton.dataset.vrLeaderboardTab || "rankings";
+    renderStudentLeaderboardDashboard();
+    return;
+  }
+
+  const pageButton = event.target.closest("[data-vr-history-page]");
+  if (pageButton && !pageButton.disabled) {
+    studentState.vrHistoryPage = Number(pageButton.dataset.vrHistoryPage) || 1;
+    renderStudentLeaderboardDashboard();
+    return;
+  }
+
+  const resetButton = event.target.closest("[data-vr-history-reset]");
+  if (resetButton) {
+    studentState.vrHistoryFilter = { simulation: "all", date: "all" };
+    studentState.vrHistoryPage = 1;
+    renderStudentLeaderboardDashboard();
+    return;
+  }
+}
+
+function handleStudentLeaderboardChange(event) {
+  const filterSelect = event.target.closest("[data-vr-history-filter]");
+  if (filterSelect) {
+    const key = filterSelect.dataset.vrHistoryFilter;
+    if (!studentState.vrHistoryFilter) {
+      studentState.vrHistoryFilter = { simulation: "all", date: "all" };
+    }
+    studentState.vrHistoryFilter[key] = filterSelect.value;
+    studentState.vrHistoryPage = 1;
+    renderStudentLeaderboardDashboard();
+  }
+}
+
 function renderStudentLeaderboardDashboard() {
   const container = document.getElementById("studentLeaderboardDashboard");
   if (!container) return;
+  const activeTab = studentState.vrLeaderboardTab || "rankings";
+
   const data = studentState.leaderboard || { rows: [], summary: {} };
-  const rows = data.rows || [];
-  const summary = data.summary || {};
+  let rows = [...(data.rows || [])];
+  const summary = { ...(data.summary || {}) };
+
+  // Deduplicate by student: each student in the class is displayed with their single best record
+  const seenStudents = new Set();
+  rows = rows.filter((row) => {
+    const sId = row.student?.id || row.student?.username || row.student?.full_name;
+    if (!sId || seenStudents.has(sId)) return false;
+    seenStudents.add(sId);
+    return true;
+  }).map((row, idx) => ({ ...row, rank: idx + 1 }));
+
+  if (rows.length) {
+    summary.top_score = rows[0]?.attempt?.score_percent || 0;
+    const currentIdx = rows.findIndex((r) => r.is_current_student);
+    summary.student_rank = currentIdx >= 0 ? currentIdx + 1 : null;
+    summary.participants_ranked = rows.length;
+  }
+
+  // All student's own attempts sorted by date descending (most recent first)
+  const myAttempts = [...(studentState.vrAttempts || [])].sort((a, b) => new Date(b.completed_at || b.created_at || 0) - new Date(a.completed_at || a.created_at || 0));
+  const bestAttempt = [...(studentState.vrAttempts || [])].sort(compareVrAttempts)[0] || null;
+
+  if (!rows.length && bestAttempt) {
+    rows = [{
+      rank: 1,
+      student: studentState.profile || {},
+      attempt: bestAttempt,
+      competition: null,
+      is_current_student: true
+    }];
+    summary.top_score = bestAttempt.score_percent || 0;
+    summary.student_rank = 1;
+    summary.participants_ranked = 1;
+  }
+
+  let metricGridHtml = "";
+  let contentHtml = "";
+
+  if (activeTab === "history") {
+    const filters = studentState.vrHistoryFilter || { simulation: "all", date: "all" };
+    const hasActiveFilters = (filters.simulation && filters.simulation !== "all") || (filters.date && filters.date !== "all");
+
+    // Dynamic month detection from attempts
+    const availableMonths = [];
+    const seenMonths = new Set();
+    myAttempts.forEach((attempt) => {
+      const rawDate = attempt.completed_at || attempt.created_at;
+      if (!rawDate) return;
+      const d = new Date(rawDate);
+      if (Number.isNaN(d.getTime())) return;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const ym = `${y}-${m}`;
+      if (!seenMonths.has(ym)) {
+        seenMonths.add(ym);
+        const label = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(y, d.getMonth(), 1));
+        availableMonths.push({ value: ym, label });
+      }
+    });
+
+    // Filter attempts
+    const now = new Date();
+    const filteredAttempts = myAttempts.filter((attempt) => {
+      if (filters.simulation && filters.simulation !== "all") {
+        const sim = String(attempt.simulation_type || "assembly").toLowerCase();
+        if (sim !== filters.simulation.toLowerCase()) return false;
+      }
+      if (filters.date && filters.date !== "all") {
+        const rawDate = attempt.completed_at || attempt.created_at;
+        if (!rawDate) return false;
+        const d = new Date(rawDate);
+        if (Number.isNaN(d.getTime())) return false;
+        const time = d.getTime();
+
+        if (filters.date === "today") {
+          const isSameDay = d.getFullYear() === now.getFullYear() &&
+                            d.getMonth() === now.getMonth() &&
+                            d.getDate() === now.getDate();
+          if (!isSameDay) return false;
+        } else if (filters.date === "7days") {
+          const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+          if (time < sevenDaysAgo) return false;
+        } else if (filters.date === "30days") {
+          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          if (time < thirtyDaysAgo) return false;
+        } else if (filters.date.startsWith("year_")) {
+          const targetYear = Number(filters.date.replace("year_", ""));
+          if (d.getFullYear() !== targetYear) return false;
+        } else if (/^\d{4}-\d{2}$/.test(filters.date)) {
+          const [y, m] = filters.date.split("-").map(Number);
+          if (d.getFullYear() !== y || (d.getMonth() + 1) !== m) return false;
+        }
+      }
+      return true;
+    });
+
+    // Pagination
+    const pageSize = studentState.vrHistoryPageSize || 5;
+    const totalCount = filteredAttempts.length;
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const currentPage = Math.min(Math.max(1, Number(studentState.vrHistoryPage) || 1), pageCount);
+    studentState.vrHistoryPage = currentPage;
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalCount);
+    const visibleAttempts = filteredAttempts.slice(startIndex, endIndex);
+
+    const todayFormatted = formatDateOnly(now);
+    const monthOptionsHtml = availableMonths.map((m) => `
+      <option value="${m.value}" ${filters.date === m.value ? "selected" : ""}>${escapeHtml(m.label)}</option>
+    `).join("");
+
+    metricGridHtml = `
+      <div class="metric-grid">
+        <article class="stat-card">
+          <span class="stat-icon gold"><i data-lucide="award"></i></span>
+          <div>
+            <p>Personal Best</p>
+            <strong>${bestAttempt ? `${formatProgressNumber(bestAttempt.score_percent || 0)}%` : "-"}</strong>
+            <small>${bestAttempt ? `${formatSeconds(bestAttempt.duration_seconds || 0)} · ${bestAttempt.mistakes || 0} mistakes` : "No attempts recorded"}</small>
+          </div>
+        </article>
+        <article class="stat-card">
+          <span class="stat-icon blue"><i data-lucide="history"></i></span>
+          <div>
+            <p>Total Attempts</p>
+            <strong>${myAttempts.length}${hasActiveFilters ? ` (${totalCount} shown)` : ""}</strong>
+            <small>Completed simulations</small>
+          </div>
+        </article>
+        <article class="stat-card">
+          <span class="stat-icon green"><i data-lucide="trophy"></i></span>
+          <div>
+            <p>Current Standing</p>
+            <strong>${summary.student_rank ? `#${summary.student_rank}` : "-"}</strong>
+            <small>In ${escapeHtml(studentState.profile?.section || "Class")}</small>
+          </div>
+        </article>
+      </div>
+    `;
+
+    const toolbarHtml = `
+      <div class="leaderboard-toolbar student-vr-history-toolbar">
+        <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;">
+          <label>
+            <span>Simulation</span>
+            <select data-vr-history-filter="simulation">
+              <option value="all" ${filters.simulation === "all" ? "selected" : ""}>All Simulations</option>
+              <option value="assembly" ${filters.simulation === "assembly" ? "selected" : ""}>Assembly</option>
+              <option value="disassembly" ${filters.simulation === "disassembly" ? "selected" : ""}>Disassembly</option>
+            </select>
+          </label>
+          <label>
+            <span>Filter Date</span>
+            <select data-vr-history-filter="date">
+              <option value="all" ${filters.date === "all" ? "selected" : ""}>All Dates (2026)</option>
+              <option value="today" ${filters.date === "today" ? "selected" : ""}>Today (${escapeHtml(todayFormatted)})</option>
+              <option value="7days" ${filters.date === "7days" ? "selected" : ""}>Past 7 Days</option>
+              <option value="30days" ${filters.date === "30days" ? "selected" : ""}>Past 30 Days</option>
+              <option value="year_2026" ${filters.date === "year_2026" ? "selected" : ""}>Year 2026</option>
+              ${monthOptionsHtml}
+            </select>
+          </label>
+          ${hasActiveFilters ? `
+            <button class="small-button" type="button" data-vr-history-reset title="Reset all filters" style="height: 44px; align-self: flex-end;">
+              <i data-lucide="rotate-ccw"></i><span>Reset</span>
+            </button>
+          ` : ""}
+        </div>
+        <div style="color: var(--muted, #64748b); font-size: 0.85rem; font-weight: 700; align-self: flex-end; padding-bottom: 8px;">
+          ${hasActiveFilters ? `Showing ${totalCount} of ${myAttempts.length} attempts` : `${myAttempts.length} total attempt${myAttempts.length === 1 ? "" : "s"}`}
+        </div>
+      </div>
+    `;
+
+    let paginationHtml = "";
+    if (totalCount > pageSize) {
+      paginationHtml = `
+        <div class="student-dashboard-pagination-row">
+          <span>Showing ${startIndex + 1}-${endIndex} of ${totalCount} attempts</span>
+          ${renderDashboardPagination({
+            currentPage,
+            pageCount,
+            pageNumberAttribute: "data-vr-history-page",
+            label: "My attempt history pages"
+          })}
+        </div>
+      `;
+    } else if (totalCount > 0) {
+      paginationHtml = `
+        <div class="student-dashboard-pagination-row" style="border-top: 1px solid var(--border, #e4ebf5); padding-top: 12px; margin-top: 14px;">
+          <span>Showing all ${totalCount} attempt${totalCount === 1 ? "" : "s"}</span>
+        </div>
+      `;
+    }
+
+    contentHtml = `
+      <section class="panel-card">
+        ${myAttempts.length ? toolbarHtml : ""}
+        <div class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Attempt Date</th>
+                <th>Simulation</th>
+                <th>Score</th>
+                <th>Time</th>
+                <th>Mistakes</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${visibleAttempts.length
+                ? visibleAttempts.map((attempt, idx) => renderStudentVrHistoryRow(attempt, startIndex + idx, bestAttempt?.id)).join("")
+                : myAttempts.length
+                ? `<tr><td colspan="7" class="empty-table-cell leaderboard-empty-cell"><strong>No attempts match your filters.</strong><span>Try adjusting your simulation or date filter, or click Reset to view all attempts.</span></td></tr>`
+                : `<tr><td colspan="7" class="empty-table-cell leaderboard-empty-cell"><strong>No VR attempts recorded yet.</strong><span>Put on your Meta Quest 2 headset and complete an assembly or disassembly simulation to see your attempt history here.</span></td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        ${paginationHtml}
+      </section>
+    `;
+  } else {
+    metricGridHtml = `
+      <div class="metric-grid">
+        <article class="stat-card"><span class="stat-icon gold"><i data-lucide="bar-chart-3"></i></span><div><p>Your Result</p><strong>${summary.student_rank ? `#${summary.student_rank}` : "-"}</strong><small>Class position</small></div></article>
+        <article class="stat-card"><span class="stat-icon blue"><i data-lucide="bar-chart-3"></i></span><div><p>Highest Score</p><strong>${formatProgressNumber(summary.top_score || 0)}%</strong><small>Best class attempt</small></div></article>
+        <article class="stat-card"><span class="stat-icon green"><i data-lucide="users"></i></span><div><p>Students Recorded</p><strong>${summary.participants_ranked || 0}</strong><small>With VR attempts</small></div></article>
+      </div>
+    `;
+
+    contentHtml = `
+      <section class="panel-card">
+        <div class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Student</th>
+                <th>Simulation</th>
+                <th>Score</th>
+                <th>Time</th>
+                <th>Mistakes</th>
+                <th>Last Attempt</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length
+                ? rows.map(renderStudentLeaderboardRow).join("")
+                : `<tr><td colspan="7" class="empty-table-cell leaderboard-empty-cell"><strong>No VR attempts recorded for your class yet.</strong><span>The class leaderboard will show ranked VR attempts after students submit assembly or disassembly records.</span></td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
   container.innerHTML = `
     <div class="dashboard-page-header">
       <div>
@@ -10620,23 +12817,20 @@ function renderStudentLeaderboardDashboard() {
         <h1>Class VR Leaderboard</h1>
         <p>See assembly and disassembly records from real VR attempts in your class.</p>
       </div>
-    </div>
-    <div class="metric-grid">
-      <article class="stat-card"><span class="stat-icon gold"><i data-lucide="bar-chart-3"></i></span><div><p>Your Result</p><strong>${summary.student_rank ? `#${summary.student_rank}` : "-"}</strong><small>Class position</small></div></article>
-      <article class="stat-card"><span class="stat-icon blue"><i data-lucide="bar-chart-3"></i></span><div><p>Highest Score</p><strong>${formatProgressNumber(summary.top_score || 0)}%</strong><small>Best class attempt</small></div></article>
-      <article class="stat-card"><span class="stat-icon green"><i data-lucide="users"></i></span><div><p>Students Recorded</p><strong>${summary.participants_ranked || 0}</strong><small>With VR attempts</small></div></article>
-    </div>
-    <section class="panel-card">
-      <div class="leaderboard-table-wrap">
-        <table class="leaderboard-table">
-          <thead><tr><th>Rank</th><th>Student</th><th>Simulation</th><th>Score</th><th>Time</th><th>Mistakes</th><th>Last Attempt</th></tr></thead>
-          <tbody>
-            ${rows.length ? rows.map(renderStudentLeaderboardRow).join("") : `<tr><td colspan="7" class="empty-table-cell leaderboard-empty-cell"><strong>No VR attempts recorded for your class yet.</strong><span>The class leaderboard will show ranked VR attempts after students submit assembly or disassembly records.</span></td></tr>`}
-          </tbody>
-        </table>
+      <div class="achievement-tabs leaderboard-tabs" role="tablist" aria-label="Leaderboard views">
+        <button class="${activeTab === "rankings" ? "active" : ""}" type="button" data-vr-leaderboard-tab="rankings">
+          <i data-lucide="trophy"></i> Class Rankings
+        </button>
+        <button class="${activeTab === "history" ? "active" : ""}" type="button" data-vr-leaderboard-tab="history">
+          <i data-lucide="history"></i> My Attempt History
+        </button>
       </div>
-    </section>
+    </div>
+    ${metricGridHtml}
+    ${contentHtml}
   `;
+
+  if (typeof window !== "undefined" && window.lucide) window.lucide.createIcons();
 }
 
 function renderStudentLeaderboardRow(row) {
@@ -10651,6 +12845,28 @@ function renderStudentLeaderboardRow(row) {
       <td>${formatSeconds(attempt.duration_seconds || 0)}</td>
       <td>${Number(attempt.mistakes || 0)}</td>
       <td>${escapeHtml(formatDate(attempt.completed_at))}</td>
+    </tr>
+  `;
+}
+
+function renderStudentVrHistoryRow(attempt, index, bestAttemptId) {
+  const isBest = attempt.id && attempt.id === bestAttemptId;
+  const isQuickTest = Number(attempt.duration_seconds || 0) > 0 && Number(attempt.duration_seconds || 0) < 20;
+  const statusBadge = isBest
+    ? `<span class="soft-pill green" style="font-weight: 600;"><i data-lucide="award"></i> Personal Best</span>`
+    : isQuickTest
+    ? `<span class="soft-pill" style="opacity: 0.85;">Test Run</span>`
+    : `<span class="soft-pill blue">Completed</span>`;
+
+  return `
+    <tr class="${isBest ? "current-student-row" : ""}">
+      <td><strong>${index + 1}</strong></td>
+      <td>${escapeHtml(formatDate(attempt.completed_at || attempt.created_at))}</td>
+      <td>${escapeHtml(titleCase(attempt.simulation_type || "Assembly"))}${attempt.competition_id ? `<small>Competition</small>` : ""}</td>
+      <td><strong>${formatProgressNumber(attempt.score_percent || 0)}%</strong></td>
+      <td>${formatSeconds(attempt.duration_seconds || 0)}</td>
+      <td>${Number(attempt.mistakes || 0)}</td>
+      <td>${statusBadge}</td>
     </tr>
   `;
 }
@@ -11026,16 +13242,30 @@ function renderStudentProgressDashboard() {
   const recommendation = getStudentRecommendation(topicMastery, progressByLesson);
 
   container.innerHTML = `
+    <div class="student-assessment-metrics student-progress-summary">
+      ${renderStudentAssessmentMetric("activity", "Overall Progress", `${summary.overall}%`, "Active term", "blue")}
+      ${renderStudentAssessmentMetric("check-circle-2", "Lessons Completed", `${summary.completed}/${summary.total}`, "Published learning parts", "green")}
+      ${renderStudentAssessmentMetric("bar-chart-3", "Average Score", `${summary.averageScore}%`, "Submitted checks", "purple")}
+      ${renderStudentAssessmentMetric("award", "Achievements", summary.badgesEarned + summary.certificatesEarned, "Badges and certificates", "gold")}
+    </div>
     <div class="student-progress-grid">
-      ${renderStudentOverallProgressCard(summary)}
-      ${renderStudentTopicMasteryCard(topicMastery)}
+      <div class="student-progress-row student-progress-overview-row">
+        ${renderStudentOverallProgressCard(summary)}
+        ${renderStudentTopicMasteryCard(topicMastery)}
+      </div>
       ${renderStudentSkillMapCard(skillMap)}
-      ${renderStudentReadinessChecklistCard(readiness)}
-      ${renderStudentCompletionProgressCard()}
-      ${renderStudentWeeklyActivityCard(weeklyActivity)}
-      ${renderStudentRecentScoresCard(recentScores, modulesById)}
-      ${renderStudentHoursCard(hoursLearned)}
-      ${renderStudentGoalsCard(goals)}
+      <div class="student-progress-columns">
+        <div class="student-progress-column">
+          ${renderStudentCompletionProgressCard()}
+          ${renderStudentWeeklyActivityCard(weeklyActivity)}
+          ${renderStudentHoursCard(hoursLearned)}
+        </div>
+        <div class="student-progress-column">
+          ${renderStudentReadinessChecklistCard(readiness)}
+          ${renderStudentRecentScoresCard(recentScores, modulesById)}
+          ${renderStudentGoalsCard(goals)}
+        </div>
+      </div>
       ${renderStudentRecommendationCard(recommendation)}
       ${renderStudentEvidenceTimelineCard()}
     </div>
@@ -11554,8 +13784,11 @@ function getStudentHoursLearned(range, progressByLesson) {
   studentState.lessons.forEach((lesson) => {
     const progress = progressByLesson.get(lesson.id);
     if (!isStudentLessonComplete(lesson, progressByLesson)) return;
-    const completedAt = progress.completed_at || progress.updated_at;
-    if (!isDateInRange(completedAt, range.startDate, range.endDate)) return;
+    const latestAttempt = ["practice", "assessment"].includes(lesson.lesson_type)
+      ? getLatestAttemptsByLesson().find((attempt) => attempt.lesson_id === lesson.id)
+      : null;
+    const completedAt = progress?.completed_at || progress?.updated_at || latestAttempt?.submitted_at;
+    if (!completedAt || !isDateInRange(completedAt, range.startDate, range.endDate)) return;
     const day = dayByKey.get(toDateInputValue(completedAt));
     if (day) day.hours += Number(lesson.duration_minutes || 0) / 60;
   });
@@ -11949,10 +14182,7 @@ function isLessonInActiveQuarter(lesson) {
 function validateRegistrationPayload(payload) {
   if (payload.password !== payload.confirm_password) return "Password and confirm password must match.";
   if (!payload.terms) return "Please agree to the Terms and Privacy Policy.";
-  if (!payload.grade_level || !payload.section) return "Please select your grade level and section.";
-  const expectedAdviser = STUDENT_SECTION_ADVISERS[payload.grade_level]?.[payload.section];
-  if (!expectedAdviser) return "Please select a valid section for your grade level.";
-  if (payload.adviser !== expectedAdviser) return "Adviser must match the selected grade level and section.";
+  if (!payload.grade_level || !payload.section_id) return "Please select your grade level and an active section.";
   if (!/^09\d{9}$/.test(payload.phone_number || "")) return "Phone Number must be exactly 11 digits and start with 09.";
   if (!isStrongPassword(payload.password || "")) return "Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.";
   return "";
@@ -11972,9 +14202,16 @@ async function requireSession() {
   if (!session?.access_token) {
     throw new Error("Please log in first.");
   }
-  const me = await apiGet("/api/me");
-  setSession(session, me.profile);
-  return { session, profile: me.profile };
+  try {
+    const me = await apiGet("/api/me");
+    setSession(session, me.profile);
+    return { session, profile: me.profile };
+  } catch (error) {
+    if (session.is_local_preview || session.profile) {
+      return { session, profile: session.profile };
+    }
+    throw error;
+  }
 }
 
 async function apiGet(path) {
@@ -12299,12 +14536,15 @@ function getInitials(name) {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat(undefined, {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit"
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function formatDateOnly(value) {
@@ -12312,7 +14552,8 @@ function formatDateOnly(value) {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value))
     ? startOfLocalDay(value)
     : new Date(value);
-  return new Intl.DateTimeFormat(undefined, {
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric"

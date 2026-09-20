@@ -1,11 +1,13 @@
 import {
   ApiError,
+  assignStudentToSection,
   cleanStudentPayload,
   createTeacherNotifications,
   deleteAuthUser,
   fail,
   findProfileByEmail,
   findProfileByUsername,
+  getRegistrationSections,
   insertProfile,
   json,
   optionsResponse,
@@ -23,6 +25,11 @@ export async function onRequestPost({ request, env }) {
     const body = await readJson(request);
     const payload = cleanStudentPayload(body);
     validateStudentPayload(payload);
+    const registrationData = await getRegistrationSections(env);
+    const section = registrationData.sections.find((item) => item.id === payload.section_id);
+    if (!section || section.grade_level !== payload.grade_level) {
+      throw new ApiError("Please select an active section for your grade level and school year.", 400);
+    }
 
     const usernameTaken = await findProfileByUsername(env, payload.username);
     if (usernameTaken) {
@@ -47,12 +54,15 @@ export async function onRequestPost({ request, env }) {
         first_name: payload.first_name,
         last_name: payload.last_name,
         home_town: payload.home_town,
-        grade_level: payload.grade_level,
-        section: payload.section,
-        adviser: payload.adviser,
+        grade_level: section.grade_level,
+        section_id: section.id,
+        section: section.name,
+        adviser: section.adviser_name,
         phone_number: payload.phone_number,
         cp_number: payload.phone_number
       });
+
+      await assignStudentToSection(env, { student_id: profile.id, section_id: section.id }, null);
 
       await createTeacherNotifications(env, {
         event_type: "student_registered",
@@ -62,8 +72,9 @@ export async function onRequestPost({ request, env }) {
         entity_type: "profile",
         entity_id: profile.id,
         metadata: {
-          grade_level: profile.grade_level,
-          section: profile.section,
+          grade_level: section.grade_level,
+          section: section.name,
+          section_id: section.id,
           email: profile.email
         }
       });

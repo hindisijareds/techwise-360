@@ -60,6 +60,50 @@ public class MainMenu : MonoBehaviour
     TMP_Text competitionAssemblyText;
     TMP_Text competitionDisassemblyText;
     TMP_Text settingsModalStatusText;
+    TMP_Text stationBadgeText;
+    TMP_Text signedInStationText;
+    Button switchStationButton;
+    Button checkStationButton;
+    Button unpairStationButton;
+    Coroutine stationPollingCoroutine;
+
+    public static readonly string[] AvailableStations = new[]
+    {
+        "station-01",
+        "station-02",
+        "station-03",
+        "station-04",
+        "station-05",
+        "station-06"
+    };
+
+    public static string CurrentStationId
+    {
+        get => PlayerPrefs.GetString("TechWise_StationId", "station-01");
+        set
+        {
+            PlayerPrefs.SetString("TechWise_StationId", value);
+            PlayerPrefs.Save();
+        }
+    }
+
+    public static string CurrentStationDisplayName
+    {
+        get
+        {
+            var id = CurrentStationId;
+            return id switch
+            {
+                "station-01" => "Station 01 (Desk 1)",
+                "station-02" => "Station 02 (Desk 2)",
+                "station-03" => "Station 03 (Desk 3)",
+                "station-04" => "Station 04 (Desk 4)",
+                "station-05" => "Station 05 (Desk 5)",
+                "station-06" => "Station 06 (Desk 6)",
+                _ => id.ToUpper()
+            };
+        }
+    }
 
     Button portalLoginButton;
     Button portalRefreshButton;
@@ -269,16 +313,7 @@ public class MainMenu : MonoBehaviour
 
     public static bool IsDesktopModeSelected(bool desktopModeOverridesVrWhenHeadsetPresent = false)
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
         return false;
-#endif
-        var selectedMode = PlayerPrefs.GetString(ControlModeKey, DesktopModeValue);
-        var userExplicitlySelectedMode = PlayerPrefs.GetInt(ControlModeExplicitKey, 0) == 1;
-
-        if (!userExplicitlySelectedMode && IsVrHardwareAvailable() && !desktopModeOverridesVrWhenHeadsetPresent)
-            return false;
-
-        return selectedMode == DesktopModeValue;
     }
 
     public static bool IsVrHardwareAvailable()
@@ -421,11 +456,7 @@ public class MainMenu : MonoBehaviour
 
     public void UseDesktopMode()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
         SetControlMode(VrModeValue);
-        return;
-#endif
-        SetControlMode(DesktopModeValue);
     }
 
     public void UseVrMode()
@@ -438,19 +469,107 @@ public class MainMenu : MonoBehaviour
         Application.Quit();
     }
 
+    void OnEnable()
+    {
+        stationPollingCoroutine = StartCoroutine(StationPollingLoop());
+    }
+
+    void OnDisable()
+    {
+        if (stationPollingCoroutine != null)
+        {
+            StopCoroutine(stationPollingCoroutine);
+            stationPollingCoroutine = null;
+        }
+    }
+
+    IEnumerator StationPollingLoop()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(2.5f);
+            if (!TechWiseSessionStore.HasSession)
+            {
+                var station = CurrentStationId;
+                yield return TechWisePortalClient.EnsureInstance().CheckStationStatusCoroutine(station, (ok, error, resp) =>
+                {
+                    if (ok && resp != null && resp.status == "paired")
+                    {
+                        RefreshMenuAuthState();
+                        StartCoroutine(LoadCompetitionsCoroutine());
+                        RefreshPortalStatus($"Station paired! Welcome, {resp.student?.full_name ?? resp.profile?.full_name ?? "Student"}.");
+                    }
+                });
+            }
+        }
+    }
+
+    public void CycleNextStation()
+    {
+        var current = CurrentStationId;
+        var index = Array.IndexOf(AvailableStations, current);
+        if (index < 0) index = 0;
+        var next = AvailableStations[(index + 1) % AvailableStations.Length];
+        CurrentStationId = next;
+        UpdateStationUi();
+        CheckStationNow();
+    }
+
+    public void CheckStationNow()
+    {
+        if (TechWiseSessionStore.HasSession)
+        {
+            SetPortalStatus("Already paired and linked.");
+            return;
+        }
+
+        SetPortalStatus($"Checking {CurrentStationDisplayName}...");
+        StartCoroutine(TechWisePortalClient.EnsureInstance().CheckStationStatusCoroutine(CurrentStationId, (ok, error, resp) =>
+        {
+            if (ok && resp != null && resp.status == "paired")
+            {
+                RefreshMenuAuthState();
+                StartCoroutine(LoadCompetitionsCoroutine());
+                RefreshPortalStatus($"Station paired! Welcome, {resp.student?.full_name ?? resp.profile?.full_name ?? "Student"}.");
+            }
+            else if (!ok)
+            {
+                SetPortalStatus($"Could not check station: {error}");
+            }
+            else
+            {
+                SetPortalStatus($"No pairing claim yet for {CurrentStationDisplayName}.\nClick 'Pair Station & Launch VR' on student dashboard.");
+            }
+        }));
+    }
+
+    public void UnpairStation()
+    {
+        var station = CurrentStationId;
+        SetPortalStatus("Unpairing station...");
+        StartCoroutine(TechWisePortalClient.EnsureInstance().UnpairStationCoroutine(station, (ok, message) =>
+        {
+            LogoutPortal();
+            SetPortalStatus("Station unpaired. Ready for new student.");
+        }));
+    }
+
+    void UpdateStationUi()
+    {
+        if (stationBadgeText != null)
+            stationBadgeText.text = CurrentStationDisplayName;
+        if (signedInStationText != null)
+            signedInStationText.text = $"{CurrentStationDisplayName} Linked";
+    }
+
     void Awake()
     {
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
         PlayerPrefs.SetString(ControlModeKey, VrModeValue);
         PlayerPrefs.SetInt(ControlModeExplicitKey, 1);
         PlayerPrefs.Save();
-#else
-        if (!PlayerPrefs.HasKey(ControlModeKey))
-            PlayerPrefs.SetString(ControlModeKey, IsVrHardwareAvailable() ? VrModeValue : DesktopModeValue);
-#endif
 
         EnsureEventSystem();
         if (IsVrHardwareAvailable())
@@ -881,24 +1000,44 @@ public class MainMenu : MonoBehaviour
         lineImg.raycastTarget = false;
 
         loginGroup = CreateRect("Logged Out Group", card, new Vector2(0.06f, 0.075f), new Vector2(0.94f, 0.69f));
-        portalIdentifierInput = CreateInput(loginGroup, "Username, email or website code", new Vector2(0f, 0.68f), new Vector2(1f, 0.9f), "User");
-        portalPasswordInput = CreateInput(loginGroup, "Password", new Vector2(0f, 0.43f), new Vector2(1f, 0.65f), "Lock");
-        portalPasswordInput.contentType = TMP_InputField.ContentType.Password;
 
-        portalStatusText = CreateText(loginGroup, "Portal Status", "", 16f, FontStyles.Normal, TextAlignmentOptions.Left);
-        portalStatusText.color = TechWiseUITheme.MutedText;
-        Stretch(portalStatusText.rectTransform, new Vector2(0f, 0.24f), new Vector2(1f, 0.36f));
+        var stationHub = CreateRect("Station Hub Box", loginGroup, new Vector2(0f, 0.42f), new Vector2(1f, 1f));
+        TechWiseUITheme.StylePanel(stationHub.gameObject.AddComponent<Image>(), new Color32(244, 248, 255, 255), false);
+        var hubOutline = stationHub.gameObject.AddComponent<Outline>();
+        hubOutline.effectColor = new Color32(202, 219, 241, 200);
+        hubOutline.effectDistance = new Vector2(1f, -1f);
+        hubOutline.useGraphicAlpha = false;
 
-        portalLoginButton = CreateLargeButton(loginGroup, "Login Button", "Log In", "", LoginToPortal, new Vector2(0f, 0.02f), new Vector2(0.46f, 0.2f), TechWiseUITheme.PrimaryBlue, Color.white);
-        CreateLargeButton(loginGroup, "Connect Website Button", "Connect Code", "", ConnectWebsiteAccount, new Vector2(0.5f, 0.02f), new Vector2(1f, 0.2f), TechWiseUITheme.PrimaryBlue, Color.white);
+        CreateIconBadge(stationHub, "Station Icon", "VR", TechWiseUITheme.PrimaryBlue, new Vector2(0.04f, 0.56f), new Vector2(0.18f, 0.9f));
+
+        var stationHeader = CreateText(stationHub, "Station Header", "HEADSET LAB STATION", 14f, FontStyles.Bold, TextAlignmentOptions.Left);
+        stationHeader.color = TechWiseUITheme.PrimaryBlue;
+        Stretch(stationHeader.rectTransform, new Vector2(0.21f, 0.74f), new Vector2(0.96f, 0.92f));
+
+        stationBadgeText = CreateText(stationHub, "Station Badge Text", CurrentStationDisplayName, 22f, FontStyles.Bold, TextAlignmentOptions.Left);
+        stationBadgeText.color = TechWiseUITheme.Navy;
+        Stretch(stationBadgeText.rectTransform, new Vector2(0.21f, 0.52f), new Vector2(0.96f, 0.74f));
+
+        var stationSub = CreateText(stationHub, "Station Sub", "Option B auto-pairing: Pair this station on your dashboard to log in without typing.", 13f, FontStyles.Normal, TextAlignmentOptions.Left);
+        stationSub.color = TechWiseUITheme.MutedText;
+        Stretch(stationSub.rectTransform, new Vector2(0.04f, 0.28f), new Vector2(0.96f, 0.48f));
+
+        switchStationButton = CreateLargeButton(stationHub, "Switch Station Button", "Change Station", "Cycle station 01 - 06", CycleNextStation, new Vector2(0.04f, 0.04f), new Vector2(0.48f, 0.25f), TechWiseUITheme.PrimaryBlue, Color.white, "Sync");
+        checkStationButton = CreateLargeButton(stationHub, "Check Station Button", "Check Now", "Check dashboard pairing", CheckStationNow, new Vector2(0.52f, 0.04f), new Vector2(0.96f, 0.25f), Color.white, TechWiseUITheme.PrimaryBlue);
+
+        portalStatusText = CreateText(loginGroup, "Portal Status", $"Waiting for pairing on {CurrentStationDisplayName}...\nOpen your dashboard to link.", 15f, FontStyles.Normal, TextAlignmentOptions.Center);
+        portalStatusText.color = TechWiseUITheme.Navy;
+        Stretch(portalStatusText.rectTransform, new Vector2(0f, 0.02f), new Vector2(1f, 0.38f));
 
         signedInGroup = CreateRect("Logged In Group", card, new Vector2(0.06f, 0.065f), new Vector2(0.94f, 0.68f));
-        signedInNameText = CreateInfoLine(signedInGroup, "Signed In Name", "Logged in as Student.", "User", 0.73f);
-        signedInActivityText = CreateInfoLine(signedInGroup, "Signed In Activities", "0 active VR activities loaded.", "VR", 0.57f);
-        signedInPendingText = CreateInfoLine(signedInGroup, "Signed In Pending", "Pending sync: 0", "Cloud", 0.41f);
+        signedInNameText = CreateInfoLine(signedInGroup, "Signed In Name", "Logged in as Student.", "User", 0.78f);
+        signedInStationText = CreateInfoLine(signedInGroup, "Signed In Station", $"{CurrentStationDisplayName} Linked", "VR", 0.62f);
+        signedInActivityText = CreateInfoLine(signedInGroup, "Signed In Activities", "0 active VR activities loaded.", "VR", 0.46f);
+        signedInPendingText = CreateInfoLine(signedInGroup, "Signed In Pending", "Pending sync: 0", "Cloud", 0.30f);
 
-        portalRefreshButton = CreateLargeButton(signedInGroup, "Refresh Button", "Refresh Activities", "Check for new or updated activities", () => StartCoroutine(LoadCompetitionsCoroutine()), new Vector2(0f, 0.02f), new Vector2(0.47f, 0.26f), TechWiseUITheme.PrimaryBlue, Color.white, "Sync");
-        portalLogoutButton = CreateLargeButton(signedInGroup, "Logout Button", "Log Out", "Sign out and clear local session data", LogoutPortal, new Vector2(0.53f, 0.02f), new Vector2(1f, 0.26f), TechWiseUITheme.Red, Color.white, "X");
+        portalRefreshButton = CreateLargeButton(signedInGroup, "Refresh Button", "Refresh Activities", "Check for new or updated activities", () => StartCoroutine(LoadCompetitionsCoroutine()), new Vector2(0f, 0.02f), new Vector2(0.47f, 0.22f), TechWiseUITheme.PrimaryBlue, Color.white, "Sync");
+        unpairStationButton = CreateLargeButton(signedInGroup, "Unpair Button", "Unpair Station", "Release station and log out headset", UnpairStation, new Vector2(0.53f, 0.02f), new Vector2(1f, 0.22f), TechWiseUITheme.Red, Color.white, "X");
+        portalLogoutButton = unpairStationButton;
     }
 
     void BuildNavigationPanel(Transform parent)
@@ -908,13 +1047,13 @@ public class MainMenu : MonoBehaviour
         TechWiseUITheme.StylePanel(panelImg, Color.white, true);
         panelImg.raycastTarget = false;
 
-        var modeLabel = CreateText(panel, "Mode Label", "SELECT MODE", 17f, FontStyles.Bold, TextAlignmentOptions.Left);
+        var modeLabel = CreateText(panel, "Mode Label", "SYSTEM MODE", 17f, FontStyles.Bold, TextAlignmentOptions.Left);
         modeLabel.color = TechWiseUITheme.MutedText;
         Stretch(modeLabel.rectTransform, new Vector2(0.075f, 0.915f), new Vector2(0.45f, 0.955f));
 
         var modeRow = CreateRect("Mode Toggle", panel, new Vector2(0.075f, 0.815f), new Vector2(0.925f, 0.885f));
-        desktopModeButton = CreateModeButton(modeRow, "Desktop Mode Button", "Desktop", UseDesktopMode, new Vector2(0f, 0f), new Vector2(0.49f, 1f));
-        vrModeButton = CreateModeButton(modeRow, "VR Mode Button", "VR", UseVrMode, new Vector2(0.51f, 0f), new Vector2(1f, 1f));
+        vrModeButton = CreateModeButton(modeRow, "VR Mode Button", "Meta Quest 2 (VR Mode)", UseVrMode, Vector2.zero, Vector2.one);
+        desktopModeButton = null;
 
         var mainLabel = CreateText(panel, "Main Menu Label", "MAIN MENU", 17f, FontStyles.Normal, TextAlignmentOptions.Left);
         mainLabel.color = TechWiseUITheme.MutedText;
@@ -979,45 +1118,41 @@ public class MainMenu : MonoBehaviour
         TechWiseUITheme.StylePanel(cardImg, Color.white, true);
         cardImg.raycastTarget = false;
 
-        var title = CreateText(card, "Controls Title", "Controls", 44f, FontStyles.Bold, TextAlignmentOptions.Center);
+        var title = CreateText(card, "Controls Title", "Meta Quest 2 Controls", 44f, FontStyles.Bold, TextAlignmentOptions.Center);
         title.color = TechWiseUITheme.Navy;
-        Stretch(title.rectTransform, new Vector2(0.28f, 0.82f), new Vector2(0.72f, 0.92f));
+        Stretch(title.rectTransform, new Vector2(0.2f, 0.82f), new Vector2(0.8f, 0.92f));
 
-        var subtitle = CreateText(card, "Controls Subtitle", "View all control mappings for Desktop and VR modes.", 18f, FontStyles.Normal, TextAlignmentOptions.Center);
+        var subtitle = CreateText(card, "Controls Subtitle", "6DoF Spatial Interaction and Touch Controller mappings for VR mode.", 18f, FontStyles.Normal, TextAlignmentOptions.Center);
         subtitle.color = TechWiseUITheme.MutedText;
-        Stretch(subtitle.rectTransform, new Vector2(0.22f, 0.755f), new Vector2(0.78f, 0.805f));
+        Stretch(subtitle.rectTransform, new Vector2(0.15f, 0.755f), new Vector2(0.85f, 0.805f));
 
-        var desktop = CreateRect("Desktop Controls Section", card, new Vector2(0.035f, 0.12f), new Vector2(0.59f, 0.71f));
-        var desktopTitle = CreateText(desktop, "Desktop Title", "Desktop Controls", 26f, FontStyles.Bold, TextAlignmentOptions.Left);
-        desktopTitle.color = TechWiseUITheme.Navy;
-        Stretch(desktopTitle.rectTransform, new Vector2(0f, 0.9f), new Vector2(1f, 1f));
+        var vrLeft = CreateRect("VR Controls Section", card, new Vector2(0.035f, 0.12f), new Vector2(0.59f, 0.71f));
+        var vrLeftTitle = CreateText(vrLeft, "VR Left Title", "Touch Controller Mappings", 26f, FontStyles.Bold, TextAlignmentOptions.Left);
+        vrLeftTitle.color = TechWiseUITheme.Navy;
+        Stretch(vrLeftTitle.rectTransform, new Vector2(0f, 0.9f), new Vector2(1f, 1f));
         var mappings = new[]
         {
-            ("W A S D", "Move"),
-            ("Mouse", "Look"),
-            ("Left Click", "Grab/drop part or press crosshair button"),
-            ("Right Mouse Drag", "Rotate held part freely"),
-            ("Mouse Wheel", "Rotate held part"),
-            ("R", "Cycle rotation axis"),
-            ("Shift + Wheel", "Move held part closer/farther"),
-            ("F", "Reset held part rotation"),
-            ("Backspace", "Reset held or last grabbed part"),
-            ("Enter / Space", "Start visible competition prompt"),
-            ("Esc", "Unlock cursor or open in-game menu"),
+            ("Grip (Side)", "Grab, hold, and drop PC components"),
+            ("Trigger (Index)", "Pull screws, press UI buttons, slot parts"),
+            ("Left Stick", "Smooth locomotion / move around workstation"),
+            ("Right Stick", "Snap turn and viewpoint rotation"),
+            ("Button A / X", "Select interactable item / confirm dialogs"),
+            ("Button B / Y", "Toggle pause menu / reset component"),
+            ("Proximity", "Automatic headset wear tracking for audit"),
         };
 
         for (var i = 0; i < mappings.Length; i++)
-            CreateControlRow(desktop, mappings[i].Item1, mappings[i].Item2, 0.82f - i * 0.073f);
+            CreateControlRow(vrLeft, mappings[i].Item1, mappings[i].Item2, 0.82f - i * 0.11f);
 
-        var vr = CreateRect("VR Controls Section", card, new Vector2(0.61f, 0.18f), new Vector2(0.965f, 0.71f));
-        TechWiseUITheme.StylePanel(vr.gameObject.AddComponent<Image>(), Color.white, false);
-        var vrTitle = CreateText(vr, "VR Title", "VR Controls", 28f, FontStyles.Bold, TextAlignmentOptions.Left);
-        vrTitle.color = TechWiseUITheme.Navy;
-        Stretch(vrTitle.rectTransform, new Vector2(0.08f, 0.77f), new Vector2(0.92f, 0.91f));
-        CreateIconGlyph(vr, "VR Illustration", TechWiseUITheme.PrimaryBlue, new Vector2(0.38f, 0.44f), new Vector2(0.62f, 0.64f));
-        var vrBody = CreateText(vr, "VR Body", "Use headset and controllers when connected.\n\nCrosshair/desktop controls remain available when Desktop mode is selected.", 20f, FontStyles.Normal, TextAlignmentOptions.Center);
+        var vrRight = CreateRect("VR Safety Section", card, new Vector2(0.61f, 0.12f), new Vector2(0.965f, 0.71f));
+        TechWiseUITheme.StylePanel(vrRight.gameObject.AddComponent<Image>(), new Color32(244, 248, 255, 255), false);
+        var vrRightTitle = CreateText(vrRight, "VR Right Title", "Safety & Verification", 26f, FontStyles.Bold, TextAlignmentOptions.Left);
+        vrRightTitle.color = TechWiseUITheme.Navy;
+        Stretch(vrRightTitle.rectTransform, new Vector2(0.08f, 0.86f), new Vector2(0.92f, 0.96f));
+        CreateIconGlyph(vrRight, "VR Illustration", TechWiseUITheme.PrimaryBlue, new Vector2(0.38f, 0.52f), new Vector2(0.62f, 0.74f));
+        var vrBody = CreateText(vrRight, "VR Body", "Pure VR Simulation Mode\n\n- Option B Station Zero-Typing Pairing\n- Realtime Proximity Sensor Verification\n- Headset & Station Device Fingerprints\n- Offline Queuing with Cloud Auto-Sync", 16f, FontStyles.Normal, TextAlignmentOptions.Center);
         vrBody.color = TechWiseUITheme.Navy;
-        Stretch(vrBody.rectTransform, new Vector2(0.08f, 0.1f), new Vector2(0.92f, 0.36f));
+        Stretch(vrBody.rectTransform, new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.48f));
 
         var back = CreateLargeButton(card, "Back Button", "Back", "", ShowMainMenu, new Vector2(0.84f, 0.035f), new Vector2(0.965f, 0.11f), TechWiseUITheme.PrimaryBlue, Color.white);
         AddLayout(back.gameObject, 0f);
@@ -1476,16 +1611,17 @@ public class MainMenu : MonoBehaviour
     void RefreshPortalStatus(string fallbackMessage = "")
     {
         portalStatusMessage = fallbackMessage ?? string.Empty;
+        UpdateStationUi();
         var signedIn = TechWiseSessionStore.HasSession;
         if (!signedIn)
         {
             if (syncCardTitleText != null)
-                syncCardTitleText.text = "Student Sync";
+                syncCardTitleText.text = "VR Lab Station Pairing";
             if (syncCardSubtitleText != null)
-                syncCardSubtitleText.text = "Log in with a student account to sync competition attempts.";
+                syncCardSubtitleText.text = "Option B zero-typing pairing: Pair from your student web dashboard.";
             if (portalStatusText != null)
                 portalStatusText.text = string.IsNullOrWhiteSpace(fallbackMessage)
-                    ? string.Empty
+                    ? $"Waiting for student pairing on {CurrentStationDisplayName}...\nOpen your dashboard and click 'Pair Station & Launch VR'."
                     : fallbackMessage;
             RaiseMenuStateChanged();
             return;
@@ -1501,7 +1637,7 @@ public class MainMenu : MonoBehaviour
         if (syncCardTitleText != null)
             syncCardTitleText.text = $"Welcome back, {FirstName(name)}!";
         if (syncCardSubtitleText != null)
-            syncCardSubtitleText.text = "Your activity and competition data is saved to your account when online.";
+            syncCardSubtitleText.text = $"{CurrentStationDisplayName} linked. Your progress is saved automatically.";
         if (syncPillText != null)
         {
             syncPillText.text = pending == 0 ? "SYNCED" : $"PENDING {pending}";
@@ -1509,6 +1645,8 @@ public class MainMenu : MonoBehaviour
         }
         if (signedInNameText != null)
             signedInNameText.text = $"Logged in as {name}.";
+        if (signedInStationText != null)
+            signedInStationText.text = $"{CurrentStationDisplayName} Linked";
         if (signedInActivityText != null)
             signedInActivityText.text = activityText;
         if (signedInPendingText != null)
@@ -1528,9 +1666,9 @@ public class MainMenu : MonoBehaviour
 
     void RefreshModeButtons()
     {
-        var desktopSelected = IsDesktopModeSelected();
-        SetModeButtonState(desktopModeButton, desktopSelected);
-        SetModeButtonState(vrModeButton, !desktopSelected);
+        if (desktopModeButton != null)
+            desktopModeButton.gameObject.SetActive(false);
+        SetModeButtonState(vrModeButton, true);
         RaiseMenuStateChanged();
     }
 

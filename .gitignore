@@ -75,16 +75,37 @@ crashlytics-build.properties
 /WebPortal/capture.env
 /WebPortal/artifacts/system-screenshots/
 
+# Environment and Secret Files
+.env
+.env.*
+.env.local
+.env.*.local
+.dev.vars
+.dev.vars.*
+*.env
+!capture.env.example
+!.dev.vars.example
+
 # Web portal dependencies, local Cloudflare state, secrets, and generated exports
+node_modules/
 /WebPortal/node_modules/
+.wrangler/
 /WebPortal/.wrangler/
 /WebPortal/.dev.vars
 /WebPortal/.wrangler-dev*.log
 /WebPortal/output/
 /WebPortal/tmp/
 
+# Build and Framework Artifacts
+.next/
+dist/
+
+# Logs
+*.log
+
 # Local assistant/conversion caches and temporary working files
 /.codex_tmp/
 /__pycache__/
 *.py[cod]
 /tmp_*
+

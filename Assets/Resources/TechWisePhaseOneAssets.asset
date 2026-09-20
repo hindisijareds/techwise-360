@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b73d8db8cee10d4385d8a1a4a66ddb3, type: 3}
+  m_Name: TechWisePhaseOneAssets
+  m_EditorClassIdentifier: Assembly-CSharp::TechWisePhaseOneAssets
+  boardParts:
+  - id: CPU
+    position: {x: -0.0037404983, y: 0.019408472, z: -0.0051381886}
+    scale: {x: 1.1249564, y: 1.0000001, z: 1.1249565}
+    rotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071067}
+  - id: RAM
+    position: {x: -0.02050884, y: 0.019626595, z: 0.0023407936}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: RAM1
+    position: {x: -0.023490956, y: 0.019626595, z: 0.0023407936}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: RAM2
+    position: {x: -0.02641301, y: 0.019626595, z: 0.0023407936}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: RAM3
+    position: {x: -0.029263368, y: 0.019626595, z: 0.0023407936}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: M2
+    position: {x: 0.0010450807, y: -0.0035486019, z: -0.004498534}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  - id: CPUCooler
+    position: {x: -0.003527849, y: 0.016199863, z: -0.004432887}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  boardInCase:
+    id: Motherboard
+    position: {x: 0.0012755293, y: -0.00050563336, z: -0.073781066}
+    scale: {x: 1, y: 1, z: 1}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+  motherboardHoles:
+  - {x: -0.036400814, y: 0.043367367, z: -0.005611792}
+  - {x: -0.036400814, y: -0.003953221, z: -0.005611792}
+  - {x: -0.014731163, y: -0.0039532213, z: -0.005611792}
+  - {x: -0.036400814, y: -0.041304156, z: -0.005611792}
+  - {x: -0.014731161, y: -0.041304156, z: -0.005611792}
+  - {x: 0.031615112, y: -0.041174456, z: -0.005611792}
+  - {x: 0.031615112, y: -0.0038235195, z: -0.005611792}
+  - {x: 0.024840638, y: 0.043497067, z: -0.005611792}
+  - {x: -0.014731161, y: 0.043367367, z: -0.005611792}
+  coolerScrews:
+  - {x: -0.014756669, y: 0.030517763, z: -0.0018007415}
+  - {x: 0.00771936, y: 0.030502828, z: -0.0018011644}
+  - {x: 0.007640377, y: 0.0081120245, z: -0.0018056432}
+  - {x: -0.014752218, y: 0.007906591, z: -0.0018173117}
+  m2Standoff: {x: 0.012706324, y: -0.0034205415, z: -0.0049257725}
+  m2Connector: {x: -0.010586081, y: -0.0035486019, z: -0.0044967756}
+  coverHinge: {x: -0.0036386224, y: 0.028337836, z: -0.004785426}
+  boardThickness: 0.0007230118
+  screwdriver: {fileID: 7748035458273455792, guid: f7797f5f6f88ec742ac40f092727f023,
+    type: 3}
+  screw: {fileID: 2653706560370096023, guid: 7c8a1e355e4705e4e95a1b322a0fba9f, type: 3}
+  pasteApplicator: {fileID: 6866458842148454386, guid: b2ab879938c79d542a47380b1aed52fc,
+    type: 3}
+  fan: {fileID: 2200152899118064333, guid: 0a1d706fd45ed9a4ea0aed109bc3fa5f, type: 3}
+  officeShell: {fileID: 2959591425087510982, guid: 921d1f2154127a44e818d085418a70df,
+    type: 3}
+  pasteBlob: {fileID: 4300000, guid: 064c024867c24be4cb9e282078a08806, type: 2}
+  standoffMesh: {fileID: 4300000, guid: 1f38453c39dee704d9beb2486359f66c, type: 2}
+  metal: {fileID: 2100000, guid: b2b8580c56580b645ac22a1e83eb7f08, type: 2}
+  paste: {fileID: 2100000, guid: f52ab365941ae9843abbe61b739550c8, type: 2}
+  accent: {fileID: 2100000, guid: 43263c967be914245b8f3cfb9762b3fb, type: 2}
+  sourceModel: Assets/Prefab/PC/dream-computer-setup/source/maya2sketchfab.fbx

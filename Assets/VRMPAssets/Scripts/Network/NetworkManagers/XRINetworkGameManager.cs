@@ -268,7 +268,8 @@ namespace XRMultiplayer
             }
 
             // Shutdown lobby if owner, remove from lobby if not owner.
-            await m_LobbyManager.RemovePlayerFromLobby(AuthenicationId);
+            if (m_LobbyManager != null)
+                await m_LobbyManager.RemovePlayerFromLobby(AuthenicationId);
         }
 
         public async Task<bool> Authenticate()

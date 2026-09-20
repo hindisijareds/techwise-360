@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="student-dashboard.css">
   <link rel="stylesheet" href="theme.css">
 </head>
 <body data-page="student">
@@ -19,33 +20,66 @@
     <div class="mobile-nav-backdrop" data-mobile-nav-close></div>
     <aside id="studentSidebar" class="app-sidebar" aria-label="Student navigation">
       <div class="sidebar-brand-block">
-        <span class="sidebar-logo-mark"><i data-lucide="box"></i></span>
+        <span class="sidebar-logo-mark" aria-hidden="true">
+          <svg class="techwise-cube-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <path d="M20.5 7.25 12 12.1 3.5 7.25"></path>
+            <path d="M12 12.1V21.5"></path>
+            <path d="M21 16.55V7.45a2 2 0 0 0-1-1.73l-6-3.42a4 4 0 0 0-4 0L4 5.72a2 2 0 0 0-1 1.73v9.1a2 2 0 0 0 1 1.73l6 3.42a4 4 0 0 0 4 0l6-3.42a2 2 0 0 0 1-1.73Z"></path>
+          </svg>
+        </span>
         <div>
           <strong>TechWise 360</strong>
           <small>Learn. Practice. Grow.</small>
         </div>
       </div>
-      <button class="nav-item active" type="button" data-student-view="home"><i data-lucide="home"></i><span>Home</span></button>
+      <label class="sidebar-search">
+        <i data-lucide="search"></i>
+        <input id="studentNavSearch" type="search" placeholder="Search menu" autocomplete="off">
+        <kbd>Ctrl K</kbd>
+      </label>
+      <span class="sidebar-section-label">Main navigation</span>
+      <button class="nav-item active" type="button" data-student-view="home"><i data-lucide="layout-dashboard"></i><span>Home</span></button>
       <button class="nav-item" type="button" data-student-view="lessons"><i data-lucide="book-open"></i><span>Learn</span></button>
       <button class="nav-item" type="button" data-student-view="assessments"><i data-lucide="clipboard-check"></i><span>Assessments</span></button>
+      <span class="sidebar-section-label">Progress &amp; recognition</span>
       <button class="nav-item" type="button" data-student-view="progress"><i data-lucide="bar-chart-3"></i><span>Progress</span></button>
-      <button class="nav-item" type="button" data-student-view="leaderboard"><i data-lucide="bar-chart-3"></i><span>VR Leaderboard</span></button>
-      <button class="nav-item" type="button" data-student-view="achievements"><i data-lucide="trophy"></i><span>Achievements</span></button>
+      <button class="nav-item" type="button" data-student-view="leaderboard"><i data-lucide="trophy"></i><span>VR Leaderboard</span></button>
+      <button class="nav-item" type="button" data-student-view="vr-connect"><i data-lucide="glasses"></i><span>Connect VR Simulation</span></button>
+      <button class="nav-item" type="button" data-student-view="achievements"><i data-lucide="award"></i><span>Achievements</span></button>
+      <span class="sidebar-section-label">Account</span>
       <button class="nav-item" type="button" data-student-view="profile"><i data-lucide="settings"></i><span>Settings</span></button>
-      <div class="sidebar-help-card">
-        <span><i data-lucide="book-open-check"></i></span>
-        <strong>Learning Tools</strong>
-        <small>Continue lessons, submit checks, and track progress.</small>
+      <div class="sidebar-profile-card">
+        <div id="studentTopAvatar" class="profile-badge"><i data-lucide="user-round"></i></div>
+        <div>
+          <strong id="studentTopName">Student</strong>
+          <small id="studentTopGrade">Grade Level</small>
+        </div>
+        <button id="logoutButton" class="icon-shell" type="button" aria-label="Logout">
+          <i data-lucide="log-out"></i>
+        </button>
       </div>
     </aside>
 
     <section class="app-main">
       <header class="app-topbar">
-        <a class="brand-mark compact-brand" href="student-dashboard.html">TechWise <span>360</span></a>
-        <div class="topbar-profile">
+        <div class="topbar-leading">
+          <button id="studentSidebarToggle" class="sidebar-collapse-toggle" type="button" aria-controls="studentSidebar" aria-expanded="true" aria-label="Collapse navigation">
+            <span class="sidebar-toggle-glyph" aria-hidden="true"></span>
+          </button>
+          <div class="topbar-breadcrumb" aria-label="Breadcrumb">
+            <i data-lucide="layout-grid"></i>
+            <span id="studentBreadcrumbParent">Student portal</span>
+            <i data-lucide="chevron-right"></i>
+            <strong id="studentBreadcrumbCurrent">Home</strong>
+          </div>
+        </div>
+        <div class="topbar-actions">
           <div class="notification-center" id="studentNotificationCenter">
             <button id="studentNotificationButton" class="notification-button" type="button" aria-label="Open notifications" aria-expanded="false">
-              <i data-lucide="bell"></i>
+              <svg class="notification-bell-icon" data-lucide="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
+                <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path>
+              </svg>
               <span id="studentNotificationBadge" class="notification-badge" hidden>0</span>
             </button>
             <section id="studentNotificationPanel" class="notification-panel" aria-label="Student notifications" hidden>
@@ -59,13 +93,11 @@
               <div id="studentNotificationList" class="notification-list"></div>
             </section>
           </div>
-          <div id="studentTopAvatar" class="profile-badge"><i data-lucide="user-round"></i></div>
-          <div>
-            <strong id="studentTopName">Student</strong>
-            <span id="studentTopGrade">Grade Level</span>
-          </div>
-          <button id="logoutButton" class="icon-shell" type="button" aria-label="Logout">
-            <i data-lucide="log-out"></i>
+          <button class="icon-shell" type="button" data-jump-student="profile" aria-label="Open settings">
+            <svg class="topbar-settings-icon" data-lucide="settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
           </button>
         </div>
       </header>
@@ -73,56 +105,106 @@
       <p id="studentMessage" class="status-message dashboard-status" role="status" aria-live="polite"></p>
 
       <section class="student-section active" data-view="home">
-        <div class="student-hero-row">
+        <div class="student-home-surface">
+        <header class="student-home-hero">
           <section class="welcome-block">
             <h1 id="studentGreeting">Welcome back!</h1>
             <p id="studentQuarter">Ready to build your ICT skills today?</p>
           </section>
-          <section class="achievement-strip">
-            <div><i data-lucide="award"></i><strong id="studentBadges">0</strong><span>Badges</span></div>
-            <div><i data-lucide="file-badge"></i><strong id="studentCertificates">0</strong><span>Certificates</span></div>
-            <div><i data-lucide="bar-chart-3"></i><strong id="studentRank">-</strong><span>VR Result</span></div>
-          </section>
-        </div>
+          <div class="student-home-actions">
+            <span class="home-period-pill"><i data-lucide="calendar-days"></i><span>Active term</span></span>
+            <button class="primary-button compact-action" type="button" data-jump-student="lessons"><i data-lucide="play"></i><span>Continue Learning</span></button>
+          </div>
+        </header>
 
-        <section class="quick-access">
-          <h2>Quick Access</h2>
-          <div id="quickAccessCards" class="quick-grid"></div>
-        </section>
+        <div class="metric-grid student-home-metrics">
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Overall Progress</p><span class="stat-icon blue"><i data-lucide="activity"></i></span></div>
+            <div class="stat-card-body"><div class="stat-card-value"><strong id="studentHomeProgress">0%</strong><small>Active term completion</small></div><svg class="metric-sparkline" data-metric-sparkline="student-home-progress" viewBox="0 0 100 46" role="img" aria-label="Overall progress trend"><title>Overall progress trend</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Lessons Completed</p><span class="stat-icon green"><i data-lucide="check-circle-2"></i></span></div>
+            <div class="stat-card-body"><div class="stat-card-value"><strong id="studentHomeLessons">0</strong><small>Published learning parts</small></div><svg class="metric-sparkline" data-metric-sparkline="student-home-lessons" viewBox="0 0 100 46" role="img" aria-label="Lesson completion trend"><title>Lesson completion trend</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Average Score</p><span class="stat-icon gold"><i data-lucide="star"></i></span></div>
+            <div class="stat-card-body"><div class="stat-card-value"><strong id="studentHomeAverage">0%</strong><small>Submitted checks</small></div><svg class="metric-sparkline" data-metric-sparkline="student-home-scores" viewBox="0 0 100 46" role="img" aria-label="Assessment score trend"><title>Assessment score trend</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Earned Rewards</p><span class="stat-icon purple"><i data-lucide="award"></i></span></div>
+            <div class="stat-card-body"><div class="stat-card-value"><strong id="studentHomeRewards">0</strong><small><span id="studentBadges">0</span> badges &middot; <span id="studentCertificates">0</span> certificates</small></div><svg class="metric-sparkline" data-metric-sparkline="student-home-rewards" viewBox="0 0 100 46" role="img" aria-label="Earned rewards trend"><title>Earned rewards trend</title><path class="sparkline-area" d=""></path><polyline pathLength="1" points=""></polyline></svg></div>
+          </article>
+        </div>
 
         <section id="studentEvaluationPrompt" class="student-evaluation-prompt" hidden></section>
 
+        <div class="student-home-layout">
+        <div class="student-home-main">
         <div class="student-home-grid">
           <section class="panel-card student-next-action-card">
             <div class="panel-title-row"><h2>Next Best Action</h2><span id="nextActionKind" class="soft-pill"><i data-lucide="sparkles"></i> Ready</span></div>
-            <div id="studentNextAction"></div>
+            <div id="studentNextAction" class="student-home-card-body"></div>
           </section>
           <section class="panel-card mission-card">
             <div class="panel-title-row"><h2>Today's Learning Task</h2><span class="soft-pill"><i data-lucide="clock"></i> Active</span></div>
-            <div id="dailyMission"></div>
+            <div id="dailyMission" class="student-home-card-body"></div>
           </section>
           <section class="panel-card student-skill-snapshot-card">
             <div class="panel-title-row"><h2>Skill Snapshot</h2><button class="link-button" type="button" data-jump-student="progress">View Progress</button></div>
-            <div id="studentSkillSnapshot"></div>
+            <div id="studentSkillSnapshot" class="student-home-card-body"></div>
           </section>
           <section class="panel-card progress-card">
             <div class="panel-title-row"><h2>Progress Overview</h2><span id="progressWindow" class="link-label">Active Term</span></div>
-            <div class="gauge"><strong id="overallProgress">0%</strong><span>Overall Progress</span></div>
-            <div class="progress-stats">
-              <div><i data-lucide="book-open"></i><strong id="topicsCompleted">0</strong><span>Topics</span></div>
-              <div><i data-lucide="clock"></i><strong id="hoursLearned">0</strong><span>Hours</span></div>
-              <div><i data-lucide="file-text"></i><strong id="lessonsCompleted">0</strong><span>Done</span></div>
-              <div><i data-lucide="bar-chart-3"></i><strong id="avgScore">0%</strong><span>Avg Score</span></div>
+            <div class="student-home-card-body student-progress-summary-body">
+              <div class="gauge"><strong id="overallProgress">0%</strong><span>Overall Progress</span></div>
+              <div class="progress-stats">
+                <div><i data-lucide="book-open"></i><strong id="topicsCompleted">0</strong><span>Topics</span></div>
+                <div><i data-lucide="clock"></i><strong id="hoursLearned">0</strong><span>Hours</span></div>
+                <div><i data-lucide="file-text"></i><strong id="lessonsCompleted">0</strong><span>Done</span></div>
+                <div><i data-lucide="bar-chart-3"></i><strong id="avgScore">0%</strong><span>Avg Score</span></div>
+              </div>
             </div>
           </section>
           <section class="panel-card student-due-reminders-card">
             <div class="panel-title-row"><h2>Due Reminders</h2><button class="link-button" type="button" data-jump-student="assessments">Open Checks</button></div>
-            <div id="studentDueReminders"></div>
+            <div id="studentDueReminders" class="student-home-card-body"></div>
           </section>
           <section class="panel-card student-evidence-timeline-card">
             <div class="panel-title-row"><h2>Learning Evidence</h2><button class="link-button" type="button" data-jump-student="progress">View All</button></div>
-            <div id="studentEvidenceTimeline"></div>
+            <div id="studentEvidenceTimeline" class="student-home-card-body"></div>
           </section>
+        </div>
+        </div>
+        <aside class="student-home-rail">
+          <section class="panel-card quick-access">
+            <div class="panel-title-row"><h2>Quick Access</h2><i data-lucide="zap"></i></div>
+            <div id="quickAccessCards" class="quick-grid student-home-card-body"></div>
+          </section>
+          <section class="panel-card student-vr-card">
+            <div class="panel-title-row">
+              <h2>Meta Quest 2 Lab</h2>
+              <span class="soft-pill"><i data-lucide="glasses"></i> VR Ready</span>
+            </div>
+            <div class="student-vr-spotlight student-home-card-body">
+              <div class="vr-spotlight-hero">
+                <span class="vr-spotlight-icon"><i data-lucide="monitor"></i></span>
+                <div>
+                  <strong>Hardware Assembly VR</strong>
+                  <small>6DoF PC Simulation</small>
+                </div>
+              </div>
+              <button class="primary-button compact-action" type="button" data-jump-student="vr-connect">
+                <i data-lucide="link"></i>
+                <span>Connect Simulation</span>
+              </button>
+            </div>
+          </section>
+          <section class="panel-card student-rank-card">
+            <div class="panel-title-row"><h2>VR Standing</h2><button class="link-button" type="button" data-jump-student="leaderboard">View Board</button></div>
+            <div class="student-rank-spotlight student-home-card-body"><i data-lucide="trophy"></i><strong id="studentRank">-</strong><span id="studentRankSub">Class position</span></div>
+          </section>
+        </aside>
+        </div>
         </div>
       </section>
 
@@ -163,6 +245,160 @@
 
       <section class="student-section" data-view="leaderboard">
         <div id="studentLeaderboardDashboard" class="leaderboard-dashboard student-leaderboard-dashboard"></div>
+      </section>
+
+      <section class="student-section" data-view="vr-connect">
+        <div class="section-heading vr-connect-heading">
+          <div>
+            <h1>Connect VR Simulation</h1>
+            <p>Pair your student account with the lab headset to launch 3D PC Hardware Assembly and Disassembly.</p>
+          </div>
+          <div class="vr-connect-header-badge">
+            <span class="status-indicator-dot live"></span>
+            <span id="vrGlobalStatus">Lab Simulation: Ready</span>
+          </div>
+        </div>
+
+        <div class="metric-grid vr-connect-metrics">
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Headset Model</p><span class="stat-icon purple"><i data-lucide="glasses"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value">
+                <strong>Meta Quest 2</strong>
+                <small>6DoF Standalone Headset</small>
+              </div>
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Assigned Lab</p><span class="stat-icon blue"><i data-lucide="school"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value">
+                <strong id="vrLabSection">ICT Computer Lab</strong>
+                <small>DepEd TVL-ICT Workstation</small>
+              </div>
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Simulation Modules</p><span class="stat-icon green"><i data-lucide="cpu"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value">
+                <strong>PC Assembly &amp; Disassembly</strong>
+                <small>Interactive Virtual Training</small>
+              </div>
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card-heading"><p>Offline Protection</p><span class="stat-icon gold"><i data-lucide="shield-check"></i></span></div>
+            <div class="stat-card-body">
+              <div class="stat-card-value">
+                <strong>Store &amp; Auto-Sync</strong>
+                <small>Local Queue &amp; PIN Security</small>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Lab Headset Station Pairing -->
+        <section class="panel-card vr-station-main-card">
+          <div class="panel-title-row">
+            <div class="vr-card-title-wrap">
+              <h2>Lab Headset Station Pairing</h2>
+            </div>
+          </div>
+          <p class="vr-card-lead">Pair your active dashboard session directly to the physical Meta Quest 2 at your computer lab desk. Your student account, grade level, and active quarter are automatically synchronized to the headset without typing usernames or passwords in VR.</p>
+
+          <div class="vr-station-hub-layout">
+            <div class="vr-station-selector-box">
+              <div class="station-picker-header">
+                <span class="station-picker-label"><i data-lucide="monitor"></i> Choose Your Lab Desk Station:</span>
+              </div>
+              <div class="station-buttons-grid" id="stationButtonsGrid">
+                <button type="button" class="station-select-btn active" data-station="station-01">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 01</strong>
+                    <small>Lab Desk 1</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+                <button type="button" class="station-select-btn" data-station="station-02">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 02</strong>
+                    <small>Lab Desk 2</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+                <button type="button" class="station-select-btn" data-station="station-03">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 03</strong>
+                    <small>Lab Desk 3</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+                <button type="button" class="station-select-btn" data-station="station-04">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 04</strong>
+                    <small>Lab Desk 4</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+                <button type="button" class="station-select-btn" data-station="station-05">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 05</strong>
+                    <small>Lab Desk 5</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+                <button type="button" class="station-select-btn" data-station="station-06">
+                  <i data-lucide="glasses"></i>
+                  <div class="station-btn-meta">
+                    <strong>Station 06</strong>
+                    <small>Lab Desk 6</small>
+                  </div>
+                  <span class="station-mini-dot"></span>
+                </button>
+              </div>
+
+              <input type="hidden" id="vrStationSelectValue" value="station-01">
+
+              <div class="station-status-strip" id="stationStatusStrip">
+                <div class="station-status-info">
+                  <span class="status-indicator-dot pulse" id="stationDot"></span>
+                  <div>
+                    <strong id="selectedStationName">Station 01 — Meta Quest 2</strong>
+                    <small id="selectedStationSub">Standby &middot; Ready for student pairing</small>
+                  </div>
+                </div>
+                <span class="station-chip" id="stationChip">Ready to Pair</span>
+              </div>
+
+              <div class="station-action-row">
+                <button id="pairStationBtn" class="primary-button vr-pair-btn" type="button">
+                  <i data-lucide="link"></i>
+                  <span>Pair &amp; Launch on Headset</span>
+                </button>
+                <button id="unpairStationBtn" class="outline-button vr-unpair-btn" type="button" style="display: none;">
+                  <i data-lucide="unlink"></i>
+                  <span>Unpair Station</span>
+                </button>
+              </div>
+              <p id="stationPairFeedback" class="status-message" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="vr-guide-steps-card">
+              <h4><i data-lucide="check-check"></i> How Station Pairing Works:</h4>
+              <ol>
+                <li><strong>Locate Station:</strong> Check the station label on your desk or headset (e.g., <em>Station 01</em>).</li>
+                <li><strong>Click Pair:</strong> Select your station above and click <strong>Pair &amp; Launch on Headset</strong>.</li>
+                <li><strong>Put On Headset:</strong> Put on the Meta Quest 2 headset. The VR simulation automatically recognizes your account, displays your name, and unlocks your learning modules!</li>
+              </ol>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="student-section" data-view="achievements">

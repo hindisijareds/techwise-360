@@ -10,47 +10,84 @@
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="auth.css">
 </head>
 <body data-page="login">
   <main class="auth-shell">
     <section class="brand-panel" aria-label="TechWise 360 introduction">
-      <a class="brand-mark" href="index.html">TechWise <span>360</span></a>
-      <h1>Welcome to<br>TechWise <span>360</span></h1>
-      <p>Learn ICT skills through structured lessons, guided practice, and immersive VR experiences</p>
-      <div class="asset-stage">
-        <img class="asset pc-case" src="assets/pc-case.png" alt="">
-        <img class="asset fan" src="assets/fan.png" alt="">
-        <img class="asset gpu" src="assets/gpu.png" alt="">
-        <img class="asset vr" src="assets/vr-headset.png" alt="">
-        <img class="asset word" src="assets/word.png" alt="">
-        <img class="asset excel" src="assets/excel.png" alt="">
-        <img class="asset ppt" src="assets/powerpoint.png" alt="">
+      <a class="auth-brand-header" href="index.html">
+        <span class="auth-logo-mark" aria-hidden="true">
+          <svg class="techwise-cube-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <path d="M20.5 7.25 12 12.1 3.5 7.25"></path>
+            <path d="M12 12.1V21.5"></path>
+            <path d="M21 16.55V7.45a2 2 0 0 0-1-1.73l-6-3.42a4 4 0 0 0-4 0L4 5.72a2 2 0 0 0-1 1.73v9.1a2 2 0 0 0 1 1.73l6 3.42a4 4 0 0 0 4 0l6-3.42a2 2 0 0 0 1-1.73Z"></path>
+          </svg>
+        </span>
+        <div class="auth-brand-text">
+          <strong>TechWise <span>360</span></strong>
+          <small>Learn. Practice. Grow.</small>
+        </div>
+      </a>
+
+      <div class="auth-hero-copy">
+        <span class="auth-pill-badge"><i data-lucide="sparkles"></i> TVL-ICT &amp; VR Learning Platform</span>
+        <h1>Interactive Learning &amp;<br><span>VR Simulation</span> Hub</h1>
+        <p class="auth-lead">Master computer systems servicing through DepEd-aligned interactive modules, virtual reality PC assembly/disassembly, and real-time skill analytics.</p>
       </div>
-      <div class="feature-strip" role="group" aria-label="TechWise features">
-        <div><i data-lucide="book-open-check"></i><span>Guided<br>Learning</span></div>
-        <div><i data-lucide="monitor"></i><span>Real-World<br>ICT Skills</span></div>
-        <div><i data-lucide="headphones"></i><span>Immersive<br>VR Lab</span></div>
-        <div><i data-lucide="trophy"></i><span>Track<br>Progress</span></div>
+
+      <!-- Feature Badges -->
+      <div class="auth-feature-grid" role="group" aria-label="TechWise key features">
+        <div class="feature-card">
+          <div class="feature-icon blue"><i data-lucide="book-open-check"></i></div>
+          <div class="feature-info">
+            <strong>Guided Lessons</strong>
+            <small>Structured ICT modules</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple"><i data-lucide="glasses"></i></div>
+          <div class="feature-info">
+            <strong>VR Simulation</strong>
+            <small>Immersive hardware lab</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon gold"><i data-lucide="trophy"></i></div>
+          <div class="feature-info">
+            <strong>Leaderboard</strong>
+            <small>Live competency ranking</small>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green"><i data-lucide="award"></i></div>
+          <div class="feature-info">
+            <strong>Achievements</strong>
+            <small>Badges &amp; certificates</small>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="form-card login-card" aria-labelledby="login-title">
       <div class="form-heading">
-        <h2 id="login-title">Login</h2>
-        <p>Enter your details to access your account.</p>
+        <span class="auth-card-pill"><i data-lucide="shield-check"></i> Secure Access</span>
+        <h2 id="login-title">Sign In</h2>
+        <p>Enter your credentials to access your learning portal.</p>
       </div>
 
       <form id="loginForm" class="form-stack" novalidate>
         <label class="field">
-          <span>Email</span>
+          <span>Email or Username</span>
           <span class="input-wrap">
             <i data-lucide="mail"></i>
-            <input name="identifier" type="text" autocomplete="username" placeholder="Email or Username" required>
+            <input name="identifier" type="text" autocomplete="username" placeholder="e.g. student or you@school.edu" required>
           </span>
         </label>
 
         <div class="field">
-          <label for="loginPassword">Password</label>
+          <div class="field-label-row">
+            <label for="loginPassword">Password</label>
+          </div>
           <span class="input-wrap">
             <i data-lucide="key-round"></i>
             <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
@@ -70,10 +107,14 @@
 
         <p id="loginMessage" class="status-message" role="status" aria-live="polite"></p>
 
-        <button class="primary-button" type="submit">Login now</button>
+        <button class="primary-button" type="submit">
+          <span>Login now</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+
         <a class="outline-button" href="create-account.html">
-          <span>Create Account</span>
           <i data-lucide="user-plus"></i>
+          <span>Create Account</span>
         </a>
       </form>
     </section>

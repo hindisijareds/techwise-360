@@ -24,26 +24,37 @@ public sealed class TechWisePortalProfile
     public string last_name;
     public string grade_level;
     public string section;
+    public string section_id, academic_year_id, academic_year, quarter_id, term, enrollment_id;
+    public string name => !string.IsNullOrEmpty(full_name) ? full_name : username;
 }
 
 public static class TechWiseSessionStore
 {
     const string SessionKey = "TechWise360.PortalSession";
     const string ProfileKey = "TechWise360.PortalProfile";
+    static TechWisePortalSession currentSession;
+    static TechWisePortalProfile currentProfile;
+    static string sessionOrigin;
+
+    static TechWiseSessionStore()
+    {
+        // Credentials from older builds must not remain in plaintext preferences.
+        PlayerPrefs.DeleteKey(SessionKey);
+        PlayerPrefs.DeleteKey(ProfileKey);
+        PlayerPrefs.Save();
+    }
 
     public static bool HasSession => !string.IsNullOrWhiteSpace(GetSession()?.access_token);
     public static bool HasRefreshToken => !string.IsNullOrWhiteSpace(GetSession()?.refresh_token);
 
     public static TechWisePortalSession GetSession()
     {
-        var json = PlayerPrefs.GetString(SessionKey, string.Empty);
-        return string.IsNullOrWhiteSpace(json) ? null : JsonUtility.FromJson<TechWisePortalSession>(json);
+        return sessionOrigin == TechWisePortalClient.PortalBaseUrl ? currentSession : null;
     }
 
     public static TechWisePortalProfile GetProfile()
     {
-        var json = PlayerPrefs.GetString(ProfileKey, string.Empty);
-        return string.IsNullOrWhiteSpace(json) ? null : JsonUtility.FromJson<TechWisePortalProfile>(json);
+        return sessionOrigin == TechWisePortalClient.PortalBaseUrl ? currentProfile : null;
     }
 
     public static void Save(TechWisePortalSession session, TechWisePortalProfile profile)
@@ -56,17 +67,20 @@ public static class TechWiseSessionStore
                 session.expires_at = DateTime.UtcNow.AddSeconds(seconds - 30).ToString("o");
             }
 
-            PlayerPrefs.SetString(SessionKey, JsonUtility.ToJson(session));
+            currentSession = session;
+            sessionOrigin = TechWisePortalClient.PortalBaseUrl;
         }
 
         if (profile != null)
-            PlayerPrefs.SetString(ProfileKey, JsonUtility.ToJson(profile));
+            currentProfile = profile;
 
         PlayerPrefs.Save();
     }
 
     public static void Clear()
     {
+        currentSession = null;
+        currentProfile = null;
         PlayerPrefs.DeleteKey(SessionKey);
         PlayerPrefs.DeleteKey(ProfileKey);
         PlayerPrefs.Save();
@@ -81,7 +95,7 @@ public static class TechWiseSessionStore
         if (string.IsNullOrWhiteSpace(session.expires_at))
             return true;
 
-        return DateTime.TryParse(session.expires_at, out var expiresAt) &&
+        return !DateTime.TryParse(session.expires_at, out var expiresAt) ||
             DateTime.UtcNow >= expiresAt.ToUniversalTime().AddSeconds(-45);
     }
 }

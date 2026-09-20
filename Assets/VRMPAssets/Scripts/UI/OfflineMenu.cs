@@ -55,9 +55,10 @@ namespace XRMultiplayer
             XRINetworkGameManager.LocalPlayerName.Unsubscribe(SetPlayerName);
             XRINetworkGameManager.LocalPlayerColor.Unsubscribe(SetPlayerColor);
             OfflinePlayerAvatar.voiceAmp.Unsubscribe(UpdateMicIcon);
-            m_VoiceChatManager.selfMuted.Subscribe(MutedChanged);
+            if (m_VoiceChatManager != null) m_VoiceChatManager.selfMuted.Unsubscribe(MutedChanged);
 
-            XRINetworkGameManager.Instance.connectionFailedAction -= ConnectionFailed;
+            if (XRINetworkGameManager.Instance != null)
+                XRINetworkGameManager.Instance.connectionFailedAction -= ConnectionFailed;
         }
 
         void SetupPlayerDefaults()

@@ -204,12 +204,59 @@ async function captureTeacherAchievementTabs(page, startingIndex) {
 async function captureStudentAchievementTabs(page, startingIndex) {
   await openView(page, "[data-student-view]", "data-student-view", ".student-section", "achievements");
   const tabs = ["certificates"];
+  let captureIndex = startingIndex;
   for (let index = 0; index < tabs.length; index += 1) {
     const tab = tabs[index];
     await page.locator(`[data-achievement-tab="${tab}"]`).first().click();
     await page.locator(`[data-achievement-tab="${tab}"].active`).waitFor({ state: "visible" });
     await settlePage(page);
-    await saveScreenshot(page, "student", `${pad(startingIndex + index)}-achievements-${tab}`, `Student - Achievements - ${titleFromSlug(tab)}`);
+    await saveScreenshot(page, "student", `${pad(captureIndex)}-achievements-${tab}`, `Student - Achievements - ${titleFromSlug(tab)}`);
+    captureIndex += 1;
+  }
+
+  await page.evaluate(() => window.showStudentView?.("evaluation"));
+  await page.locator('.student-section[data-view="evaluation"].active').waitFor({ state: "visible" });
+  await settlePage(page);
+  await saveScreenshot(page, "student", `${pad(captureIndex)}-evaluation-contextual`, "Student - Evaluation - Contextual Survey");
+  captureIndex += 1;
+
+  await openView(page, "[data-student-view]", "data-student-view", ".student-section", "lessons");
+  const firstLesson = page.locator('[data-open-student-lesson]:not([disabled])').first();
+  if (await firstLesson.count()) {
+    await firstLesson.click();
+    await page.locator('.student-section[data-view="lesson-player"].active').waitFor({ state: "visible" });
+    await settlePage(page, 1200);
+    await saveScreenshot(page, "student", `${pad(captureIndex)}-lesson-player`, "Student - Lesson Player");
+    captureIndex += 1;
+
+    const practicePart = page.locator('.lesson-sequence-list button:not([disabled])').filter({ hasText: /Practice|Assessment/i }).first();
+    if (await practicePart.count()) {
+      await practicePart.click();
+      await settlePage(page, 1000);
+      await saveScreenshot(page, "student", `${pad(captureIndex)}-lesson-practice`, "Student - Lesson Player - Practice");
+      captureIndex += 1;
+    }
+  }
+
+  await openView(page, "[data-student-view]", "data-student-view", ".student-section", "home");
+  const collapseToggle = page.locator("#studentSidebarToggle");
+  if (await collapseToggle.count()) {
+    await collapseToggle.click();
+    await settlePage(page, 500);
+    await saveScreenshot(page, "student", `${pad(captureIndex)}-home-sidebar-collapsed`, "Student - Home - Collapsed Sidebar");
+    captureIndex += 1;
+  }
+
+  const responsiveViewports = [
+    [1024, 900, "tablet"],
+    [768, 900, "narrow-tablet"],
+    [390, 844, "mobile"]
+  ];
+  for (const [width, height, label] of responsiveViewports) {
+    await page.setViewportSize({ width, height });
+    await settlePage(page, 400);
+    await saveScreenshot(page, "student", `${pad(captureIndex)}-home-${label}`, `Student - Home - ${titleFromSlug(label)}`);
+    captureIndex += 1;
   }
 }
 

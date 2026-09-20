@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using TMPro;
 using Unity.XR.CoreUtils;
@@ -25,51 +26,18 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
     const float RotationGoodAngle = 25f;
     const float StepCompletionHoldSeconds = 0.85f;
 
-    static readonly GuideStep[] Steps =
-    {
-        new(
-            "CPU",
-            "Step 1: Install the CPU",
-            "Firstly, open the CPU socket on the motherboard by lifting the retention arm.\n\nGrab the CPU and drag it to the motherboard's socket until the green guide appears.\n\nThen close the CPU socket.\n\n(Reminder: In a real-life simulation, the CPU must be handled with care because its structure is very sensitive and can be easily damaged.)",
-            "Place the CPU into the motherboard socket."),
-        new(
-            "RAM",
-            "Step 2: Install the RAM",
-            "Grab the RAM from the table, align the notch on the RAM stick with the slot, and then insert it into the RAM slot.\n\nAttach it until the green guide disappears.",
-            "Line up the notch and place RAM in the RAM slot."),
-        new(
-            "M2",
-            "Step 3: Install the SSD M2",
-            "Reminder: Ensure the SSD M.2 type (SATA or NVMe) is compatible with motherboard.\n\nIdentify SSD M2 slot on the motherboard (The M.2 slot is usually near the RAM slots or PCIe slots. It may have a label like M.2_1 or M.2_2.)\n\nGrab the M.2 SSD then attach to the slot carefully.",
-            "Place the M.2 SSD into its small motherboard slot."),
-        new(
-            "CPUCooler",
-            "Step 4: Install the CPU cooler",
-            "Grab the thermal paste and apply a pea-sized dot to the center of the CPU in the motherboard's socket.\n\nThen, Allign the CPU Cooler over the CPU. Attach it.",
-            "Mount the cooler over the CPU after thermal paste."),
-        new(
-            "Motherboard",
-            "Step 5: Mount the Motherboard in the Case",
-            "Use left side motherboard to grab and align the motherboard with the standoffs in the case, then carefully attach it to the case.\n\nNext, grab the GPU connector and attach it to the motherboard to connect the GPU.",
-            "Attach the motherboard inside the case."),
-        new(
-            "GPU",
-            "Step 6: Install the Graphic Card (GPU)",
-            "Grab and attach the graphics card to the top PSU slot, connecting it to the motherboard using the GPU connector.",
-            "Seat the graphics card in the GPU slot."),
-        new(
-            "Storage",
-            "Step 7: Install the storage",
-            "Attach the SSDs or HDDs to the designated mounting brackets in the case, aligning them with the slots right on the motherboard.",
-            "Attach the SSD or hard drive in its mount."),
-        new(
-            "PSU",
-            "Step 8: Install the Power Supply Unit (PSU)",
-            "For final important part, locate the power supply unit (PSU) and place it into the designated area in the case. Typically, this area is located below the graphics card section.",
-            "Place the PSU into the case power bay."),
-    };
+    static readonly GuideStep[] Steps = TechWiseBuildDefinition.Components.Select((c,i)=>new GuideStep(
+        c.id, "Step "+(i+1)+": "+c.name, c.handling+"\n"+c.orientation+"\nTarget: "+c.target,
+        "Use the detailed lesson panel for the current action and each required screw.")).ToArray();
 
     readonly List<XRGrabInteractable> grabInteractables = new();
+    internal static string TutorialInstruction(string id)
+    {
+        foreach (var step in Steps)
+            if (step.id == id)
+                return step.title + "\n" + step.hint + "\nHold either grip to grab. Rotate to align, then release into the highlighted target.";
+        return "Follow the highlighted component and its matching target.";
+    }
     readonly List<XRLockSocketInteractor> sockets = new();
     readonly Dictionary<XRBaseInteractable, string> stepByInteractable = new();
     readonly Dictionary<XRLockSocketInteractor, string> stepBySocket = new();
@@ -146,16 +114,14 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
             return;
         }
 
-        if (TechWiseSimulationModeManager.IsTutorialMode)
-        {
-            SetRobotVisible(false);
-            return;
-        }
-
         refreshTimer -= Time.unscaledDeltaTime;
         if (refreshTimer <= 0f)
         {
             refreshTimer = 0.25f;
+            if (boardText == null || !boardText.gameObject.activeInHierarchy)
+            {
+                SetupBlackboard();
+            }
             RefreshProgress();
             UpdateBoardText();
         }
@@ -185,15 +151,6 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
         playerCamera = ResolvePlayerCamera();
 
-        if (TechWiseSimulationModeManager.IsTutorialMode)
-        {
-            HideRestartCautionPanels();
-            RestoreKnowledgeCorner();
-            SetRobotVisible(false);
-            lastHint = null;
-            return;
-        }
-
         SetupBlackboard();
         HideRestartCautionPanels();
         RefreshTutorialVideos();
@@ -204,7 +161,7 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
         else
         {
             RestoreKnowledgeCorner();
-            if (TechWiseSimulationModeManager.IsDisassembly)
+            if (TechWiseSimulationModeManager.IsPracticeMode || TechWiseSimulationModeManager.IsTutorialMode)
                 HideOldFloatingStepPanels();
             if (TechWiseSimulationModeManager.IsDisassembly)
                 StartCompetitionUiCleanup();
@@ -313,6 +270,19 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
     void SetupBlackboard()
     {
+        if (!TechWiseSimulationModeManager.IsCompetitionMode && TryUseExistingCautionBoardTexts())
+        {
+            UpdateBoardText();
+            return;
+        }
+
+        if (!TechWiseSimulationModeManager.IsCompetitionMode)
+        {
+            var cautionTitle = FindCautionTitleText();
+            if (cautionTitle != null && cautionTitle.transform.parent != null)
+                cautionTitle.transform.parent.gameObject.SetActive(false);
+        }
+
         var blackboard = instructionBoard != null ? instructionBoard : ResolveInstructionBoard();
         if (blackboard == null)
             return;
@@ -377,6 +347,10 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
         instructionBoard = boardGroup;
         boardTitleText = titleText;
         boardText = infoText;
+
+        if (TechWiseTutorialRuntime.InTutorial)
+            foreach (var text in boardGroup.GetComponentsInChildren<TMP_Text>(true))
+                if (text != titleText && text != infoText) text.gameObject.SetActive(false);
 
         boardGroup.gameObject.SetActive(true);
         boardTitleText.gameObject.SetActive(true);
@@ -498,11 +472,15 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
     static Transform ResolveInstructionBoard()
     {
+        var practiceBoard = FindNamedTransform(BlackboardName);
+        if (practiceBoard != null)
+            return practiceBoard;
+
         var cautionBoard = FindBoardContainingText("CAUTION");
         if (cautionBoard != null)
             return cautionBoard;
 
-        return FindNamedTransform(BlackboardName);
+        return null;
     }
 
     static Transform FindBoardContainingText(string textFragment)
@@ -719,10 +697,6 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
     void OnSocketSelected(SelectEnterEventArgs args)
     {
         RefreshProgress();
-
-        if (TechWiseSimulationModeManager.IsTutorialMode)
-            return;
-
         UpdateBoardText();
 
         if (TechWiseSimulationModeManager.IsCompetitionMode)
@@ -741,6 +715,12 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
     void RefreshProgress()
     {
+        if (TechWiseSimulationRuntime.Instance != null)
+        {
+            foreach (var step in Steps)
+                completedSteps[step.id] = TechWiseSimulationRuntime.Instance.IsStepComplete(step.id);
+            return;
+        }
         foreach (var step in Steps)
             completedSteps[step.id] = false;
 
@@ -767,10 +747,33 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
         }
     }
 
+    static string BoardSummary(TechWiseDetailedAssemblyRuntime phase)
+    {
+        var lines=phase.Instruction.Split('\n');
+        return string.Join("\n\n",lines.Where(l=>l.StartsWith("<b>Objective:") || l.StartsWith("<b>Action:") || l.StartsWith("<b>Progress:") || l.StartsWith("<b>Next:")))
+            + "\n\nRead and scroll the floating lesson panel for controls, handling, alignment and corrections.";
+    }
     void UpdateBoardText()
     {
         if (boardText == null)
             return;
+
+        if (TechWiseTutorialRuntime.InTutorial && TechWiseTutorialRuntime.Instance != null)
+        {
+            EnsurePracticeBoardTextVisible();
+            var tutorial = TechWiseTutorialRuntime.Instance;
+            if (boardTitleText != null) boardTitleText.text = tutorial.Heading;
+            boardText.text = tutorial.stage >= TechWiseTutorialRuntime.Stage.Assembly && TechWiseDetailedAssemblyRuntime.Active ? BoardSummary(TechWiseDetailedAssemblyRuntime.Instance) : tutorial.Instructions + "\n\n" + tutorial.Feedback;
+            return;
+        }
+
+        EnsurePracticeBoardTextVisible();
+        if (!TechWiseSimulationModeManager.IsCompetitionMode && boardTitleText != null)
+        {
+            boardTitleText.fontStyle = FontStyles.Italic;
+            boardTitleText.characterSpacing = 1.5f;
+            boardTitleText.color = new Color(0.94f, 0.96f, 0.90f);
+        }
 
         if (TechWiseSimulationModeManager.IsCompetitionMode)
         {
@@ -783,14 +786,16 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
             return;
         }
 
-        if (TechWiseSimulationModeManager.IsDisassembly)
+        if (TechWiseDetailedAssemblyRuntime.Active)
         {
-            UpdateDisassemblyPracticeBoardText();
+            var phase = TechWiseDetailedAssemblyRuntime.Instance;
+            if (boardTitleText != null) boardTitleText.text = phase.Heading;
+            boardText.text = BoardSummary(phase);
             return;
         }
 
         if (boardTitleText != null)
-            boardTitleText.text = "PC Assembly Guide";
+            boardTitleText.text = TechWiseSimulationModeManager.IsTutorialMode ? "Tutorial Mode" : "Practice Mode";
 
         var builder = new StringBuilder();
         var currentStep = GetCurrentStep();
@@ -828,10 +833,41 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
         boardText.text = builder.ToString();
     }
 
+    void EnsurePracticeBoardTextVisible()
+    {
+        if (TechWiseSimulationModeManager.IsCompetitionMode)
+            return;
+
+        if (instructionBoard != null)
+            instructionBoard.gameObject.SetActive(true);
+
+        if (boardTitleText != null)
+        {
+            boardTitleText.gameObject.SetActive(true);
+            boardTitleText.enabled = true;
+        }
+
+        if (boardText != null)
+        {
+            boardText.gameObject.SetActive(true);
+            boardText.enabled = true;
+        }
+    }
+
+    bool IsCurrentBoardText(TMP_Text text)
+    {
+        if (text == null)
+            return false;
+
+        return ReferenceEquals(text, boardTitleText) ||
+            ReferenceEquals(text, boardText) ||
+            HasParent(text.transform, instructionBoard);
+    }
+
     void UpdateDisassemblyPracticeBoardText()
     {
         if (boardTitleText != null)
-            boardTitleText.text = "PC Disassembly Guide";
+            boardTitleText.text = "Practice Mode";
 
         var builder = new StringBuilder();
         if (boardTitleText == null)
@@ -863,7 +899,7 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
         sceneTextCleanupComplete = true;
 
-        foreach (var text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Exclude))
+        foreach (var text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include))
         {
             if (text == null || string.IsNullOrWhiteSpace(text.text))
                 continue;
@@ -871,22 +907,25 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
             if (!text.gameObject.scene.IsValid() || !text.gameObject.scene.isLoaded)
                 continue;
 
-            if (IsProtectedInstructionText(text) || !LooksLikeOldFloatingStepPanel(text.text))
+            if (IsCurrentBoardText(text) || IsProtectedInstructionText(text) || !LooksLikeOldFloatingStepPanel(text.text))
                 continue;
 
             var panel = FindOldStepPanelRoot(text.transform);
             if (panel != null && !IsProtectedTransform(panel))
             {
+                foreach (var graphic in panel.GetComponentsInChildren<Graphic>(true))
+                    graphic.enabled = false;
+
                 panel.gameObject.name = OldStepPanelMarker + " - " + panel.gameObject.name;
                 panel.gameObject.SetActive(false);
                 continue;
             }
 
             text.gameObject.name = OldStepPanelMarker + " - " + text.gameObject.name;
+            text.enabled = false;
             text.gameObject.SetActive(false);
         }
 
-        HideEmptyBlackLabelBackplates();
     }
 
     void HideRestartCautionPanels()
@@ -897,6 +936,9 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
                 continue;
 
             if (!text.gameObject.scene.IsValid() || !text.gameObject.scene.isLoaded)
+                continue;
+
+            if (IsCurrentBoardText(text))
                 continue;
 
             var value = text.text;
@@ -915,39 +957,6 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
                 panel.gameObject.SetActive(false);
             else
                 text.gameObject.SetActive(false);
-        }
-    }
-
-    void HideEmptyBlackLabelBackplates()
-    {
-        foreach (var image in FindObjectsByType<Image>(FindObjectsInactive.Exclude))
-        {
-            if (image == null || !image.gameObject.scene.IsValid() || !image.gameObject.scene.isLoaded)
-                continue;
-
-            if (IsCompetitionProtectedTransform(image.transform))
-                continue;
-
-            var color = image.color;
-            if (color.a < 0.45f || color.r > 0.08f || color.g > 0.08f || color.b > 0.08f)
-                continue;
-
-            var rect = image.rectTransform.rect;
-            if (Mathf.Abs(rect.width * rect.height) > 90000f)
-                continue;
-
-            var hasVisibleText = false;
-            foreach (var text in image.GetComponentsInChildren<TMP_Text>(true))
-            {
-                if (text != null && text.gameObject.activeInHierarchy && !string.IsNullOrWhiteSpace(text.text))
-                {
-                    hasVisibleText = true;
-                    break;
-                }
-            }
-
-            if (!hasVisibleText)
-                image.gameObject.SetActive(false);
         }
     }
 
@@ -1255,6 +1264,13 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
         if (validSocket != null && validDistance <= SocketNearDistance)
         {
+            var state = TechWiseSimulationRuntime.Instance;
+            if (state != null && state.Sockets.Contains(validSocket))
+            {
+                var problem = state.PlacementProblem(validSocket, heldInteractable, out _, out var correction);
+                SetRobotHint(problem == null ? "Correct place and rotation. Release it to attach." : correction);
+                return;
+            }
             var targetRotation = validSocket.attachTransform != null ? validSocket.attachTransform.rotation : validSocket.transform.rotation;
             var angle = Quaternion.Angle(heldInteractable.transform.rotation, targetRotation);
             SetRobotHint(angle <= RotationGoodAngle
@@ -1285,11 +1301,13 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
             if (socket == null)
                 continue;
 
-            if (requireValid && !socket.CanSelect((IXRSelectInteractable)interactable))
+            if (!socket.isActiveAndEnabled || !socket.socketActive ||
+                (socket.hasSelection && !socket.IsSelecting(interactable))) continue;
+            if (requireValid && !TechWiseSimulationRuntime.Matches(socket, interactable.transform))
                 continue;
 
             var socketPosition = socket.attachTransform != null ? socket.attachTransform.position : socket.transform.position;
-            var distance = Vector3.Distance(interactable.transform.position, socketPosition);
+            var distance = Vector3.Distance(interactable.GetAttachTransform(socket).position, socketPosition);
             if (distance >= nearestDistance)
                 continue;
 
@@ -1317,6 +1335,12 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
     GuideStep GetCurrentStep()
     {
+        if (TechWiseDetailedAssemblyRuntime.Active && TechWiseDetailedAssemblyRuntime.Instance.Ready)
+        {
+            var current = TechWiseDetailedAssemblyRuntime.Instance.CurrentPartStep;
+            foreach (var step in Steps) if (step.id == current) return step;
+            return default;
+        }
         foreach (var step in Steps)
         {
             if (!completedSteps.TryGetValue(step.id, out var completed) || !completed)

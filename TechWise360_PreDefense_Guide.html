@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TechWise 360 - Comprehensive Pre-Defense Technical Guide</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 15mm 20mm 15mm;
+    @bottom-center {
+      content: "Page " counter(page);
+      font-size: 9pt;
+      color: #64748b;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    page-break-after: avoid;
+  }
+
+  h1 {
+    font-size: 22pt;
+    color: #0f365c;
+    border-bottom: 3px solid #0284c7;
+    padding-bottom: 8px;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 14pt;
+    color: #0369a1;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-top: 1.6em;
+  }
+
+  h3 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    margin-top: 1.2em;
+  }
+
+  p {
+    margin: 0.5em 0;
+    text-align: justify;
+  }
+
+  ul, ol {
+    margin: 0.4em 0;
+    padding-left: 24px;
+  }
+
+  li {
+    margin-bottom: 0.3em;
+  }
+
+  code {
+    font-family: "Consolas", "Fira Code", monospace;
+    font-size: 9pt;
+    background-color: #f1f5f9;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #0369a1;
+    border: 1px solid #e2e8f0;
+  }
+
+  pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 9pt;
+    font-family: "Consolas", monospace;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    line-height: 1.4;
+  }
+
+  .banner {
+    background: linear-gradient(135deg, #072540 0%, #0f4c81 100%);
+    color: white;
+    padding: 24px 28px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    page-break-inside: avoid;
+  }
+
+  .banner h1 {
+    color: #38bdf8;
+    border-bottom: none;
+    margin: 0 0 6px 0;
+    font-size: 24pt;
+  }
+
+  .banner .subtitle {
+    font-size: 12pt;
+    color: #cbd5e1;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .banner .meta {
+    font-size: 9pt;
+    color: #94a3b8;
+    margin-top: 10px;
+  }
+
+  .card {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 12px 0;
+    page-break-inside: avoid;
+  }
+
+  .card-warning {
+    border-left-color: #f59e0b;
+    background-color: #fffbeb;
+  }
+
+  .card-success {
+    border-left-color: #10b981;
+    background-color: #f0fdf4;
+  }
+
+  .card-title {
+    font-weight: bold;
+    color: #0f172a;
+    margin-bottom: 4px;
+    font-size: 11pt;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #0f365c;
+    color: white;
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+
+  .qa-box {
+    margin-bottom: 16px;
+    page-break-inside: avoid;
+  }
+
+  .qa-question {
+    font-weight: 700;
+    color: #0f365c;
+    background-color: #e0f2fe;
+    padding: 8px 12px;
+    border-radius: 4px 4px 0 0;
+    border: 1px solid #bae6fd;
+    border-bottom: none;
+    font-size: 10.5pt;
+  }
+
+  .qa-answer {
+    background-color: #ffffff;
+    border: 1px solid #bae6fd;
+    border-radius: 0 0 4px 4px;
+    padding: 10px 14px;
+    font-size: 10pt;
+    text-align: justify;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    border-radius: 12px;
+    background-color: #e0f2fe;
+    color: #0369a1;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <h1>TechWise 360</h1>
+  <p class="subtitle">Comprehensive Pre-Defense Technical Examination Guide & Reference</p>
+  <p class="meta">Target Hardware: Meta Quest 2 (OpenXR) &bull; Engine: Unity 6000.4.8f1 (URP 17.4.0, XRI 3.4.1) &bull; Backend: Supabase &bull; Local Lab System</p>
+</div>
+
+<h2>1. Executive Project Summary & Defense Pitch</h2>
+<p>
+  <strong>TechWise 360</strong> is an immersive Virtual Reality (VR) computer hardware assembly and disassembly training simulation system specifically engineered for the standalone Meta Quest 2 headset. In technical vocational education, providing individual, hands-on PC hardware labs is restricted by tight equipment budgets, mechanical wear, and component destruction through electrostatic discharge (ESD) or improper force.
+</p>
+<div class="card card-success">
+  <div class="card-title">The 60-Second Opening Elevator Pitch (Memorize This)</div>
+  <em>"Good morning, esteemed panelists. We present <strong>TechWise 360</strong>, a high-fidelity standalone VR simulation system designed to bridge the gap between computer hardware theory and practical physical assembly. Running natively on the Meta Quest 2 through OpenXR and Unity 6, TechWise 360 delivers an authentic 1:1 scale PC building experience. Unlike basic drag-and-drop simulations, our system incorporates true mechanical locking latches, thermal paste application, screw threading physics with full-view magnification, orientation-aware guidance, and comprehensive assessment tracking backed by an offline-resilient Cloud Web Portal."</em>
+</div>
+
+<h2>2. How Virtual Reality Operates in TechWise 360</h2>
+<p>Panelists frequently interrogate candidates on the scientific and technological fundamentals of VR. Be prepared to explain these exact principles:</p>
+
+<h3>A. 6 Degrees of Freedom (6DoF) & Real-Time Tracking</h3>
+<ul>
+  <li><strong>Rotational Tracking (Orientation)</strong>: <code>Pitch</code> (looking up/down), <code>Yaw</code> (turning left/right), and <code>Roll</code> (tilting head side-to-side). Handled at over 1000 Hz by the headset's internal <strong>Inertial Measurement Unit (IMU)</strong> containing gyroscopes and accelerometers.</li>
+  <li><strong>Positional Tracking (Translation)</strong>: <code>X</code> (strafing left/right), <code>Y</code> (ducking/standing), and <code>Z</code> (walking forward/backward).</li>
+  <li><strong>Inside-Out Optical Tracking (SLAM)</strong>: The Meta Quest 2 uses 4 wide-angle infrared monochrome cameras placed at the corners of the visor. Using <strong>Simultaneous Localization and Mapping (SLAM)</strong>, the tracking system identifies static high-contrast features in the physical room (corners, doorframes, desk lines) and calculates the headset’s real-world translation relative to those points.</li>
+  <li><strong>Code Architecture</strong>: In Unity, our VR Player Rig uses an <code>XROrigin</code>. Attached to the <code>Main Camera</code> is a <code>TrackedPoseDriver</code>. Every frame, the OpenXR subsystem polls the physical headset's fused IMU/optical pose and applies exact 3D coordinates to the virtual camera's Transform.</li>
+</ul>
+
+<h3>B. Stereoscopic 3D Depth Perception</h3>
+<p>
+  Humans perceive depth through <strong>stereoscopic vision</strong> and <strong>retinal disparity</strong>. Because our eyes are spaced approximately 63 mm apart (Interpupillary Distance or IPD), each eye views an object from a slightly different perspective angle.
+</p>
+<p>
+  In TechWise 360, Unity renders the scene twice per frame—generating a separate projection matrix and viewport for the Left Eye and the Right Eye. When you inspect a motherboard slot or bring a CPU within inches of your face, your brain fuses these two distinct visual streams into one perceived image with true tangible depth, allowing instinctive spatial alignment.
+</p>
+
+<h3>C. Low Latency & High Refresh Rate (90 Hz)</h3>
+<p>
+  To prevent simulation sickness, <strong>Motion-to-Photon Latency</strong> must remain under 20 milliseconds. TechWise 360 runs in **Vulkan** on Android ARM64 utilizing **Single-Pass Instanced Rendering** in the Universal Render Pipeline (URP). This renders both stereo eye views in a single GPU draw pass, maintaining a stable 90 frames per second without dropouts.
+</p>
+
+<div class="page-break"></div>
+
+<h2>3. System Architecture & Component Pipeline</h2>
+<pre>
++-----------------------------------------------------------------------------------+
+|                               TECHWISE 360                                        |
+|             (Tutorial Mode  *  Practice Mode  *  Competition Mode)                |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+|                               APPLICATION LAYER                                   |
+|   Simulation Runtime  *  Detailed Mechanical Assembly  *  Disassembly Logic       |
+|   Screw Threading Physics  *  Assessment Clock  *  Offline Resilient Queue        |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+|                            XR INTERACTION LAYER                                   |
+|   Unity XR Interaction Toolkit 3.4.1  *  NearFarInteractor  *  Lock Sockets       |
+|   Upright Draggable World Canvases  *  Zero-TimeScale Pause Isolation             |
++-----------------------------------------------------------------------------------+
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+|                        GRAPHICS & HARDWARE PIPELINE                               |
+|   Unity 6000.4.8f1  *  URP 17.4.0 (Single-Pass Instanced)  *  Stereo Zoom Matrix  |
+|   OpenXR Mobile Loader  *  Meta Quest 2 Android ARM64  *  Vulkan Runtime          |
++-----------------------------------------------------------------------------------+
+                                         |
+                       REST HTTPS / Encrypted JSON Payloads
+                                         |
+                                         v
++-----------------------------------------------------------------------------------+
+|                            CLOUD WEB PORTAL BACKEND                               |
+|   Supabase PostgreSQL Database  *  Auth  *  Student & Teacher Analytics Portal     |
++-----------------------------------------------------------------------------------+
+</pre>
+
+<h2>4. Detailed Breakdown of Core Code Modules</h2>
+
+<h3>Module 1: Simulation Core & State Machine (<code>TechWiseSimulationRuntime.cs</code>)</h3>
+<ul>
+  <li><strong>Single Source of Truth</strong>: Manages the active state of all <code>XRGrabInteractable</code> computer parts and <code>XRLockSocketInteractor</code> sockets on the workbench.</li>
+  <li><strong>Assembly Sequence Enforcement</strong>: Ensures realistic prerequisite order (e.g. CPU cannot be mounted if the socket bracket is closed; CPU cooler cannot be clamped until thermal paste is deposited).</li>
+  <li><strong>Mistake Auditing</strong>: Implements <code>RecordMistake()</code>. When a student attempts an invalid connection or drops a component, an error record containing component name, timestamp, and severity is logged without crashing the active simulation.</li>
+</ul>
+
+<h3>Module 2: Detailed Mechanical Assembly (<code>TechWiseDetailedAssemblyRuntime.cs</code>)</h3>
+<p>Unlike simplistic educational games where objects just snap instantly, TechWise 360 simulates fine mechanical procedures:</p>
+<ul>
+  <li><strong>CPU Socket Hinges (<code>TechWiseAssemblyHinge.cs</code>)</strong>: Simulates the two-stage Intel/AMD retention mechanism. Students must swing the load plate (<code>Cover</code>) and tension arm (<code>Lever</code>) independently before inserting the processor.</li>
+  <li><strong>M.2 SSD Angular Insertion & Standoff</strong>: Recreates the realistic 30-degree insertion angle into the M.2 keyed slot, followed by pivoting the board flat against the motherboard standoff and securing it with an ultra-fine screw.</li>
+  <li><strong>Thermal Compound Syringe</strong>: Tracks cap removal, syringe plunger depression, and volumetric paste deposition across the Integrated Heat Spreader (IHS) of the CPU.</li>
+</ul>
+
+<h3>Module 3: Fastener Physics & URP Stereo Zoom (<code>TechWiseScrewDetail.cs</code>)</h3>
+<ul>
+  <li><strong>The Problem Solved</strong>: Viewing micro-fasteners (M.2, cooler brackets) in VR is difficult due to display resolution. Traditional Picture-in-Picture (PiP) inset windows ruin immersion and cause severe rendering lag by doubling draw calls.</li>
+  <li><strong>URP Rendering Hook</strong>: Directly hooks into the Universal Render Pipeline:
+    <code>RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;</code></li>
+  <li><strong>Stereo Matrix Scaling</strong>: While driving screws, it dynamically scales the projection matrix diagonal elements:
+    <pre>left.m00 *= currentZoom;  left.m11 *= currentZoom;
+right.m00 *= currentZoom; right.m11 *= currentZoom;
+cam.SetStereoProjectionMatrix(Camera.StereoscopicEye.Left, left);
+cam.SetStereoProjectionMatrix(Camera.StereoscopicEye.Right, right);</pre>
+  </li>
+  <li><strong>User Experience</strong>: The student enjoys smooth 1.6x full-field magnification while driving screws, <strong>without</strong> shifting camera position, <strong>without</strong> altering physical geometry, and <strong>preserving 100% natural 6DoF head tracking</strong>.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h3>Module 4: Orientation-Aware Directional Arrows (<code>TechWiseComponentGeometry.cs</code>)</h3>
+<ul>
+  <li><strong>Dynamic Normal Evaluation</strong>: Evaluates socket orientation relative to world and chassis vectors:
+    <ul>
+      <li><strong>Flat Upward Sockets (RAM, CPU, M.2)</strong>: Evaluates <code>vertical &gt; 0.5f</code> to project arrows descending straight downward into the motherboard.</li>
+      <li><strong>Side-Facing Sockets (GPU in PCIe, Motherboard into Case, Side SSD)</strong>: Calculates the horizontal chassis plane normal, rendering guide arrows approaching horizontally from the open chassis side.</li>
+    </ul>
+  </li>
+  <li><strong>Chassis Rotation Adaptation</strong>: Because vectors are evaluated relative to parent coordinate space, when the player spins the PC case around on the desk, the guidance arrows seamlessly rotate with the case.</li>
+</ul>
+
+<h3>Module 5: In-Game Pause Session & Draggable UI (<code>TechWiseInGameMenu.cs</code>)</h3>
+<ul>
+  <li><strong>Interaction Layer Isolation</strong>: When paused (<code>Time.timeScale = 0</code>), standard VR games suffer from a bug where clicking UI accidentally grabs objects behind the canvas. Our custom <code>TechWisePauseSession</code> zeroes controller <code>hand.interactionLayers = 0</code> and suspends locomotion providers, ensuring crisp button clicks with zero background interference.</li>
+  <li><strong>Upright Draggable Canvases (<code>TechWiseDraggableUiPanel.cs</code>)</strong>: World-space UI canvases can be repositioned by grabbing their header bar. Pitch and roll rotations are locked to <code>0.0f</code>, keeping panels strictly upright and legible. When released, user repositioning flags prevent the system from snapping panels back during step advancements.</li>
+</ul>
+
+<h3>Module 6: Assessment Engine & Resilient Offline Queue (<code>TechWiseOfflineAttemptQueue.cs</code>)</h3>
+<ul>
+  <li><strong>Grading Equation</strong>:
+    $$\text{Final Grade} = \max\left(0, 100 - (\text{Mistakes} \times \text{Weight}) - \text{Time Deductions}\right)$$</li>
+  <li><strong>Offline-First Architecture</strong>: School Wi-Fi networks are notoriously unreliable. If a student completes an evaluation while offline, the payload is serialized into persistent local storage as encrypted JSON. When connectivity returns, a background synchronization daemon automatically posts records to the Supabase portal database.</li>
+</ul>
+
+<h2>5. Comparison of Simulation Modes</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Tutorial Mode</th>
+      <th>Practice Mode</th>
+      <th>Competition Mode</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Target Audience</strong></td>
+      <td>Novices & First-Time VR Users</td>
+      <td>Students Building Proficiency</td>
+      <td>Formal Practical Evaluation</td>
+    </tr>
+    <tr>
+      <td><strong>Visual Guidance</strong></td>
+      <td>High (Bounding boxes, 3D outlines, dynamic arrows)</td>
+      <td>Moderate (Component status feedback)</td>
+      <td>None (Zero hints, arrows, or outlines)</td>
+    </tr>
+    <tr>
+      <td><strong>Controller Hints</strong></td>
+      <td>Callout rings on physical buttons</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td><strong>Timer & Scoring</strong></td>
+      <td>Untimed / Ungraded</td>
+      <td>Live timer, mistake counter displayed</td>
+      <td>Hidden timer & mistakes, scored on portal</td>
+    </tr>
+    <tr>
+      <td><strong>Reset Practice</strong></td>
+      <td>Skip lesson option</td>
+      <td>Instant Reset in Pause Menu</td>
+      <td>Disabled (Strict attempt integrity)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>6. Anticipated Panel Questions & High-Scoring Defense Answers</h2>
+
+<div class="qa-box">
+  <div class="qa-question">Q1: Why did you choose standalone Meta Quest 2 and OpenXR over PCVR (SteamVR / Oculus Link)?</div>
+  <div class="qa-answer">
+    <strong>Answer:</strong> "We selected the standalone Meta Quest 2 because it dramatically lowers institutional deployment barriers. High-end PCVR setups require expensive dedicated gaming workstations ($1,500+ per student) and create dangerous cable trip hazards in computer classrooms. By developing natively for Android ARM64 through the <strong>OpenXR standard</strong>, our application is lightweight, untethered, and future-proof. OpenXR ensures that our interaction and rendering architecture can be deployed to Meta Quest 3, HTC Vive, or Pico headsets with zero rewrites to core simulation code."
+  </div>
+</div>
+
+<div class="qa-box">
+  <div class="qa-question">Q2: How do your virtual controllers interact with UI in 3D world space?</div>
+  <div class="qa-answer">
+    <strong>Answer:</strong> "We employ Unity XRI's <code>NearFarInteractor</code> coupled with <code>TrackedDeviceGraphicRaycaster</code> on our world-space canvases. When the controller ray crosses the canvas plane, <code>TrackedDeviceEventData</code> calculates the exact 2D hit coordinate on the RectTransform and triggers standard Unity Event System interfaces like <code>IPointerClickHandler</code> and <code>IPointerEnterHandler</code>. To prevent false negatives, we programmatically set <code>checkFor3DOcclusion = false</code> on modal canvases so workbench geometry never blocks menu interaction."
+  </div>
+</div>
+
+<div class="qa-box">
+  <div class="qa-question">Q3: How do you handle physics stability so computer components do not jitter or fly away?</div>
+  <div class="qa-answer">
+    <strong>Answer:</strong> "Physical jitter in VR usually stems from physics conflicts between the player's direct interactor and socket triggers. We solved this with custom <code>XRLockSocketInteractor</code> components that use kinematic transitions. Once a component enters tolerance bounds and is released, we instantly set its Rigidbody to <code>isKinematic = true</code>, cancel residual linear/angular momentum, and smoothly parent it to the socket attach transform. If an item is dropped out of bounds or falls off the workbench, our <code>TechWiseComponentRecovery</code> service detects the collision floor and teleports it back to its original tray."
+  </div>
+</div>
+
+<div class="qa-box">
+  <div class="qa-question">Q4: What ensures academic integrity if a student cheats by taking off the headset?</div>
+  <div class="qa-answer">
+    <strong>Answer:</strong> "The Meta Quest 2 contains a hardware optical proximity sensor between the lenses. The moment the headset is removed, the Android OS fires an <code>onPause()</code> signal, halting the OpenXR session. In our assessment engine, <code>TechWiseAssessmentClock</code> utilizes unscaled monotonic system time and compares it against active focus intervals. An attempt cannot be exploited by removing the headset to pause the evaluation timer, and attempt integrity flags are flagged in the upload payload."
+  </div>
+</div>
+
+<div class="qa-box">
+  <div class="qa-question">Q5: How does this simulation prove educational effectiveness?</div>
+  <div class="qa-answer">
+    <strong>Answer:</strong> "Our instructional design follows cognitive scaffolding theory. In <strong>Tutorial Mode</strong>, cognitive load is minimized through active visual cues and controller callouts. In <strong>Practice Mode</strong>, students develop muscle memory and procedural familiarity with real-time feedback. Finally, in <strong>Competition Mode</strong>, students demonstrate independent mastery under realistic conditions. Objective metrics (time to assemble, mistake frequency, fastener errors) are aggregated in the Web Portal, providing instructors with concrete diagnostic data on student learning deficiencies."
+  </div>
+</div>
+
+<h2>7. Defense Day Demonstration Script & Checklist</h2>
+<ol>
+  <li><strong>Tutorial Demo (2 mins)</strong>:
+    <ul>
+      <li>Show how controller rings guide user fingers to Trigger, Grip, and Joysticks.</li>
+      <li>Grab the floating tutorial header and drag it to a comfortable side angle, showing it remains strictly upright and stays in place.</li>
+    </ul>
+  </li>
+  <li><strong>Practice Mode Mechanics (3 mins)</strong>:
+    <ul>
+      <li>Open the CPU socket latch (cover & lever hinges), place the CPU, and lock the latch.</li>
+      <li>Deposit thermal paste on the CPU IHS.</li>
+      <li>Drive cooler screws with the screwdriver, highlighting the smooth 1.6x URP full-view magnification.</li>
+      <li>Press the <strong>Left Menu Button</strong> to open the Pause Menu: click <strong>Settings</strong>, toggle the wrist shortcut, and show that workbench items behind the menu cannot be accidentally grabbed.</li>
+    </ul>
+  </li>
+  <li><strong>Competition Mode & Web Portal (2 mins)</strong>:
+    <ul>
+      <li>Start Competition mode: point out that hints and arrows are strictly disabled.</li>
+      <li>Complete or submit the session, then immediately open the Web Portal on a browser laptop to show the completed score, time, and mistake log updated in real time.</li>
+    </ul>
+  </li>
+</ol>
+
+</body>
+</html>

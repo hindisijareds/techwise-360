@@ -212,6 +212,11 @@ namespace XRMultiplayer
         public override void OnSelectEnteredLocal(BaseInteractionEventArgs args)
         {
             base.OnSelectEnteredLocal(args);
+            if (!IsSpawned)
+            {
+                m_ClientNetworkTransform.enabled = false;
+                return;
+            }
 
             // Return out early if the interactor is ignoring sockets or not syncing select.
             if (m_IgnoreSocketSelectedCallback && args.interactorObject.transform.GetComponent<XRSocketInteractor>() != null) return;
@@ -227,6 +232,11 @@ namespace XRMultiplayer
         public override void OnSelectExitedLocal(BaseInteractionEventArgs args)
         {
             base.OnSelectExitedLocal(args);
+            if (!IsSpawned)
+            {
+                m_ClientNetworkTransform.enabled = false;
+                return;
+            }
             // Return out early if the interactor is ignoring sockets or not syncing select.
             if (m_IgnoreSocketSelectedCallback && args.interactorObject.transform.GetComponent<XRSocketInteractor>() != null) return;
 
