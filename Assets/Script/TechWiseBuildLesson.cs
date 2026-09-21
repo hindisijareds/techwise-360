@@ -21,7 +21,7 @@ internal static class TechWiseBuildLesson
         string progress=screws.Length==0?"Complete the current action before moving on.":remove
             ?$"Screws: {screws.Count(f=>f.Progress==0)} / {screws.Length} loosened; {screws.Count(f=>f.Removed)} / {screws.Length} removed."
             :$"Screws: {screws.Count(f=>f.Inserted)} / {screws.Length} inserted; {screws.Count(f=>f.Complete)} / {screws.Length} tightened.";
-        if(remove && runtime.PanelInstalled || !remove && runtime.CurrentPhase==TechWiseDetailedAssemblyRuntime.Phase.CloseCase)
+        if(remove && !runtime.CaseAccessOpen || !remove && runtime.CurrentPhase==TechWiseDetailedAssemblyRuntime.Phase.CloseCase)
         {
             component="Case side panel"; handling="Hold the side-panel edge with "+TechWiseControlLabels.Grab+".";
             objective=remove?"Open the case before servicing components.":"Close the completed PC.";
@@ -63,7 +63,7 @@ internal static class TechWiseBuildLesson
             handling="Point at the indicated hinge and hold "+TechWiseControlLabels.Grab+".";
             action=remove?"Lift your hand about 9 cm away from the motherboard, then release at the fully open stop. Open the arm before the cover.":"Move your hand about 9 cm DOWN toward the motherboard, then release at the closed stop. Close the cover before the arm.";
             validation="The hinge reaches its stop and you release your grip."; error="Touching it or releasing halfway does not finish the action.";
-            correction="Grip the indicated hinge again and complete its travel before releasing."; next=remove?"Lift the CPU out by its edges.":"Apply thermal paste after both locks close.";
+            correction="Grip the indicated hinge again and complete its travel before releasing."; next=remove?(lever?"Open the CPU cover next.":"Lift the CPU out by its edges."):(lever?"Apply thermal paste after both locks close.":"Lower and release the locking arm next.");
         }
         else if(step=="M2" && runtime.Seated("M2") && (remove?runtime.M2Lowered:!runtime.M2Lowered))
         {
@@ -85,15 +85,16 @@ internal static class TechWiseBuildLesson
         {
             objective=(remove?"Remove ":"Install ")+component;
             action=remove?"After removing every assigned screw or lock, grip the component, withdraw it along its connector direction, move it at least 20 cm clear of the mount and RELEASE it on the workbench.":
-                "Hold "+TechWiseControlLabels.Grab+" to pick up the highlighted component. Move/turn your wrist to align it. While holding, use the holding hand's configured Manipulation joystick to rotate or adjust distance. Bring the connector into its target and RELEASE to seat it.";
+                "Hold "+TechWiseControlLabels.Grab+" to pick up the highlighted component. Move/turn your wrist to align it. While holding, use "+TechWiseControlLabels.Both("Manipulation")+" to rotate or adjust distance. Bring the connector into its target and RELEASE to seat it.";
             validation=remove?"The component is clear of its socket, released, and all its fasteners have been removed.":"The correct component snaps only in its matching target and orientation. Mere proximity is not enough. All required screws must then be inserted and tightened.";
             error=remove?"Secured components cannot be pulled out; a held component is not a completed removal.":"Backwards, upside-down, misaligned or wrong-slot releases do not advance the lesson.";
             correction=remove?"Complete every screw/lock first, then re-grip, withdraw and release the component clear of the mount.":"Re-grip the loose component; align its keyed edge to the indicated target and release. Green alignment feedback means ready to seat.";
-            if(step=="RAM") progress=$"RAM modules: {state.Parts.Count(p=>state.StepOf(p)=="RAM"&&state.IsPartInstalled(p))} / 4 seated. Each module must be handled separately.";
+            if(step=="RAM") { int seated=state.Parts.Count(p=>state.StepOf(p)=="RAM"&&state.IsPartInstalled(p)); progress=remove?$"RAM modules: {4-seated} / 4 removed.":$"RAM modules: {seated} / 4 seated. Each module must be handled separately."; }
             int index=System.Array.IndexOf(remove?TechWiseBuildDefinition.DisassemblyOrder:TechWiseBuildDefinition.AssemblyOrder,step);
             var order=remove?TechWiseBuildDefinition.DisassemblyOrder:TechWiseBuildDefinition.AssemblyOrder;
             next=definition!=null&&definition.screws>0&&!remove?"Insert and tighten all "+definition.screws+" numbered screws, one by one.":index>=0&&index+1<order.Length?"Continue with "+TechWiseSimulationRuntime.Label(order[index+1])+".":remove?"Complete the disassembly review.":"Reinstall the case side panel.";
         }
+        if(!remove && runtime.CurrentPhase==TechWiseDetailedAssemblyRuntime.Phase.InstallCPU) next="Lower and release the cover, then the locking arm. Apply thermal paste before the cooler.";
         return new StringBuilder().AppendLine("<b>Objective:</b> "+objective).AppendLine("<b>Component / tool:</b> "+component)
             .AppendLine("<b>Controls:</b> "+TechWiseControlLabels.Grab+" to grab / release; "+TechWiseControlLabels.Activate+" to use a held tool.")
             .AppendLine("<b>Handling:</b> "+handling).AppendLine("<b>Placement:</b> "+placement).AppendLine("<b>Orientation:</b> "+orientation)

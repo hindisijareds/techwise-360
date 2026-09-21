@@ -749,6 +749,7 @@ public sealed class TechWiseGuideAssistant : MonoBehaviour
 
     static string BoardSummary(TechWiseDetailedAssemblyRuntime phase)
     {
+        if(phase.BuildComplete || phase.RemovalComplete) return phase.Instruction;
         var lines=phase.Instruction.Split('\n');
         return string.Join("\n\n",lines.Where(l=>l.StartsWith("<b>Objective:") || l.StartsWith("<b>Action:") || l.StartsWith("<b>Progress:") || l.StartsWith("<b>Next:")))
             + "\n\nRead and scroll the floating lesson panel for controls, handling, alignment and corrections.";

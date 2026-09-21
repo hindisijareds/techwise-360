@@ -316,7 +316,7 @@ public sealed class TechWiseSimulationRuntime : MonoBehaviour
         Result("CPU/cover","CPU","CPU retention cover",ready&&(removal?!runtime.Cover.Closed:runtime.Cover.Closed),"missing_dependency","CPU cover is not in the required state.",removal?"Open the lever, then lift the cover.":"Lower the cover and release it.");
         Result("CPU/lever","CPU","CPU locking arm",ready&&(removal?!runtime.Lever.Closed:runtime.Lever.Closed),"missing_dependency","CPU locking arm is not in the required state.",removal?"Lift and release the arm after removing the cooler.":"Lower and release the arm after closing the cover.");
         Result("CPU/paste","CPUCooler","Thermal paste",ready&&(removal?IsStepComplete("CPU"):runtime.PasteApplied),"missing_dependency","Required thermal-paste state is incomplete.",removal?"Remove the CPU after its cooler and locks are cleared.":"Apply paste to the locked CPU before installing the cooler.");
-        Result("Case/panel","CasePanel","Case side panel",ready&&(removal?!runtime.PanelInstalled:runtime.CasePrepared&&runtime.PanelInstalled),"missing_dependency","The case panel is not in its required final state.",removal?"Remove and set aside the case panel first.":"Complete the build, then align and release the side panel onto the case.");
+        Result("Case/panel","CasePanel","Case side panel",ready&&(removal?runtime.CaseAccessOpen:runtime.CasePrepared&&runtime.PanelInstalled),"missing_dependency","The case panel is not in its required final state.",removal?"Remove and set aside the case panel first.":"Complete the build, then align and release the side panel onto the case.");
         return results.ToArray();
     }
     bool PartRemoved(XRGrabInteractable part)
@@ -453,7 +453,7 @@ public sealed class TechWiseSimulationRuntime : MonoBehaviour
         if (args.interactorObject is XRSocketInteractor || TechWiseDisassemblyRuntime.IsPreparing || ManipulationLocked) return;
         if (args.interactableObject is XRGrabInteractable part)
         {
-            if (!actionBefore.ContainsKey(part)) actionBefore[part] = TechWiseAssemblyHistory.Capture();
+            if (TechWiseSimulationModeManager.IsAssembly || !actionBefore.ContainsKey(part)) actionBefore[part] = TechWiseAssemblyHistory.Capture();
             touched.Add(part);
             part.throwOnDetach = false;
             // The board's solid collision envelope must not push a held CPU/RAM
@@ -568,7 +568,9 @@ public sealed class TechWiseSimulationRuntime : MonoBehaviour
             // for the motherboard itself and must not generate release mistakes.
             if (socket.transform.IsChildOf(part.transform)) continue;
             var current = Vector3.Distance(part.GetAttachTransform(socket).position, socket.GetAttachTransform(part).position);
-            if (current >= 0.35f && !socket.interactablesHovered.Contains(part)) continue;
+            var attemptRule=socket.GetComponent<TechWisePlacementRule>();
+            float attemptRadius=Mathf.Max(.08f,(attemptRule!=null?attemptRule.distanceTolerance:.035f)*2.5f);
+            if (current >= attemptRadius && !socket.interactablesHovered.Contains(part)) continue;
             // Adjacent RAM/CPU targets can be closer than the compatible target.
             bool matches = Matches(socket, part.transform);
             bool nearestMatches = nearest != null && Matches(nearest, part.transform);
@@ -693,7 +695,14 @@ public sealed class TechWiseSimulationRuntime : MonoBehaviour
     {
         if (string.IsNullOrEmpty(step) || performedSteps.Contains(step) || !TechWiseSimulationModeManager.GetExpectedOrder().Contains(step)) return;
         string expected = null;
-        foreach (var id in TechWiseSimulationModeManager.GetExpectedOrder()) if (!performedSteps.Contains(id)) { expected = id; break; }
+        foreach (var id in TechWiseSimulationModeManager.GetExpectedOrder())
+        {
+            if (id==step) break;
+            // A screw can finish immediately before the next part's release in this frame.
+            // Validate live prerequisites, not the previous Update's completion cache.
+            if (!IsStepComplete(id)) { expected=id; break; }
+            performedSteps.Add(id);
+        }
         if (expected != null && expected != step)
             RecordMistake("wrong_order", step, $"{Label(step)} was handled before {Label(expected)}.", $"Follow the current step: {Label(expected)}.");
         else Feedback = $"{Label(step)} completed.";
@@ -719,13 +728,16 @@ public sealed class TechWiseSimulationRuntime : MonoBehaviour
         ManipulationLocked = locked;
         if (!locked) { lockedPoses.Clear(); startedAt = Time.realtimeSinceStartupAsDouble; return; }
         // Keep socket ownership for final-state validation; cancel only hands/rays.
-        foreach (var part in Parts)
+        var runtime=TechWiseDetailedAssemblyRuntime.Instance;
+        var all=Parts.AsEnumerable();
+        if(runtime!=null && runtime.Ready) all=all.Concat(runtime.Fasteners.Select(s=>s.Grab)).Concat(TechWiseAssemblyTool.Tools.Select(t=>t.GetComponent<XRGrabInteractable>())).Append(runtime.SidePanel);
+        foreach (var part in all.Distinct())
         {
             if (part == null) continue;
             var pose = new Pose(part.transform.position, part.transform.rotation);
             var owners = new List<IXRSelectInteractor>(part.interactorsSelecting);
             foreach (var owner in owners)
-                if (owner is not XRSocketInteractor && part.interactionManager != null) part.interactionManager.SelectExit(owner, part);
+                if (owner is not XRSocketInteractor && part.interactionManager != null) part.interactionManager.SelectCancel(owner, part);
             lockedPoses[part] = pose;
             var body = part.GetComponent<Rigidbody>();
             if (body != null) { if (!body.isKinematic) { body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; } body.isKinematic = true; }

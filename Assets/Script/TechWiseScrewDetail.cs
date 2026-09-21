@@ -100,6 +100,8 @@ public sealed class TechWiseScrewDetail : MonoBehaviour
 
         if (cam.stereoEnabled && currentZoom > 1.001f)
         {
+            // Both render callbacks may run; always scale the current XR baseline once.
+            cam.ResetStereoProjectionMatrices();
             var left = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
             var right = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
             left.m00 *= currentZoom;

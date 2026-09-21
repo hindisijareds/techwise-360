@@ -52,7 +52,14 @@ public sealed class TechWiseFastener : MonoBehaviour
         transform.SetParent(null, true); transform.SetPositionAndRotation(home.position, home.rotation);
         gameObject.SetActive(false);
         body = gameObject.AddComponent<Rigidbody>(); body.useGravity = true; body.isKinematic = true; body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        var collider = gameObject.AddComponent<BoxCollider>(); collider.center = new Vector3(0,0,.006f); collider.size = new Vector3(.012f,.012f,.025f);
+        var collider = gameObject.AddComponent<BoxCollider>();
+        if(TechWiseComponentGeometry.BoundsOf(transform,out var geometry,true))
+        {
+            collider.center=geometry.center; collider.size=new Vector3(Mathf.Max(.009f,geometry.size.x),Mathf.Max(.009f,geometry.size.y),geometry.size.z);
+            // The inventory screws stand on the tray at their actual shaft-tip height.
+            home.position.y += geometry.max.z-.014f; transform.position=home.position;
+        }
+        else { collider.center=new Vector3(0,0,.003f);collider.size=new Vector3(.01f,.01f,.018f); }
         grab = gameObject.AddComponent<XRGrabInteractable>(); grab.interactionLayers = ~0; grab.selectMode = InteractableSelectMode.Single;
         grab.colliders.Clear(); grab.colliders.Add(collider); grab.throwOnDetach = false; grab.movementType = XRBaseInteractable.MovementType.Kinematic;
         grab.useDynamicAttach = true; gameObject.AddComponent<Keychain>().AddKey(key);
@@ -75,6 +82,7 @@ public sealed class TechWiseFastener : MonoBehaviour
         for (int i=0;i<25;i++) { float a=i*Mathf.PI*2/24; marker.SetPosition(i,new Vector3(Mathf.Cos(a)*.009f,Mathf.Sin(a)*.009f,-.007f)); }
         marker.enabled = false;
         screwTag=Tag(transform,"Screw ID"); holeTag=Tag(holeObject.transform,"Hole ID");
+        holeTag.gameObject.SetActive(false);
         initialized = true; All.Add(this); holeObject.SetActive(true); gameObject.SetActive(true);
     }
     TMP_Text Tag(Transform parent,string name)
@@ -87,10 +95,11 @@ public sealed class TechWiseFastener : MonoBehaviour
     {
         var camera=Camera.main;if(camera==null)return;
         screwTag.gameObject.SetActive(!Inserted&&!TechWiseSimulationRuntime.IsHeld(grab));
-        holeTag.gameObject.SetActive(!Complete);
+        holeTag.gameObject.SetActive(CanUse && !Complete);
         if(screwTag.gameObject.activeSelf) { screwTag.transform.position=transform.position+Vector3.up*.02f; screwTag.transform.rotation=Quaternion.LookRotation(screwTag.transform.position-camera.transform.position); }
         if(holeTag.gameObject.activeSelf) { holeTag.transform.position=Hole.transform.position-Hole.transform.forward*.015f+Hole.transform.right*.014f;holeTag.transform.rotation=Quaternion.LookRotation(holeTag.transform.position-camera.transform.position); }
     }
+    void OnDisable() { if(holeTag!=null) holeTag.gameObject.SetActive(false); if(marker!=null) marker.enabled=false; }
     bool CanUse => !TechWisePauseSession.Active && !TechWiseTutorialRuntime.ControlsPending && TechWiseSimulationRuntime.Instance != null && !TechWiseSimulationRuntime.Instance.ManipulationLocked && (permitted == null || permitted());
     void Selected(SelectEnterEventArgs args)
     {

@@ -13,16 +13,17 @@ public sealed partial class TechWiseDetailedAssemblyRuntime
     TechWiseCasePanel casePanel;
     readonly Dictionary<GameObject, bool> conditionalObjects = new();
     public bool PanelInstalled => casePanel != null && casePanel.Installed;
+    internal bool CaseAccessOpen => casePanel!=null && casePanel.AccessOpen;
     internal XRGrabInteractable SidePanel => panel;
     internal bool IsConditionallyHidden(Transform item) => conditionalObjects.TryGetValue(item.gameObject,out var hidden) && hidden;
     internal bool BuildComplete => Ready && TechWiseBuildDefinition.Components.All(c => Seated(c.id) && StepFastened(c.id)) && PanelInstalled;
-    internal bool RemovalComplete => Ready && !PanelInstalled && TechWiseBuildDefinition.Components.All(c => state.IsStepComplete(c.id)) && Fasteners.All(f => f.Removed) && !Cover.Closed && !Lever.Closed;
+    internal bool RemovalComplete => Ready && CaseAccessOpen && TechWiseBuildDefinition.Components.All(c => state.IsStepComplete(c.id)) && Fasteners.All(f => f.Removed) && !Cover.Closed && !Lever.Closed;
     internal string DisassemblyStep => !Ready ? null : TechWiseBuildDefinition.DisassemblyOrder.FirstOrDefault(id => !state.IsStepComplete(id));
     internal TechWiseFastener CurrentFastener
     {
         get
         {
-            if (!Ready || CurrentPartStep == null || !Seated(CurrentPartStep) || TechWiseSimulationModeManager.IsDisassembly && PanelInstalled) return null;
+            if (!Ready || CurrentPartStep == null || !Seated(CurrentPartStep) || TechWiseSimulationModeManager.IsDisassembly && !CaseAccessOpen) return null;
             if (CurrentPartStep == "M2" && !M2Lowered && TechWiseSimulationModeManager.IsAssembly) return null;
             return Fasteners.FirstOrDefault(f => f.ComponentId == CurrentPartStep &&
                 (TechWiseSimulationModeManager.IsDisassembly ? !f.Removed : !f.Complete));
@@ -46,27 +47,38 @@ public sealed partial class TechWiseDetailedAssemblyRuntime
             foreach (int x in new[]{-1,1}) foreach(int y in new[]{-1,1})
                 ExtraScrews.Add(Screw(part.transform,part.transform.TransformPoint(new Vector3(x*.0525f,y*.0525f,z)),part.transform.forward*sign,id+" mounting screw",()=>Seated(id)));
         }
-        foreach (var id in new[]{"GPU","Storage","PSU"})
+        // Audited in the retained FBX's component-local coordinates (not overall renderer bounds).
+        // GPU pCube1167: the bent retaining flange, +Y face. PSU pCube927: rear plate, +X face.
+        // SSD: centres of the four modeled circular holes on its +Z mounting face.
+        AddMounts("GPU",Vector3.up,new[]{new Vector3(.0395f,.01703615f,.0038f),new Vector3(.0395f,.01703615f,-.0045f)});
+        AddMounts("Storage",Vector3.forward,new[]{new Vector3(-.01078045f,.0080158f,.001064f),new Vector3(-.01078045f,-.00814265f,.001064f),new Vector3(.00933635f,.0080158f,.001064f),new Vector3(.00933635f,-.00814265f,.001064f)});
+        AddMounts("PSU",Vector3.right,new[]{new Vector3(.01861755f,-.009f,-.017f),new Vector3(.01861755f,-.009f,.017f),new Vector3(.01861755f,.009f,-.017f),new Vector3(.01861755f,.009f,.017f)});
+    }
+    void AddMounts(string id,Vector3 normal,Vector3[] points)
+    {
+        var part=state.FindPart(id);if(part==null)throw new InvalidOperationException("Missing required component: "+id);
+        foreach(var point in points) ExtraScrews.Add(Screw(part.transform,part.transform.TransformPoint(point),part.transform.TransformDirection(normal),id+" mounting screw",()=>Seated(id)));
+    }
+    internal bool GuideActionFocus(out Transform item,out Transform target)
+    {
+        item=target=null;
+        bool removing=TechWiseSimulationModeManager.IsDisassembly;
+        if(removing && !CaseAccessOpen || !removing && (CurrentPhase==Phase.PrepareCase || CurrentPhase==Phase.CloseCase)) item=panel.transform;
+        else if(!removing && CurrentPhase==Phase.ApplyThermalPaste)
         {
-            var part = state.FindPart(id); if (part == null) throw new InvalidOperationException("Missing required component: "+id);
-            if (!TechWiseComponentGeometry.BoundsOf(part.transform,out var bounds,true)) throw new InvalidOperationException("Missing component mesh: "+id);
-            int axis = id == "Storage" ? (bounds.size.x < bounds.size.y ? (bounds.size.x < bounds.size.z ? 0:2) : (bounds.size.y < bounds.size.z ? 1:2)) : 0;
-            int u=(axis+1)%3,v=(axis+2)%3;
-            int count=TechWiseBuildDefinition.Find(id).screws;
-            for(int i=0;i<count;i++)
-            {
-                var p=bounds.center; p[axis]=bounds.max[axis];
-                p[u]+=bounds.extents[u]*.78f*(i%2==0?-1:1);
-                p[v]+=bounds.extents[v]*(count==2?.8f:(i<2?-.78f:.78f));
-                var normal=Vector3.zero; normal[axis]=1;
-                ExtraScrews.Add(Screw(part.transform,part.transform.TransformPoint(p),part.transform.TransformDirection(normal),id+" mounting screw",()=>Seated(id)));
-            }
+            item=TechWiseAssemblyTool.Tools.FirstOrDefault(t=>t!=null&&t.kind==TechWiseAssemblyTool.ToolKind.ThermalPaste)?.transform;
+            var cpu=state.FindPart("CPU");target=state.FindSocket("CPU")?.GetAttachTransform(cpu);
         }
+        else if(!removing && CurrentPhase==Phase.CloseAndLockSocket || removing && CurrentPartStep=="CPU" && (Cover.Closed||Lever.Closed))
+            item=(removing?Lever.Closed?Lever:Cover:Cover.Closed?Lever:Cover).transform;
+        else if(CurrentPartStep=="M2" && Seated("M2") && (removing?M2Lowered && M2Screws.All(f=>f.Removed):!M2Lowered)) item=M2Hinge!=null?M2Hinge.transform:null;
+        if(target==null) target=item;
+        return item!=null;
     }
     void InitializeManualScrews()
     {
         var groups = new Dictionary<string,int>();
-        var inventory = board.position + Vector3.right*.65f + Vector3.back*.35f;
+        var inventory = board.position + Vector3.right*.65f + Vector3.back*.20f;
         inventory.y = TechWiseWorkbenchSurface.Height(inventory,board.position.y)+.025f;
         int index=0;
         foreach(var screw in Fasteners)
@@ -120,7 +132,7 @@ public sealed partial class TechWiseDetailedAssemblyRuntime
     }
     internal bool CanRemove(string id)
     {
-        if(!Ready || PanelInstalled || id!=DisassemblyStep) return false;
+        if(!Ready || !CaseAccessOpen || id!=DisassemblyStep) return false;
         if(Fasteners.Any(f=>f.ComponentId==id && !f.Removed)) return false;
         if(id=="M2" && M2Lowered) return false;
         if(id=="CPU" && (Cover.Closed || Lever.Closed)) return false;

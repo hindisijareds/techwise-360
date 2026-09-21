@@ -23,7 +23,7 @@ public static class TechWiseCompleteBuildVerification
     static double deadline;
     static readonly List<string> errors = new();
     static readonly List<string> frameworkErrors = new();
-    static readonly string[] Prefs = { TechWiseSimulationModeManager.GameModeKey, TechWiseSimulationModeManager.SimulationTypeKey };
+    static readonly string[] Prefs = { MainMenu.ControlModeKey, TechWiseSimulationModeManager.GameModeKey, TechWiseSimulationModeManager.SimulationTypeKey, TechWiseSimulationModeManager.CompetitionIdKey, TechWiseSimulationModeManager.CompetitionTitleKey };
     static TechWiseSimulationRuntime state;
     static TechWiseDetailedAssemblyRuntime phase;
     static XRDirectInteractor hand;
@@ -31,10 +31,12 @@ public static class TechWiseCompleteBuildVerification
     {
 
         foreach (var key in Prefs) { SessionState.SetBool(Key + key, PlayerPrefs.HasKey(key)); SessionState.SetString(Key + key + "value", PlayerPrefs.GetString(key)); }
+        PlayerPrefs.SetString(MainMenu.ControlModeKey,MainMenu.VrModeValue);
         TechWiseSimulationModeManager.SetMode("assembly", "practice");
         EditorSceneManager.OpenScene("Assets/Scenes/Multiplayer.unity");
         SessionState.SetBool(Key, true); EditorApplication.EnterPlaymode();
     }
+    public static void RunCompetition() { SessionState.SetBool(Key+"competitionOnly",true); Run(); }
     [InitializeOnLoadMethod]
     static void Resume()
     {
@@ -46,7 +48,7 @@ public static class TechWiseCompleteBuildVerification
             var queue = TechWiseOfflineAttemptQueue.EnsureInstance(); queue.StopAllCoroutines(); queue.enabled = false;
             foreach (var interactor in UnityEngine.Object.FindObjectsByType<XRBaseInteractor>()) if (interactor is not XRSocketInteractor) interactor.enabled = false;
             Application.logMessageReceived += Log;
-            deadline = EditorApplication.timeSinceStartup + 1200; flow = Scenarios(); routines.Push(flow); EditorApplication.update += Tick;
+            deadline = EditorApplication.timeSinceStartup + 1200; flow = SessionState.GetBool(Key+"competitionOnly",false)?CompetitionAssembly():Scenarios(); routines.Push(flow); EditorApplication.update += Tick;
         };
     }
     static void Log(string message, string stack, LogType type)
@@ -80,10 +82,10 @@ public static class TechWiseCompleteBuildVerification
     static object Call(object target, string method, params object[] args) => target.GetType().GetMethod(method, Hidden).Invoke(target, args);
     static void Finish(Exception error)
     {
-        EditorApplication.update -= Tick; Application.logMessageReceived -= Log; SessionState.SetBool(Key, false);
+        EditorApplication.update -= Tick; Application.logMessageReceived -= Log; SessionState.SetBool(Key, false); SessionState.SetBool(Key+"competitionOnly",false);
         foreach (var key in Prefs) if (SessionState.GetBool(Key + key, false)) PlayerPrefs.SetString(key, SessionState.GetString(Key + key + "value", "")); else PlayerPrefs.DeleteKey(key);
         PlayerPrefs.Save(); Directory.CreateDirectory("Logs/CompleteBuildAudit");
-        File.WriteAllText("Logs/CompleteBuildAudit/results.txt", (error == null ? "PASS: Phase 1 feature checks" : error.ToString()) + $"\nChecks: {checks}\nCore runtime errors: {errors.Count}\nKnown XR framework error messages: {frameworkErrors.Count}\nPhysical Quest interaction not tested.\n" + string.Join("\n", errors) + "\nFramework diagnostics:\n" + string.Join("\n",frameworkErrors));
+        File.WriteAllText("Logs/CompleteBuildAudit/results.txt", (error == null ? "PASS: Complete build feature checks" : error.ToString()) + $"\nChecks: {checks}\nCore runtime errors: {errors.Count}\nKnown XR framework error messages: {frameworkErrors.Count}\nPhysical Quest interaction not tested.\n" + string.Join("\n", errors) + "\nFramework diagnostics:\n" + string.Join("\n",frameworkErrors));
         EditorApplication.Exit(error == null && errors.Count == 0 ? 0 : 1);
     }
     static void Align(XRGrabInteractable part, XRLockSocketInteractor socket)
@@ -407,7 +409,10 @@ public static class TechWiseCompleteBuildVerification
             var handObject=new GameObject("Right disassembly verification controller",typeof(SphereCollider),typeof(Rigidbody));handObject.GetComponent<SphereCollider>().isTrigger=true;handObject.GetComponent<Rigidbody>().isKinematic=true;hand=handObject.AddComponent<XRDirectInteractor>();hand.interactionLayers=~0;
             Check(phase.Fasteners.Count()==36 && phase.Fasteners.All(f=>f.Complete),mode+" assembled seed has all individually tracked screws");
             var panel=(XRGrabInteractable)typeof(TechWiseDetailedAssemblyRuntime).GetField("panel",Hidden).GetValue(phase);
-            panel.interactionManager.SelectEnter((IXRSelectInteractor)hand,panel);panel.transform.position+=Vector3.right*.6f;panel.interactionManager.SelectExit((IXRSelectInteractor)hand,panel);yield return null;yield return null;
+            panel.interactionManager.SelectEnter((IXRSelectInteractor)hand,panel);panel.transform.position+=Vector3.right*.6f;
+            Check(!state.CaptureAssessmentState().First(r=>r.component_id=="Case/panel").complete,"Held panel cannot complete removal");
+            Check(phase.Instruction.Contains("Open the case"),"Disassembly keeps panel objective until it is released clear");
+            panel.interactionManager.SelectExit((IXRSelectInteractor)hand,panel);yield return null;yield return null;
             Check(!phase.PanelInstalled&&!panel.GetComponent<Rigidbody>().isKinematic&&panel.GetComponent<Rigidbody>().useGravity,"Detached panel uses gravity");
             foreach(string id in TechWiseBuildDefinition.DisassemblyOrder)
             {
@@ -477,7 +482,12 @@ public static class TechWiseCompleteBuildVerification
             Check(turn.turnSpeed==60&&!turn.enableTurnAround,"Smooth turn is 60 degrees/sec with 180-degree snap disabled");
         var hud=GameObject.Find("TechWise Competition HUD");var pose=hud.transform.position+Vector3.right*.2f;hud.transform.position=pose;yield return null;yield return null;
         Check(Vector3.Distance(hud.transform.position,pose)<.001f,"Competition panel stays where placed");
-        Check(GameObject.Find("Verification display").GetComponentsInChildren<UnityEngine.UI.ScrollRect>().Length==1,"Monitor instructions/results have a scroll viewport");
+        var monitorDisplay=GameObject.Find("Verification display");
+        var scroll=monitorDisplay.GetComponentsInChildren<UnityEngine.UI.ScrollRect>().Single();
+        Check(scroll!=null,"Monitor instructions/results have a scroll viewport");
+        var monitorBase=GameObject.Find("Monitor base");var baseCollider=monitorBase.GetComponent<Collider>();
+        float tableY=(float)typeof(TechWiseDetailedAssemblyRuntime).Assembly.GetType("TechWiseWorkbenchSurface").GetMethod("Height",BindingFlags.Static|BindingFlags.NonPublic).Invoke(null,new object[]{monitorBase.transform.position,monitorBase.transform.position.y});
+        Check(baseCollider!=null && Mathf.Abs(baseCollider.bounds.min.y-tableY)<.002f,"Monitor base contacts tabletop and retains solid collider");
         var cpu=state.FindPart("CPU");var target=state.FindSocket("CPU");var mistakes=(List<TechWiseVrMistakeDetail>)typeof(TechWiseAttemptRecorder).GetField("mistakeDetails",Hidden).GetValue(recorder);
         cpu.interactionManager.SelectEnter((IXRSelectInteractor)hand,cpu);Align(cpu,target);cpu.transform.rotation=Quaternion.AngleAxis(90,target.transform.up)*cpu.transform.rotation;
         cpu.interactionManager.SelectExit((IXRSelectInteractor)hand,cpu);for(int i=0;i<6;i++)yield return null;
@@ -497,6 +507,8 @@ public static class TechWiseCompleteBuildVerification
         Call(recorder,"FinishAttempt");var frozen=(TechWiseVrComponentResult[])typeof(TechWiseAttemptRecorder).GetProperty("SubmittedResults",Hidden).GetValue(recorder);int submitted=recorder.GetLiveMetrics().score;
         Check(recorder.IsFinished&&submitted<100&&frozen.Length==91&&frozen.Any(r=>!r.complete),"Done on partial build validates full denominator and cannot award 100");
         Call(recorder,"FinishAttempt");Check(recorder.GetLiveMetrics().score==submitted,"Duplicate Done preserves immutable score");
+        var guidType=AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("Unity.Tutorials.Core.SceneObjectGuidManager")).FirstOrDefault(t=>t!=null);
+        if(guidType!=null){var manager=guidType.GetProperty("Instance").GetValue(null);((IDictionary)guidType.GetField("m_Components",Hidden).GetValue(manager)).Clear();}
         recorder.ResetToBeginning();for(int i=0;i<75;i++)yield return null;
         state=TechWiseSimulationRuntime.Instance;phase=TechWiseDetailedAssemblyRuntime.Instance;recorder=UnityEngine.Object.FindAnyObjectByType<TechWiseAttemptRecorder>();
         Check(phase.Ready&&!phase.PasteApplied&&phase.Fasteners.Count()==36&&phase.Fasteners.All(f=>!f.Inserted),"Reset Beginning restores all loose screws and clears paste without duplicates");
@@ -505,14 +517,17 @@ public static class TechWiseCompleteBuildVerification
         var handObject=new GameObject("Right competition verification controller",typeof(SphereCollider),typeof(Rigidbody));handObject.GetComponent<SphereCollider>().isTrigger=true;handObject.GetComponent<Rigidbody>().isKinematic=true;hand=handObject.AddComponent<XRDirectInteractor>();hand.interactionLayers=~0;recorder.StartCompetitionAttempt();
         yield return SeatPart("CPU");CloseCpuAndPaste();yield return SeatPart("CPUCooler");Tighten(phase.CoolerScrews,"CPUCooler");
         for(int i=0;i<4;i++)yield return SeatPart("RAM");yield return SeatPart("M2");Call(phase.M2Hinge,"Observe",0f);Call(phase.M2Hinge,"Commit");Tighten(phase.M2Screws,"M2");
-        var panel=(XRGrabInteractable)typeof(TechWiseDetailedAssemblyRuntime).GetField("panel",Hidden).GetValue(phase);panel.interactionManager.SelectEnter((IXRSelectInteractor)hand,panel);panel.transform.position+=Vector3.right*.6f;panel.interactionManager.SelectExit((IXRSelectInteractor)hand,panel);yield return null;yield return null;
+        var panel=(XRGrabInteractable)typeof(TechWiseDetailedAssemblyRuntime).GetField("panel",Hidden).GetValue(phase);panel.interactionManager.SelectEnter((IXRSelectInteractor)hand,panel);panel.transform.position+=Vector3.right*.6f;
+            Check(!state.CaptureAssessmentState().First(r=>r.component_id=="Case/panel").complete,"Held panel cannot complete removal");
+            Check(phase.Instruction.Contains("Open the case"),"Disassembly keeps panel objective until it is released clear");
+            panel.interactionManager.SelectExit((IXRSelectInteractor)hand,panel);yield return null;yield return null;
         foreach(string id in new[]{"Motherboard","FanRear","FanFront1","FanFront2","GPUConnector","GPU","Storage","PSU"})
         {yield return SeatPart(id);if(TechWiseBuildDefinition.Find(id).screws>0)Tighten(phase.Fasteners.Where(f=>f.ComponentId==id).ToList(),id);}
         var panelState=panel.GetComponent<TechWiseCasePanel>();var home=(Transform)typeof(TechWiseCasePanel).GetField("home",Hidden).GetValue(panelState);panel.interactionManager.SelectEnter((IXRSelectInteractor)hand,panel);panel.transform.SetPositionAndRotation(home.position,home.rotation);panel.interactionManager.SelectExit((IXRSelectInteractor)hand,panel);yield return null;yield return null;
         Check(state.CaptureAssessmentState().All(r=>r.complete),"Competition complete build validates all 91 requirements");
         var one=phase.CoolerScrews[0];Call(one,"ResetProgress");Check(state.CaptureAssessmentState().Any(r=>!r.complete)&&recorder.GetLiveMetrics().score<100,"One untightened screw prevents a perfect score");head=(Vector3)typeof(TechWiseFastener).GetProperty("HeadPosition",Hidden).GetValue(one);for(int i=0;i<30;i++)Call(one,"Advance",head,one.transform.forward,true,.1f);
         typeof(TechWiseDetailedAssemblyRuntime).GetProperty("PasteApplied").SetValue(phase,false);Check(recorder.GetLiveMetrics().score<100,"Missing thermal paste prevents a perfect score");typeof(TechWiseDetailedAssemblyRuntime).GetProperty("PasteApplied").SetValue(phase,true);
-        Call(recorder,"FinishAttempt");Check(recorder.IsFinished&&recorder.GetLiveMetrics().score==100,"Complete accurate fresh competition attempt receives 100");
+        Call(recorder,"FinishAttempt");Check(recorder.IsFinished&&recorder.GetLiveMetrics().score==100,"Complete accurate fresh competition attempt receives 100: score="+recorder.GetLiveMetrics().score+" mistakes="+recorder.GetLiveMetrics().mistakes+" issues="+string.Join(" | ",state.CaptureAssessmentState().Where(r=>!r.complete).Select(r=>r.component+": "+r.explanation))+" penalties="+string.Join(" | ",((List<TechWiseVrMistakeDetail>)typeof(TechWiseAttemptRecorder).GetField("mistakeDetails",Hidden).GetValue(recorder)).Select(m=>m.kind+":"+m.attempted_step+":"+m.explanation)));
     }
     static void CaptureLabels()
     {

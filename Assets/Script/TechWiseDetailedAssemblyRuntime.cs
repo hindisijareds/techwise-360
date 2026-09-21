@@ -183,6 +183,7 @@ public sealed partial class TechWiseDetailedAssemblyRuntime : MonoBehaviour
             Ready = true;
             InitializePanelAndWorkspace();
             state.Refresh(); // Register the supplemental keyed fans through the existing simulation registry.
+            UpdateAvailability();
             additions.AddComponent<TechWiseAssemblyPresentation>().Initialize(state);
             additions.AddComponent<TechWiseScrewDetail>();
             Debug.Log("[Phase 1] Ready: source-model poses, " + assets.motherboardHoles.Length + " PCB mounting holes, four cooler screws, M.2 screw and three fan mounts.");

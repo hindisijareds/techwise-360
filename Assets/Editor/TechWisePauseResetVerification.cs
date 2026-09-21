@@ -257,8 +257,8 @@ public static class TechWisePauseResetVerification
         Check(Time.timeScale == 1 && Equals(lesson, typeof(TechWiseTutorialRuntime).GetField("stage", Hidden).GetValue(tutorial)), "Tutorial resumes same lesson");
         PlayerPrefs.SetString(MainMenu.ControlModeKey, MainMenu.DesktopModeValue); yield return null;
         Call(menu, "SetMenuOpen", true);
-        Check(canvas.renderMode == RenderMode.ScreenSpaceOverlay && canvas.GetComponent<GraphicRaycaster>().enabled, "Desktop overlay menu retained");
-        Button("Resume Button").onClick.Invoke(); Check(Time.timeScale == 1, "Desktop Resume works");
+        Check(canvas.renderMode == RenderMode.WorldSpace && canvas.GetComponent<TrackedDeviceGraphicRaycaster>().enabled, "Existing VR-only menu policy ignores legacy desktop preference");
+        Button("Resume Button").onClick.Invoke(); Check(Time.timeScale == 1, "Resume still works with a legacy desktop preference");
         TechWiseSimulationModeManager.SetMode("assembly", "competition");
         Call(menu, "SetMenuOpen", true);
         Check(!Button("Reset Practice Button").gameObject.activeSelf, "Reset hidden in Competition");

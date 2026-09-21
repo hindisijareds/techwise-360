@@ -135,6 +135,16 @@ public sealed class TechWisePracticeGuidePanel : MonoBehaviour
             var draggable = panel.AddComponent<TechWiseDraggableUiPanel>();
             draggable.SetBounds(new Vector2(420, 50), new Vector2(0,335));
         }
+        if(!desktop)
+        {
+            var header=new GameObject("Practice guide move handle",typeof(RectTransform),typeof(Image));
+            header.transform.SetParent(panel.transform,false);
+            var headerRect=header.GetComponent<RectTransform>();headerRect.anchorMin=new Vector2(0,.93f);headerRect.anchorMax=Vector2.one;headerRect.offsetMin=headerRect.offsetMax=Vector2.zero;
+            header.GetComponent<Image>().color=new Color(.025f,.12f,.17f,.96f);
+            var caption=new GameObject("Grip to move",typeof(RectTransform),typeof(TextMeshProUGUI));caption.transform.SetParent(header.transform,false);
+            var captionRect=caption.GetComponent<RectTransform>();captionRect.anchorMin=Vector2.zero;captionRect.anchorMax=Vector2.one;captionRect.offsetMin=new Vector2(12,4);captionRect.offsetMax=new Vector2(-12,-4);
+            var title=caption.GetComponent<TextMeshProUGUI>();title.text="Practice guide | "+TechWiseControlLabels.Grab+" to move";title.fontSize=16;title.alignment=TextAlignmentOptions.Center;title.raycastTarget=false;
+        }
         var viewport = new GameObject("Guide scroll area", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
         viewport.transform.SetParent(panel.transform, false);
         var rect = viewport.GetComponent<RectTransform>();

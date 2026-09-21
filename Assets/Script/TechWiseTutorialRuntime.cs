@@ -430,6 +430,7 @@ public sealed class TechWiseTutorialRuntime : MonoBehaviour
                 var screw=phase.CurrentFastener;
                 view?.MarkAssembly(screw.Inserted?null:screw.transform,screw.Hole.transform,screw.Inserted);
             }
+            else if(phase.GuideActionFocus(out var actionItem,out var actionTarget)) view?.MarkAssembly(actionItem,actionTarget,false);
             else if (view != null) view.MarkAssembly(next != null ? next.transform : null, socket != null ? socket.GetAttachTransform(next) : null, valid);
             return;
         }
@@ -505,7 +506,7 @@ public sealed class TechWiseTutorialRuntime : MonoBehaviour
                 Instructions = "Match the block to the glowing frame, with the white stripe toward the arrow.\nRelease the grip when the frame turns green.\nA loose or misaligned release lets you try again."; break;
             case Stage.ControlsComplete:
                 Heading = "Controls complete!";
-                Instructions = "You can point, move, turn, grab, rotate and place.\nYour guided PC assembly lesson starts next."; break;
+                Instructions = "You can point, move, turn, grab, rotate and place.\nYour guided PC lesson starts next."; break;
             case Stage.Finished:
                 Heading = "Tutorial complete!";
                 Instructions = (TechWiseSimulationModeManager.IsDisassembly ? "All components and 36 individual screws removed." : "All components, 36 individual screws, CPU locks, paste and case panel completed.") + "\nUse Menu to return home or start another activity.";

@@ -52,7 +52,7 @@ public sealed class TechWiseTutorialView : MonoBehaviour
         if (blockMaterial.HasProperty("_BaseColor")) blockMaterial.SetColor("_BaseColor", Accent);
         panel = CanvasPanel("Tutorial lesson panel", transform, new Vector2(720, 640), 0.0015f, true);
         var draggable = panel.gameObject.AddComponent<TechWiseDraggableUiPanel>();
-        draggable.SetBounds(new Vector2(720f, 70f), new Vector2(0f, 282f));
+        draggable.SetBounds(new Vector2(640f, 100f), new Vector2(0f, 230f));
         draggable.Dragged += () =>
         {
             userRepositioned = true;
@@ -149,7 +149,12 @@ public sealed class TechWiseTutorialView : MonoBehaviour
     internal void ClearMarkers() { partOutline.positionCount = 0; targetOutline.positionCount = 0; targetArrow.positionCount = 0; }
     internal void Refresh(string title, string instructions, string hint, TechWiseTutorialRuntime.Stage current)
     {
+        bool enteringAssembly=current==TechWiseTutorialRuntime.Stage.Assembly && stage!=current;
+        string oldObjective=heading.text+string.Join("\n",System.Linq.Enumerable.Take((body.text??string.Empty).Split('\n'),2));
+        string newObjective=title+string.Join("\n",System.Linq.Enumerable.Take(instructions.Split('\n'),2));
         stage = current; heading.text = title; body.text = instructions; feedback.text = hint;
+        if(enteringAssembly && !userRepositioned) PositionPanel(true);
+        if(oldObjective!=newObjective) { Canvas.ForceUpdateCanvases(); body.GetComponentInParent<ScrollRect>().verticalNormalizedPosition=1; }
         pointButton.gameObject.SetActive(current == TechWiseTutorialRuntime.Stage.Point);
         skipButton.gameObject.SetActive(current > TechWiseTutorialRuntime.Stage.Welcome && current < TechWiseTutorialRuntime.Stage.Assembly);
         resetButton.gameObject.SetActive(current >= TechWiseTutorialRuntime.Stage.Grab && current <= TechWiseTutorialRuntime.Stage.Place);

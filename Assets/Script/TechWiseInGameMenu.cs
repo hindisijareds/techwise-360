@@ -767,7 +767,7 @@ public sealed class TechWiseInGameMenu : MonoBehaviour
 
         return
             $"{leftMove}   Move\n" +
-            $"{rightTurn}   Turn / snap turn\n" +
+            $"{rightTurn}   Turn smoothly\n" +
             $"{leftTeleport}   Aim or activate teleport\n" +
             $"{leftGrip} / {rightGrip}   Grab and release components\n" +
             $"{leftTrigger} / {rightTrigger}   Activate held items\n" +

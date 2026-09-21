@@ -9,7 +9,8 @@ public sealed class TechWiseCasePanel : MonoBehaviour
     Rigidbody body;
     Transform home;
     TechWiseDetailedAssemblyRuntime runtime;
-    bool pending;
+    bool pending, releasedAway;
+    internal bool AccessOpen => !Installed && !grab.isSelected && releasedAway;
     Pose releasedPose;
     TechWiseAssemblyHistory.Snapshot before;
     internal void Initialize(TechWiseDetailedAssemblyRuntime owner,XRGrabInteractable interaction)
@@ -27,6 +28,7 @@ public sealed class TechWiseCasePanel : MonoBehaviour
     void LateUpdate()
     {
         if(!pending || grab.isSelected) return; pending=false;
+        releasedAway=Vector3.Distance(releasedPose.position,home.position)>.2f;
         bool near=Vector3.Distance(releasedPose.position,home.position)<.045f && Quaternion.Angle(releasedPose.rotation,home.rotation)<15;
         bool canClose=TechWiseSimulationModeManager.IsAssembly && runtime.CasePrepared && runtime.CurrentPhase==TechWiseDetailedAssemblyRuntime.Phase.CloseCase;
         if(near && canClose) { Installed=true; transform.SetPositionAndRotation(home.position,home.rotation); body.isKinematic=true; }
@@ -35,7 +37,7 @@ public sealed class TechWiseCasePanel : MonoBehaviour
     }
     internal void Restore(bool installed,Pose pose)
     {
-        pending=false; Installed=installed; transform.SetPositionAndRotation(installed?home.position:pose.position,installed?home.rotation:pose.rotation);
+        pending=false; releasedAway=!installed && Vector3.Distance(pose.position,home.position)>.2f; Installed=installed; transform.SetPositionAndRotation(installed?home.position:pose.position,installed?home.rotation:pose.rotation);
         body.isKinematic=installed; body.useGravity=true;
     }
     void OnDestroy() { if(home!=null) Destroy(home.gameObject); if(grab!=null) { grab.selectEntered.RemoveListener(Selected); grab.selectExited.RemoveListener(Released); } }

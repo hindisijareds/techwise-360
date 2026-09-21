@@ -655,7 +655,7 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         var canvasObject = new GameObject("TechWise Competition HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         DontDestroyOnLoad(canvasObject);
         hudCanvas = canvasObject.GetComponent<Canvas>();
-        bool isVr = UnityEngine.XR.XRSettings.isDeviceActive || Application.platform == RuntimePlatform.Android;
+        bool isVr = UnityEngine.XR.XRSettings.isDeviceActive || Application.platform == RuntimePlatform.Android || !MainMenu.IsDesktopModeSelected(false);
         hudCanvas.renderMode = isVr ? RenderMode.WorldSpace : RenderMode.ScreenSpaceOverlay;
         hudCanvas.sortingOrder = 500;
 
@@ -716,6 +716,10 @@ public sealed class TechWiseAttemptRecorder : MonoBehaviour
         {
             canvasObject.AddComponent<TrackedDeviceGraphicRaycaster>().checkFor3DOcclusion=false;
             canvasObject.AddComponent<TechWiseDraggableUiPanel>().SetBounds(new Vector2(850,55), new Vector2(0,192));
+            var titleObject=new GameObject("Competition move handle",typeof(RectTransform),typeof(TextMeshProUGUI));
+            titleObject.transform.SetParent(canvasObject.transform,false);
+            var titleRect=titleObject.GetComponent<RectTransform>();titleRect.anchorMin=new Vector2(.02f,.88f);titleRect.anchorMax=new Vector2(.98f,1);titleRect.offsetMin=titleRect.offsetMax=Vector2.zero;
+            var titleText=titleObject.GetComponent<TextMeshProUGUI>();titleText.text="Competition | Grip title to move";titleText.fontSize=24;titleText.color=new Color(.25f,.85f,1);titleText.alignment=TextAlignmentOptions.Center;titleText.raycastTarget=false;
             hudText.rectTransform.anchorMax=new Vector2(.95f,.85f);
             TechWiseScrollableText.Wrap(hudText);
         }

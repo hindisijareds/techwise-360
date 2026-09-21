@@ -1,0 +1,43 @@
+Bounds=Center: (-3.55, 1.29, -0.81), Extents: (0.57, 0.51, 1.81) direction=(1.00, 0.00, 0.00) width=3.621576
+Text pos=(-4.13, 1.58, -0.72) forward=(-1.00, 0.00, 0.00) text=Knowledge Corner
+Title pos=(-3.64, 1.32, -2.37) forward=(-0.93, -0.37, 0.00) text=MOTHERBOARD
+Info pos=(-3.56, 1.09, -2.40) forward=(-0.93, -0.37, 0.00) text=
+The motherboard is a platform that supports all parts and components of a computer.
+
+It connects the different components of a equipment, including expansion cards, hard drives, memory and peripherals such as the keyboard and mouse, as well as control communication and transmission between these devices.
+Title pos=(-3.64, 1.31, -1.88) forward=(-0.93, -0.37, 0.00) text=CENTRAL PROCESSING 
+UNIT (CPU)
+Info pos=(-3.51, 0.98, -1.88) forward=(-0.93, -0.37, 0.00) text=CPU's are the brains of computers, mainly responsible for interpreting computer instructions and processing data in software. There are two major series of CPU products available on the market: Intel and AMD. Each manufacturer has its own advantages, it should be noted is that each motherboard has its corresponding CPU socket. For Example, the Intel X299 platform only works with Intel processors that use LGA 2066 socket.
+
+Performance is reflected in the number of cores, clock frequency, ability to increase performance and cache size.
+Title pos=(-3.63, 1.29, -1.36) forward=(-0.93, -0.37, 0.00) text=GRAPHIC CARD (GPU)
+Info pos=(-3.53, 1.04, -1.37) forward=(-0.93, -0.37, 0.00) text=A Graphics card is a motherboard expansion card that processes data from the CPU into understandable and representable information on the output device, such as a monitor
+
+Almost all ATX or larger motherboards have several PCI-Express x16 sockets where we can place our graphics card
+Title pos=(-3.64, 1.32, -0.83) forward=(-0.93, -0.37, 0.00) text=HARD DRIVE
+Info pos=(-3.54, 1.06, -0.83) forward=(-0.93, -0.37, 0.00) text=The hard disk is the computer's storage device. Usually a traditional hard disk drive (HDD) is used in combination with a solid state drive (SSD) for capacity and performance, using the ssd as the operating system's boot drive. 
+
+NVMe M.2 SSD is newer type of SSD fastest storage type, connecting directly to the motherboard, perfect for gaming and professional use.
+
+Title pos=(-3.65, 1.33, -0.30) forward=(-0.93, -0.37, 0.00) text=RANDOM ACCESS 
+MEMORY (RAM)
+Info pos=(-3.54, 1.07, -0.30) forward=(-0.93, -0.37, 0.00) text=RAM memory is the main memory of a device, where the data of the programs you are currently using are temporarily stored.
+
+The RAM memory has two characteristics:
+- High speed 
+- Data is only stored temporarily.
+
+The RAM modules are anchored to the motherboard through SLOTs, in the image you can see them highlighted in red.
+Title pos=(-3.64, 1.33, 0.26) forward=(-0.93, -0.37, 0.00) text=POWER SUPPLY (PSU)
+Info pos=(-3.54, 1.07, 0.26) forward=(-0.93, -0.37, 0.00) text=The power system converts AC power into DC power for the equipment components. The following should be considered when choosing a power system. 
+
+- Voltage: A PSU with a voltage that does not fit your needs your computer may experience difficulties and system crashes.
+
+- Energy efficiency: The 80 Plus certification program system units offers different levels of certification according to their efficiency.  
+Title pos=(-3.65, 1.34, 0.78) forward=(-0.93, -0.37, 0.00) text=CPU COOLER
+Info pos=(-3.53, 1.05, 0.78) forward=(-0.93, -0.37, 0.00) text=CPUs generate a lot of hear. High temperatures can cause the system to shut down to protect important components and can even cause permanent damage. It is for these reasons that fans and heat sinks are needed to prevent the CPU from overheating.
+
+When choosing a CPU cooler for your computer consider the following:
+ - CPU cooler very depending on the base and motherboard.
+ - More powerful CPUs need better CPU cooler to ensure stable performance.
+ - Choose a CPU cooler that can be inserted into your case without obstruct the other components
